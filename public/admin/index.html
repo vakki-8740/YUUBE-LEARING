@@ -1808,13 +1808,12 @@
             const toName = toUser ? toUser.name : (d.to === 'admin' ? 'Admin' : 'Unknown');
             const msgText = d.message || '';
             const imgHtml = d.image ? `<br><img src="${d.image}" alt="" style="max-width:120px;border-radius:8px;">` : '';
-            const voiceHtml = d.voice ? `<br><audio src="${d.voice}" controls style="width:200px;height:36px;"></audio>` : '';
             html += `
               <div class="detail-msg-item">
                 <div class="detail-msg-meta">
                   <span class="detail-msg-from">→ ${escapeHtml(toName)}</span> · ${time}
                 </div>
-                <div class="detail-msg-text">${escapeHtml(msgText)}${imgHtml}${voiceHtml}</div>
+                <div class="detail-msg-text">${escapeHtml(msgText)}${imgHtml}</div>
               </div>`;
           });
           area.innerHTML = html || '<div class="no-msgs">No text messages found</div>';
