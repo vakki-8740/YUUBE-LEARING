@@ -812,148 +812,6 @@
       display: none;
     }
 
-    /* ==================== VOICE RECORDING ==================== */
-    .voice-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: none;
-      background: transparent;
-      color: var(--ios-blue);
-      cursor: pointer;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.15s, background 0.2s;
-    }
-
-    .voice-btn:active {
-      transform: scale(0.88);
-    }
-
-    .voice-btn.recording {
-      background: var(--ios-red);
-      color: white;
-      animation: voicePulse 0.6s infinite alternate;
-    }
-
-    @keyframes voicePulse {
-      from { transform: scale(1); }
-      to { transform: scale(1.15); }
-    }
-
-    .recording-bar {
-      display: none;
-      align-items: center;
-      padding: 10px 16px;
-      background: var(--ios-card);
-      border-top: 0.5px solid var(--ios-separator);
-      gap: 10px;
-      justify-content: center;
-    }
-
-    .recording-bar.show {
-      display: flex;
-    }
-
-    .recording-bar .rec-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--ios-red);
-      animation: recBlink 1s infinite;
-    }
-
-    @keyframes recBlink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
-    .recording-bar .rec-timer {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--ios-text);
-      min-width: 50px;
-      text-align: center;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .recording-bar .rec-cancel {
-      font-size: 15px;
-      color: var(--ios-red);
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-family: inherit;
-      padding: 4px 12px;
-    }
-
-    /* ==================== VOICE MESSAGE ==================== */
-    .voice-message {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 6px 12px;
-      min-width: 160px;
-      max-width: 240px;
-    }
-
-    .voice-play-btn {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      border: none;
-      background: var(--ios-blue);
-      color: white;
-      cursor: pointer;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: transform 0.15s, background 0.2s;
-    }
-
-    .voice-play-btn:active {
-      transform: scale(0.9);
-    }
-
-    .voice-play-btn.playing {
-      background: var(--ios-gray);
-    }
-
-    .voice-progress {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .voice-progress-track {
-      flex: 1;
-      height: 4px;
-      background: rgba(128, 128, 128, 0.2);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .voice-progress-fill {
-      height: 100%;
-      background: var(--ios-blue);
-      border-radius: 2px;
-      width: 0%;
-      transition: width 0.3s linear;
-    }
-
-    .voice-time {
-      font-size: 12px;
-      color: var(--ios-gray);
-      min-width: 40px;
-      text-align: right;
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
-    }
-
     /* ==================== INPUT BAR ==================== */
     .input-bar {
       background: rgba(255, 255, 255, 0.95);
@@ -1160,6 +1018,26 @@
 
     .message-wrapper.own .msg-reaction {
       background: rgba(255,255,255,0.15);
+    }
+
+    .voice-msg { padding: 6px 12px !important; }
+    .voice-msg-inner {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .voice-msg-inner svg { flex-shrink: 0; }
+    .voice-dur {
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      opacity: 0.8;
+    }
+    .voice-msg-inner.playing svg { animation: voicePlay 0.6s infinite steps(1); }
+    @keyframes voicePlay {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
 
     .msg-reaction small {
@@ -2518,23 +2396,9 @@
                 <button class="remove-img" onclick="removeImage()">✕</button>
               </div>
 
-              <div class="recording-bar" id="recordingBar">
-                <span class="rec-dot"></span>
-                <span class="rec-timer" id="recTimer">0:00</span>
-                <span class="rec-cancel" id="recCancelBtn" onclick="cancelRecording()">Cancel</span>
-              </div>
-
               <div class="input-bar">
                 <button class="attach-btn" onclick="document.getElementById('fileInput').click()">+</button>
                 <input type="file" id="fileInput" accept="image/*" onchange="handleImageSelect(event)">
-                <button class="voice-btn" id="voiceBtn">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                    <line x1="8" y1="23" x2="16" y2="23"/>
-                  </svg>
-                </button>
                 <div class="input-wrapper">
                   <textarea id="messageInput" rows="1" placeholder="Message" oninput="autoResize(this); handleTyping()"></textarea>
                 </div>
@@ -2830,17 +2694,6 @@
     let selectedUserId = null;
     let selectedImage = null;
     let selectedFile = null;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let isRecording = false;
-    let recordingStartTime = 0;
-    let recordingTimerInt = null;
-    let voiceStream = null;
-    let recordedBlob = null;
-    let recordedDuration = 0;
-    let currentVoiceAudio = null;
-    let currentVoiceId = null;
-    let voiceProgressInt = null;
     let typingTimeout = null;
     let lastTypingEmit = 0;
     let unsubUsers = null;
@@ -3241,8 +3094,7 @@
       // Reply preview
       if (msg.reply_to) {
         const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
-        const rpText = msg.reply_to.message || 'Image';
-        content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(rpText) + '</div></div>';
+        content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
       }
 
       // Deleted message
@@ -3256,16 +3108,8 @@
         }
         // Voice
         if (msg.voice) {
-          const durStr = formatDuration(msg.voice_duration || 0);
-          content += '<div class="voice-message">'
-            + '<button class="voice-play-btn" onclick="event.stopPropagation();toggleVoicePlay(\'' + msg.id + '\',\'' + msg.voice + '\')">'
-            + '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="6,4 20,12 6,20"/></svg>'
-            + '</button>'
-            + '<div class="voice-progress">'
-            + '<div class="voice-progress-track"><div class="voice-progress-fill" id="vpf_' + msg.id + '" style="width:0%"></div></div>'
-            + '<span class="voice-time" id="vt_' + msg.id + '">' + durStr + '</span>'
-            + '</div>'
-            + '</div>';
+          const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
+          content += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
         }
         // Text
         if (msg.message) {
@@ -3315,8 +3159,7 @@
 
       if (msg.reply_to) {
         const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
-        const rpText = msg.reply_to.message || 'Image';
-        content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(rpText) + '</div></div>';
+        content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
       }
 
       if (msg.deleted) {
@@ -3326,16 +3169,8 @@
           content += '<div class="message-image" onclick="openLightbox(\'' + msg.image + '\')"><img src="' + msg.image + '" alt="Image" loading="lazy"></div>';
         }
         if (msg.voice) {
-          const durStr = formatDuration(msg.voice_duration || 0);
-          content += '<div class="voice-message">'
-            + '<button class="voice-play-btn" onclick="event.stopPropagation();toggleVoicePlay(\'' + msg.id + '\',\'' + msg.voice + '\')">'
-            + '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="6,4 20,12 6,20"/></svg>'
-            + '</button>'
-            + '<div class="voice-progress">'
-            + '<div class="voice-progress-track"><div class="voice-progress-fill" id="vpf_' + msg.id + '" style="width:0%"></div></div>'
-            + '<span class="voice-time" id="vt_' + msg.id + '">' + durStr + '</span>'
-            + '</div>'
-            + '</div>';
+          const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
+          content += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
         }
         if (msg.message) {
           content += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
@@ -3371,13 +3206,11 @@
       const input = document.getElementById('messageInput');
       const text = input.value.trim();
 
-      if (!text && !selectedFile && !recordedBlob) return;
+      if (!text && !selectedFile) return;
       if (!selectedUserId) return;
 
       const convId = [myId, selectedUserId].sort().join('_');
       let imageUrl = null;
-      let voiceUrl = null;
-      let voiceDur = 0;
 
       if (selectedFile) {
         try {
@@ -3388,19 +3221,6 @@
           console.error('Upload error:', err);
         }
         removeImage();
-      }
-
-      if (recordedBlob) {
-        try {
-          voiceDur = recordedDuration;
-          const ref = storage.ref('voice/' + Date.now() + '_' + myId + '.webm');
-          const snap = await ref.put(recordedBlob);
-          voiceUrl = await snap.ref.getDownloadURL();
-        } catch (err) {
-          console.error('Voice upload error:', err);
-        }
-        recordedBlob = null;
-        recordedDuration = 0;
       }
 
       const msgData = {
@@ -3414,14 +3234,10 @@
 
       if (text) msgData.message = text;
       if (imageUrl) msgData.image = imageUrl;
-      if (voiceUrl) {
-        msgData.voice = voiceUrl;
-        msgData.voice_duration = Math.round(voiceDur);
-      }
       if (replyToMsg) {
         msgData.reply_to = {
           id: replyToMsg.id,
-          message: replyToMsg.message || (replyToMsg.voice ? 'Voice' : 'Image'),
+          message: replyToMsg.message || 'Image',
           from: replyToMsg.from
         };
         cancelReply();
@@ -3433,8 +3249,7 @@
       if (typeof sendTelegramAlert === 'function') {
         const toUser = allUsers.find(u => u.id === selectedUserId);
         const toName = toUser ? toUser.name : 'Admin';
-        const label = text ? text : (voiceUrl ? '[Voice]' : '[Image]');
-        sendTelegramAlert(myName, label, new Date().toLocaleString('en-IN'), toName);
+        sendTelegramAlert(myName, text || '[Image]', new Date().toLocaleString('en-IN'), toName);
       }
 
       input.value = '';
@@ -3627,148 +3442,12 @@
       if (!document.getElementById('messageInput').value.trim()) hideSendBtn();
     }
 
-    // ==================== VOICE ====================
-    function formatDuration(sec) {
-      if (!sec || isNaN(sec)) return '0:00';
-      const m = Math.floor(sec / 60);
-      const s = Math.floor(sec % 60);
-      return m + ':' + (s < 10 ? '0' : '') + s;
-    }
-
-    async function startRecording() {
-      if (isRecording || !selectedUserId) return;
-      recordedBlob = null;
-      recordedDuration = 0;
-      try {
-        voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : 'audio/webm';
-        mediaRecorder = new MediaRecorder(voiceStream, { mimeType });
-        audioChunks = [];
-        isRecording = true;
-        recordingStartTime = Date.now();
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) audioChunks.push(e.data);
-        };
-
-        mediaRecorder.start(100);
-        document.getElementById('voiceBtn').classList.add('recording');
-        document.getElementById('voiceBtn').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
-        document.getElementById('recordingBar').classList.add('show');
-        document.getElementById('recTimer').textContent = '0:00';
-        recordingTimerInt = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-          document.getElementById('recTimer').textContent = formatDuration(elapsed);
-        }, 200);
-      } catch (err) {
-        console.error('Mic error:', err);
-        isRecording = false;
-      }
-    }
-
-    function stopRecording() {
-      if (!isRecording || !mediaRecorder) return;
-      isRecording = false;
-      clearInterval(recordingTimerInt);
-      document.getElementById('voiceBtn').classList.remove('recording');
-      document.getElementById('voiceBtn').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
-      document.getElementById('recordingBar').classList.remove('show');
-      mediaRecorder.onstop = () => {
-        recordedBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
-        recordedDuration = (Date.now() - recordingStartTime) / 1000;
-        if (voiceStream) {
-          voiceStream.getTracks().forEach(t => t.stop());
-          voiceStream = null;
-        }
-        const input = document.getElementById('messageInput');
-        if (input.value.trim() || selectedFile || recordedBlob) showSendBtn();
-      };
-      if (mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-    }
-
-    function cancelRecording() {
-      if (!isRecording || !mediaRecorder) return;
-      isRecording = false;
-      clearInterval(recordingTimerInt);
-      document.getElementById('voiceBtn').classList.remove('recording');
-      document.getElementById('voiceBtn').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
-      document.getElementById('recordingBar').classList.remove('show');
-      if (voiceStream) {
-        voiceStream.getTracks().forEach(t => t.stop());
-        voiceStream = null;
-      }
-      if (mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-      }
-      recordedBlob = null;
-      recordedDuration = 0;
-      if (document.getElementById('messageInput').value.trim() || selectedFile) showSendBtn(); else hideSendBtn();
-    }
-
-    function toggleVoicePlay(msgId, url) {
-      if (currentVoiceId === msgId && currentVoiceAudio && !currentVoiceAudio.paused) {
-        currentVoiceAudio.pause();
-        clearInterval(voiceProgressInt);
-        const btn = document.querySelector('[data-msg-id="' + msgId + '"] .voice-play-btn');
-        if (btn) btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="6,4 20,12 6,20"/></svg>';
-        return;
-      }
-
-      // Stop previous
-      if (currentVoiceAudio) {
-        currentVoiceAudio.pause();
-        clearInterval(voiceProgressInt);
-        if (currentVoiceId) {
-          const prevBtn = document.querySelector('[data-msg-id="' + currentVoiceId + '"] .voice-play-btn');
-          if (prevBtn) prevBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="6,4 20,12 6,20"/></svg>';
-          document.getElementById('vpf_' + currentVoiceId).style.width = '0%';
-        }
-      }
-
-      const audio = new Audio(url);
-      currentVoiceAudio = audio;
-      currentVoiceId = msgId;
-
-      const btn = document.querySelector('[data-msg-id="' + msgId + '"] .voice-play-btn');
-
-      audio.addEventListener('loadedmetadata', () => {
-        const dur = document.getElementById('vt_' + msgId);
-        if (dur) dur.textContent = '0:00 / ' + formatDuration(audio.duration);
-      });
-
-      audio.addEventListener('timeupdate', () => {
-        const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
-        const fill = document.getElementById('vpf_' + msgId);
-        if (fill) fill.style.width = pct + '%';
-        const dur = document.getElementById('vt_' + msgId);
-        if (dur) dur.textContent = formatDuration(audio.currentTime) + ' / ' + formatDuration(audio.duration);
-      });
-
-      audio.addEventListener('ended', () => {
-        clearInterval(voiceProgressInt);
-        const fill = document.getElementById('vpf_' + msgId);
-        if (fill) fill.style.width = '100%';
-        const dur = document.getElementById('vt_' + msgId);
-        if (dur) dur.textContent = formatDuration(audio.duration);
-        if (btn) btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><polygon points="6,4 20,12 6,20"/></svg>';
-        currentVoiceId = null;
-        currentVoiceAudio = null;
-      });
-
-      audio.play().catch(() => {});
-      if (btn) btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-    }
-
     // ==================== UI HELPERS ====================
     function autoResize(el) {
       el.style.height = 'auto';
       el.style.height = Math.min(el.scrollHeight, 100) + 'px';
       const v = el.value.trim();
-      if (v || selectedFile || recordedBlob) showSendBtn(); else hideSendBtn();
+      if (v || selectedFile) showSendBtn(); else hideSendBtn();
     }
 
     function showSendBtn() { document.getElementById('sendBtn').classList.add('show'); }
@@ -3783,6 +3462,39 @@
       const d = document.createElement('div');
       d.textContent = text;
       return d.innerHTML;
+    }
+
+    function formatDuration(sec) {
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return m + ':' + String(s).padStart(2, '0');
+    }
+
+    let voiceAudio = null;
+    let voicePlayingEl = null;
+    function playVoiceMsg(el, url) {
+      if (voicePlayingEl && voicePlayingEl !== el) {
+        voicePlayingEl.classList.remove('playing');
+        if (voiceAudio) { voiceAudio.pause(); voiceAudio = null; }
+      }
+      if (voicePlayingEl === el && voiceAudio && !voiceAudio.paused) {
+        voiceAudio.pause();
+        el.classList.remove('playing');
+        voicePlayingEl = null;
+        return;
+      }
+      if (voiceAudio && voicePlayingEl === el) {
+        voiceAudio.currentTime = 0;
+        voiceAudio.play();
+        el.classList.add('playing');
+        return;
+      }
+      const audio = new Audio(url);
+      audio.onended = () => { el.classList.remove('playing'); voicePlayingEl = null; voiceAudio = null; };
+      audio.play();
+      voiceAudio = audio;
+      voicePlayingEl = el;
+      el.classList.add('playing');
     }
 
     function openLightbox(src) {
@@ -4064,15 +3776,6 @@
       }
     });
 
-    // Voice button: tap to start recording, tap again to stop
-    document.getElementById('voiceBtn').addEventListener('click', () => {
-      if (isRecording) {
-        stopRecording();
-      } else {
-        startRecording();
-      }
-    });
-
     // ==================== CALL FEATURE ====================
     function updCallBtn() {
       const btns = document.querySelectorAll('.call-actions .call-btn');
@@ -4208,7 +3911,7 @@
       const user = allUsers.find(u => u.id === data.from);
       const name = user ? user.name : 'Unknown';
       const initial = (user ? user.name : 'U').charAt(0).toUpperCase();
-      const text = data.message || (data.image ? 'Photo' : 'New message');
+      const text = data.message || (data.image ? 'Photo' : (data.voice ? 'Voice message' : 'New message'));
       const t = document.getElementById('toast');
       document.getElementById('toastAvatar').textContent = initial;
       document.getElementById('toastTitle').textContent = name;
