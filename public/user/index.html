@@ -2959,6 +2959,25 @@
     }
     .dm-switch input:checked + .dm-slider { background: var(--ios-green); }
     .dm-switch input:checked + .dm-slider::before { transform: translateX(20px); }
+
+    .img-download-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: none;
+      background: var(--ios-blue);
+      color: white;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .img-download-btn:active { opacity: 0.7; }
+    .img-download-btn.loading { opacity: 0.6; pointer-events: none; }
+    .img-download-btn.loading svg { animation: dlSpin 0.8s linear infinite; }
+    @keyframes dlSpin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -3381,8 +3400,14 @@
 
   <!-- Image Viewer Lightbox -->
   <div class="logo-picker-overlay" id="imgViewerOverlay" onclick="closeImgViewer()" style="background:rgba(0,0,0,0.85);">
-    <div style="max-width:90%;max-height:90%;display:flex;align-items:center;justify-content:center;">
-      <img id="imgViewerImg" src="" style="max-width:100%;max-height:90vh;border-radius:8px;">
+    <div style="max-width:90%;max-height:90%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+      <img id="imgViewerImg" src="" style="max-width:100%;max-height:80vh;border-radius:8px;">
+      <button class="img-download-btn" id="imgDownloadBtn" onclick="downloadViewerImage()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span id="imgDownloadLabel">Download</span>
+      </button>
     </div>
   </div>
 
@@ -5392,6 +5417,33 @@
     function openImgViewer(url) {
       document.getElementById('imgViewerImg').src = url;
       document.getElementById('imgViewerOverlay').style.display = 'flex';
+      document.getElementById('imgDownloadBtn').classList.remove('loading');
+      document.getElementById('imgDownloadLabel').textContent = 'Download';
+    }
+    async function downloadViewerImage() {
+      const url = document.getElementById('imgViewerImg').src;
+      if (!url) return;
+      const btn = document.getElementById('imgDownloadBtn');
+      const label = document.getElementById('imgDownloadLabel');
+      btn.classList.add('loading');
+      label.textContent = 'Downloading...';
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'image_' + Date.now() + '.' + (blob.type.split('/')[1] || 'jpg');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+        label.textContent = 'Downloaded';
+        setTimeout(() => { btn.classList.remove('loading'); label.textContent = 'Download'; }, 2000);
+      } catch (err) {
+        label.textContent = 'Failed';
+        btn.classList.remove('loading');
+        setTimeout(() => { label.textContent = 'Download'; }, 2000);
+      }
     }
     function closeImgViewer() {
       document.getElementById('imgViewerOverlay').style.display = 'none';
