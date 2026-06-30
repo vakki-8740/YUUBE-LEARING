@@ -2677,28 +2677,91 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      padding: 14px;
+      padding: 18px;
       background: var(--ios-blue);
       color: white;
       border: none;
-      border-radius: 12px;
-      font-size: 16px;
+      border-radius: 14px;
+      font-size: 17px;
       font-weight: 600;
       cursor: pointer;
-      margin-bottom: 12px;
+      width: 100%;
+      transition: transform 0.15s, background 0.2s;
     }
     .vp-record-btn:active { transform: scale(0.97); }
-    .vp-record-btn.recording { background: var(--ios-red); animation: pulse 1s infinite; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
     .vp-empty {
       text-align: center;
-      padding: 40px 0;
+      padding: 30px 0;
       color: var(--ios-gray);
       font-size: 14px;
     }
+
+    /* Recording UI */
+    .vp-rec-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ios-red);
+      margin-bottom: 8px;
+    }
+    .vp-rec-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--ios-red);
+      animation: vpPulse 0.8s infinite;
+    }
+    @keyframes vpPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+    .vp-preview-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 20px 0;
+    }
+    .vp-preview-play {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: var(--ios-blue);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .vp-preview-play:active { transform: scale(0.9); }
+    .vp-preview-play.playing { background: var(--ios-red); }
+    .vp-preview-time {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .vp-preview-label {
+      font-size: 12px;
+      color: var(--ios-gray);
+    }
+    .vp-send-rec-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 24px;
+      border: none;
+      background: var(--ios-green);
+      color: white;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .vp-send-rec-btn:active { transform: scale(0.95); }
 
     .vp-msg {
       padding: 8px 12px !important;
@@ -3137,26 +3200,54 @@
   <div class="vp-overlay" id="vpOverlay" onclick="if(event.target===this)closeVoicePackPicker()">
     <div class="vp-sheet">
       <div class="vp-sheet-header">
-        <span class="vp-sheet-title">Voice Packs</span>
+        <span class="vp-sheet-title">Voice Pack</span>
         <button class="vp-sheet-close" onclick="closeVoicePackPicker()">✕</button>
       </div>
+
+      <!-- Recording Area -->
       <div id="vpRecordSection">
-        <button class="vp-record-btn" id="vpRecordBtn" onclick="toggleVoiceRecording()">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
-          Record New
-        </button>
+        <div id="vpIdleUI">
+          <button class="vp-record-btn" id="vpRecordBtn" onclick="startVoiceRecording()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+            Tap to Record
+          </button>
+        </div>
         <div id="vpRecordingUI" style="display:none;">
+          <div class="vp-rec-indicator" id="vpRecIndicator">
+            <span class="vp-rec-dot"></span>
+            <span>Recording</span>
+          </div>
           <div class="vp-timer" id="vpTimer">0:00</div>
           <div class="vp-record-controls">
             <button class="vp-cancel-btn" onclick="cancelVoiceRecording()">Cancel</button>
-            <button class="vp-stop-btn" onclick="stopVoiceRecording()">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            <button class="vp-stop-btn" id="vpStopBtn" onclick="stopVoiceRecording()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="vpPreviewUI" style="display:none;">
+          <div class="vp-preview-wrap">
+            <button class="vp-preview-play" id="vpPreviewPlay" onclick="previewRecording()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <span class="vp-preview-time" id="vpPreviewTime">0:00</span>
+            <span class="vp-preview-label">Preview</span>
+          </div>
+          <div class="vp-record-controls">
+            <button class="vp-cancel-btn" onclick="discardRecording()">Discard</button>
+            <button class="vp-send-rec-btn" id="vpSendRecBtn" onclick="sendRecording()">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+              Send
             </button>
           </div>
         </div>
       </div>
+
+      <div style="height:1px;background:var(--ios-separator);margin:8px 0;"></div>
+
+      <!-- Library -->
       <div class="vp-list" id="vpList">
-        <div class="vp-empty">No voice packs yet. Tap "Record New" to create one.</div>
+        <div class="vp-empty">No voice packs yet. Tap to record one.</div>
       </div>
     </div>
   </div>
@@ -4859,6 +4950,9 @@
     let recordedChunks = [];
     let recordingStartTime = null;
     let recordingTimer = null;
+    let lastRecordingBlob = null;
+    let lastRecordingDuration = 0;
+    let vpPreviewAudio = null;
     let vpAudio = null;
     let vpPlayingEl = null;
 
@@ -4870,7 +4964,19 @@
 
     function closeVoicePackPicker() {
       document.getElementById('vpOverlay').classList.remove('show');
-      cancelVoiceRecording();
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
+        mediaRecorder = null;
+      }
+      if (recordingTimer) clearInterval(recordingTimer);
+      if (vpPreviewAudio) { vpPreviewAudio.pause(); vpPreviewAudio = null; }
+      recordedChunks = [];
+      lastRecordingBlob = null;
+      document.getElementById('vpRecordingUI').style.display = 'none';
+      document.getElementById('vpPreviewUI').style.display = 'none';
+      document.getElementById('vpIdleUI').style.display = 'block';
+      document.getElementById('vpPreviewPlay').classList.remove('playing');
+      document.getElementById('vpPreviewPlay').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
     }
 
     async function loadVoicePacks() {
@@ -5038,42 +5144,37 @@
       scrollToBottom();
     }
 
-    async function toggleVoiceRecording() {
-      const btn = document.getElementById('vpRecordBtn');
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        stopVoiceRecording();
-        return;
-      }
+    async function startVoiceRecording() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         recordedChunks = [];
+        lastRecordingBlob = null;
         mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         mediaRecorder.ondataavailable = (e) => {
           if (e.data.size > 0) recordedChunks.push(e.data);
         };
-        mediaRecorder.onstop = async () => {
+        mediaRecorder.onstop = () => {
           stream.getTracks().forEach(t => t.stop());
-          const duration = Math.floor((Date.now() - recordingStartTime) / 1000);
-          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-          await uploadVoicePack(blob, duration);
+          lastRecordingDuration = Math.floor((Date.now() - recordingStartTime) / 1000);
+          lastRecordingBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+          showPreviewUI();
         };
         mediaRecorder.start();
         recordingStartTime = Date.now();
-        btn.classList.add('recording');
-        btn.innerHTML = 'Recording...';
-        document.getElementById('vpRecordSection').style.display = 'none';
+        document.getElementById('vpIdleUI').style.display = 'none';
         document.getElementById('vpRecordingUI').style.display = 'block';
-        startRecordingTimer();
+        startRecTimer();
       } catch (err) {
         alert('Microphone access is required to record voice packs.');
       }
     }
 
-    function startRecordingTimer() {
+    function startRecTimer() {
       const el = document.getElementById('vpTimer');
       if (recordingTimer) clearInterval(recordingTimer);
       recordingTimer = setInterval(() => {
         const sec = Math.floor((Date.now() - recordingStartTime) / 1000);
+        if (sec >= 300) stopVoiceRecording();
         el.textContent = formatDuration(sec);
       }, 200);
     }
@@ -5083,9 +5184,6 @@
         mediaRecorder.stop();
         if (recordingTimer) clearInterval(recordingTimer);
         document.getElementById('vpRecordingUI').style.display = 'none';
-        document.getElementById('vpRecordSection').style.display = 'block';
-        document.getElementById('vpRecordBtn').classList.remove('recording');
-        document.getElementById('vpRecordBtn').innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg> Record New';
       }
     }
 
@@ -5096,23 +5194,81 @@
       }
       if (recordingTimer) clearInterval(recordingTimer);
       recordedChunks = [];
+      lastRecordingBlob = null;
       document.getElementById('vpRecordingUI').style.display = 'none';
-      document.getElementById('vpRecordSection').style.display = 'block';
-      document.getElementById('vpRecordBtn').classList.remove('recording');
-      document.getElementById('vpRecordBtn').innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg> Record New';
+      document.getElementById('vpIdleUI').style.display = 'block';
     }
 
-    async function uploadVoicePack(blob, duration) {
-      const formData = new FormData();
-      formData.append('audio', blob, 'recording.webm');
-      formData.append('userId', myId);
-      formData.append('duration', duration);
-      formData.append('title', 'Voice Pack ' + new Date().toLocaleString());
+    function showPreviewUI() {
+      document.getElementById('vpPreviewUI').style.display = 'block';
+      document.getElementById('vpPreviewTime').textContent = formatDuration(lastRecordingDuration);
+    }
+
+    function discardRecording() {
+      if (vpPreviewAudio) { vpPreviewAudio.pause(); vpPreviewAudio = null; }
+      lastRecordingBlob = null;
+      lastRecordingDuration = 0;
+      recordedChunks = [];
+      document.getElementById('vpPreviewUI').style.display = 'none';
+      document.getElementById('vpIdleUI').style.display = 'block';
+      document.getElementById('vpPreviewPlay').classList.remove('playing');
+      document.getElementById('vpPreviewPlay').innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    }
+
+    function previewRecording() {
+      if (!lastRecordingBlob) return;
+      const btn = document.getElementById('vpPreviewPlay');
+      if (vpPreviewAudio && !vpPreviewAudio.paused) {
+        vpPreviewAudio.pause();
+        btn.classList.remove('playing');
+        btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+        return;
+      }
+      if (!vpPreviewAudio) {
+        const url = URL.createObjectURL(lastRecordingBlob);
+        vpPreviewAudio = new Audio(url);
+        vpPreviewAudio.onended = () => {
+          btn.classList.remove('playing');
+          btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+          vpPreviewAudio = null;
+        };
+      }
+      vpPreviewAudio.play();
+      btn.classList.add('playing');
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+    }
+
+    async function sendRecording() {
+      if (!lastRecordingBlob || !selectedUserId) return;
+      if (vpPreviewAudio) { vpPreviewAudio.pause(); vpPreviewAudio = null; }
+      document.getElementById('vpSendRecBtn').disabled = true;
+      document.getElementById('vpSendRecBtn').textContent = 'Sending...';
       try {
-        await fetch(VP_API + '/api/voice-packs/upload', { method: 'POST', body: formData });
-        loadVoicePacks();
+        const formData = new FormData();
+        formData.append('audio', lastRecordingBlob, 'recording.webm');
+        formData.append('userId', myId);
+        formData.append('duration', lastRecordingDuration);
+        formData.append('title', 'Voice ' + new Date().toLocaleTimeString());
+        const res = await fetch(VP_API + '/api/voice-packs/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        const convId = [myId, selectedUserId].sort().join('_');
+        const msgData = {
+          conversation: convId, from: myId, to: selectedUserId,
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+          edited: false, deleted: false,
+          voice_pack: { id: data.id, url: VP_API + data.url, duration: data.duration }
+        };
+        if (replyToMsg) {
+          msgData.reply_to = { id: replyToMsg.id, message: replyToMsg.message || 'Image', from: replyToMsg.from };
+          cancelReply();
+        }
+        await db.collection('messages').add(msgData);
+        closeVoicePackPicker();
+        scrollToBottom();
       } catch (err) {
-        alert('Failed to upload voice pack. Check server connection.');
+        alert('Failed to send voice pack. Check server connection.');
+        document.getElementById('vpSendRecBtn').disabled = false;
+        document.getElementById('vpSendRecBtn').innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send';
       }
     }
   </script>
