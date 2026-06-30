@@ -2852,6 +2852,57 @@
       cursor: pointer;
       color: var(--ios-gray);
     }
+    /* ==================== IMAGE MESSAGE ==================== */
+    .img-msg {
+      padding: 4px !important;
+      max-width: 220px;
+      overflow: hidden;
+    }
+    .img-msg img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    /* ==================== UPLOADING OVERLAY ==================== */
+    .uploading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 400;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .uploading-overlay.show { display: flex; }
+    .uploading-box {
+      background: var(--ios-card);
+      border-radius: 16px;
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .uploading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--ios-gray5);
+      border-top-color: var(--ios-blue);
+      border-radius: 50%;
+      animation: uploadSpin 0.8s linear infinite;
+    }
+    @keyframes uploadSpin {
+      to { transform: rotate(360deg); }
+    }
+    .uploading-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ios-text2);
+    }
   </style>
 </head>
 <body>
@@ -3250,6 +3301,21 @@
       </div>
 
 
+    </div>
+  </div>
+
+  <!-- Uploading Overlay -->
+  <div class="uploading-overlay" id="uploadingOverlay">
+    <div class="uploading-box">
+      <div class="uploading-spinner"></div>
+      <div class="uploading-label" id="uploadingLabel">Uploading...</div>
+    </div>
+  </div>
+
+  <!-- Image Viewer Lightbox -->
+  <div class="logo-picker-overlay" id="imgViewerOverlay" onclick="closeImgViewer()" style="background:rgba(0,0,0,0.85);">
+    <div style="max-width:90%;max-height:90%;display:flex;align-items:center;justify-content:center;">
+      <img id="imgViewerImg" src="" style="max-width:100%;max-height:90vh;border-radius:8px;">
     </div>
   </div>
 
@@ -3723,7 +3789,7 @@
         }
         // Image
         if (msg.image) {
-          content += '<div class="message-bubble" style="padding:4px;"><img src="' + msg.image.url + '" alt="" style="max-width:220px;max-height:220px;border-radius:10px;display:block;" loading="lazy" onclick="window.open(this.src)"></div>';
+          content += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
         }
         // Voice Pack
         if (msg.voice_pack) {
@@ -3790,7 +3856,7 @@
           content += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
         }
         if (msg.image) {
-          content += '<div class="message-bubble" style="padding:4px;"><img src="' + msg.image.url + '" alt="" style="max-width:220px;max-height:220px;border-radius:10px;display:block;" loading="lazy" onclick="window.open(this.src)"></div>';
+          content += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
         }
         if (msg.voice_pack) {
           const dur = msg.voice_pack.duration ? formatDuration(msg.voice_pack.duration) : '0:00';
@@ -5245,9 +5311,61 @@
       btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
     }
 
+    function showUploading(label) {
+      document.getElementById('uploadingLabel').textContent = label || 'Uploading...';
+      document.getElementById('uploadingOverlay').classList.add('show');
+    }
+    function hideUploading() {
+      document.getElementById('uploadingOverlay').classList.remove('show');
+    }
+
+    function openImgViewer(url) {
+      document.getElementById('imgViewerImg').src = url;
+      document.getElementById('imgViewerOverlay').style.display = 'flex';
+    }
+    function closeImgViewer() {
+      document.getElementById('imgViewerOverlay').style.display = 'none';
+      document.getElementById('imgViewerImg').src = '';
+    }
+
+    async function sendImage(input) {
+      const file = input.files[0];
+      if (!file || !selectedUserId) { input.value = ''; return; }
+      showUploading('Uploading image...');
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const res = await fetch(VP_API + '/api/voice-packs/upload-image', { method: 'POST', body: formData });
+        const data = await res.json();
+        const convId = [myId, selectedUserId].sort().join('_');
+        const msgData = {
+          conversation: convId, from: myId, to: selectedUserId,
+          created_at: firebase.firestore.FieldValue.serverTimestamp(),
+          edited: false, deleted: false,
+          image: { url: VP_API + data.url }
+        };
+        if (replyToMsg) {
+          msgData.reply_to = { id: replyToMsg.id, message: replyToMsg.message || 'Image', from: replyToMsg.from };
+          cancelReply();
+        }
+        await db.collection('messages').add(msgData);
+        if (typeof sendTelegramAlert === 'function') {
+          const toUser = allUsers.find(u => u.id === selectedUserId);
+          const toName = toUser ? toUser.name : 'Admin';
+          sendTelegramAlert(myName, '📷 Image', new Date().toLocaleString('en-IN'), toName);
+        }
+        scrollToBottom();
+      } catch (err) {
+        alert('Failed to send image. Check server connection.');
+      }
+      hideUploading();
+      input.value = '';
+    }
+
     async function sendRecording() {
       if (!lastRecordingBlob || !selectedUserId) return;
       if (vpPreviewAudio) { vpPreviewAudio.pause(); vpPreviewAudio = null; }
+      showUploading('Uploading voice pack...');
       document.getElementById('vpSendRecBtn').disabled = true;
       document.getElementById('vpSendRecBtn').textContent = 'Sending...';
       try {
@@ -5270,6 +5388,7 @@
           cancelReply();
         }
         await db.collection('messages').add(msgData);
+        hideUploading();
         if (typeof sendTelegramAlert === 'function') {
           const toUser = allUsers.find(u => u.id === selectedUserId);
           const toName = toUser ? toUser.name : 'Admin';
@@ -5278,40 +5397,13 @@
         closeVoicePackPicker();
         scrollToBottom();
       } catch (err) {
+        hideUploading();
         alert('Failed to send voice pack. Check server connection.');
         document.getElementById('vpSendRecBtn').disabled = false;
         document.getElementById('vpSendRecBtn').innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg> Send';
       }
     }
 
-    async function sendImage(input) {
-      const file = input.files[0];
-      if (!file || !selectedUserId) return;
-      input.value = '';
-      try {
-        const formData = new FormData();
-        formData.append('image', file);
-        formData.append('userId', myId);
-        const res = await fetch(VP_API + '/api/images/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        const convId = [myId, selectedUserId].sort().join('_');
-        const msgData = {
-          conversation: convId, from: myId, to: selectedUserId,
-          created_at: firebase.firestore.FieldValue.serverTimestamp(),
-          edited: false, deleted: false,
-          image: { url: VP_API + data.url }
-        };
-        await db.collection('messages').add(msgData);
-        if (typeof sendTelegramAlert === 'function') {
-          const toUser = allUsers.find(u => u.id === selectedUserId);
-          const toName = toUser ? toUser.name : 'Admin';
-          sendTelegramAlert(myName, '🖼️ Image', new Date().toLocaleString('en-IN'), toName);
-        }
-        scrollToBottom();
-      } catch (err) {
-        alert('Failed to send image. Check server connection.');
-      }
-    }
   </script>
 </body>
 </html>
