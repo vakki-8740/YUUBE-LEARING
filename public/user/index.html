@@ -3243,12 +3243,7 @@
         </div>
       </div>
 
-      <div style="height:1px;background:var(--ios-separator);margin:8px 0;"></div>
 
-      <!-- Library -->
-      <div class="vp-list" id="vpList">
-        <div class="vp-empty">No voice packs yet. Tap to record one.</div>
-      </div>
     </div>
   </div>
 
@@ -4959,7 +4954,6 @@
     function openVoicePackPicker() {
       if (!selectedUserId) return;
       document.getElementById('vpOverlay').classList.add('show');
-      loadVoicePacks();
     }
 
     function closeVoicePackPicker() {
