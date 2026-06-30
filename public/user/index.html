@@ -32,6 +32,23 @@
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
 
+    [data-theme="dark"] {
+      --ios-blue: #0A84FF;
+      --ios-green: #30D158;
+      --ios-red: #FF453A;
+      --ios-gray: #8E8E93;
+      --ios-gray2: #636366;
+      --ios-gray3: #48484A;
+      --ios-gray4: #3A3A3C;
+      --ios-gray5: #2C2C2E;
+      --ios-gray6: #1C1C1E;
+      --ios-bg: #000000;
+      --ios-card: #1C1C1E;
+      --ios-text: #FFFFFF;
+      --ios-text2: #EBEBF5;
+      --ios-separator: rgba(84, 84, 88, 0.36);
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
       background: var(--ios-bg);
@@ -2903,6 +2920,38 @@
       font-weight: 600;
       color: var(--ios-text2);
     }
+
+    /* ==================== DARK MODE TOGGLE ==================== */
+    .dm-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .dm-switch input { opacity: 0; width: 0; height: 0; }
+    .dm-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--ios-gray4);
+      border-radius: 28px;
+      transition: background 0.2s;
+    }
+    .dm-slider::before {
+      content: '';
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      left: 2px;
+      bottom: 2px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .dm-switch input:checked + .dm-slider { background: var(--ios-green); }
+    .dm-switch input:checked + .dm-slider::before { transform: translateX(20px); }
   </style>
 </head>
 <body>
@@ -3087,6 +3136,17 @@
             </svg>
             Log Out
           </button>
+
+          <div class="profile-section">
+            <div class="ps-label">Appearance</div>
+            <div class="profile-input-group" style="display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:15px;color:var(--ios-text);">Dark Mode</span>
+              <label class="dm-switch">
+                <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode(this.checked)">
+                <span class="dm-slider"></span>
+              </label>
+            </div>
+          </div>
 
           <div class="profile-section">
             <div class="ps-label">Change Password</div>
@@ -3362,6 +3422,8 @@
       appId: "1:191123388943:web:2a352c0912c015e5e1017a"
     });
 
+    initDarkMode();
+
     const db = firebase.firestore();
     const storage = firebase.storage();
 
@@ -3582,6 +3644,7 @@
       listenForIncomingCalls();
       listenNewMsgNotifications();
       listenBroadcast();
+      initDarkMode();
     }
 
     function setAvatarImg(elId, url) {
@@ -4209,6 +4272,25 @@
           }
         }
       });
+    }
+
+    function initDarkMode() {
+      const saved = localStorage.getItem('darkMode') === 'true';
+      if (saved) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        const toggle = document.getElementById('darkModeToggle');
+        if (toggle) toggle.checked = true;
+      }
+    }
+
+    function toggleDarkMode(enabled) {
+      if (enabled) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('darkMode', 'true');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('darkMode', 'false');
+      }
     }
 
     function copyCurrentPass() {
