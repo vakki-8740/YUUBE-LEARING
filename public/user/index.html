@@ -5231,6 +5231,7 @@
       }
 
       vpChatAudio = new Audio(url);
+      vpChatAudio.crossOrigin = 'anonymous';
       vpChatWrapper = wrapper;
       vpChatIcon = iconEl;
       vpChatTime = timeEl;
@@ -5245,7 +5246,16 @@
         vpChatWrapper = null;
       };
 
-      vpChatAudio.play();
+      vpChatAudio.onerror = () => {
+        iconEl.classList.remove('playing');
+        iconEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+        timeEl.textContent = 'Error / ' + formatDuration(duration);
+        if (vpChatInterval) clearInterval(vpChatInterval);
+        vpChatWrapper = null;
+        vpChatAudio = null;
+      };
+
+      vpChatAudio.play().catch(() => {});
       iconEl.classList.add('playing');
       iconEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
       startVpProgress(wrapper, timeEl, fillEl, duration);
