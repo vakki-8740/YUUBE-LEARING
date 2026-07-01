@@ -5150,9 +5150,8 @@
 
     function closeVoicePackPicker() {
       document.getElementById('vpOverlay').classList.remove('show');
-      if (mediaRecorder) {
-        try { if (mediaRecorder.state !== 'inactive') mediaRecorder.stop(); } catch(e) {}
-        if (mediaRecorder.stream) mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
         mediaRecorder = null;
       }
       if (recordingTimer) clearInterval(recordingTimer);
@@ -5388,9 +5387,8 @@
     }
 
     function cancelVoiceRecording() {
-      if (mediaRecorder) {
-        try { if (mediaRecorder.state !== 'inactive') mediaRecorder.stop(); } catch(e) {}
-        if (mediaRecorder.stream) mediaRecorder.stream.getTracks().forEach(t => t.stop());
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stream.getTracks().forEach(t => t.stop());
         mediaRecorder = null;
       }
       if (recordingTimer) clearInterval(recordingTimer);
