@@ -5324,6 +5324,7 @@
       await db.collection('messages').add(msgData);
       closeVoicePackPicker();
       scrollToBottom();
+      location.reload();
     }
 
     function getAudioOpts() {
@@ -5545,6 +5546,7 @@
         }
         closeVoicePackPicker();
         scrollToBottom();
+        location.reload();
       } catch (err) {
         hideUploading();
         alert('Failed to send voice pack. Check server connection.');
