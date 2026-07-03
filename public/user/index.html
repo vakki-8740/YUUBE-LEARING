@@ -2663,7 +2663,10 @@
     .voice-progress-fill { height: 100%; background: var(--ios-blue); border-radius: 2px; width: 0%; transition: width 0.2s; }
     .voice-progress-label { font-size: 12px; color: var(--ios-gray); text-align: center; }
 
-    .voice-list-header { font-size: 13px; font-weight: 600; color: var(--ios-gray); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px; }
+    .voice-list-header { font-size: 13px; font-weight: 600; color: var(--ios-gray); text-transform: uppercase; letter-spacing: 0.5px; padding: 0 4px; display: flex; align-items: center; justify-content: space-between; }
+    .voice-refresh-btn { width: 32px; height: 32px; border: none; background: var(--ios-gray5); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ios-blue); transition: transform 0.2s, background 0.2s; }
+    .voice-refresh-btn:hover { background: var(--ios-gray3); }
+    .voice-refresh-btn:active { transform: scale(0.9); }
     .voice-list { display: flex; flex-direction: column; gap: 10px; }
     .voice-empty { text-align: center; padding: 40px 0; color: var(--ios-gray); font-size: 14px; }
     .voice-card {
@@ -3033,7 +3036,15 @@
               </div>
             </div>
           </div>
-          <div class="voice-list-header">All Recordings</div>
+          <div class="voice-list-header">
+            All Recordings
+            <button class="voice-refresh-btn" onclick="loadVoiceRecordings()" title="Refresh">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              </svg>
+            </button>
+          </div>
           <div class="voice-list" id="voiceList">
             <div class="voice-empty" id="voiceEmpty">No recordings yet. Tap the mic to record your first voice.</div>
           </div>
