@@ -53,6 +53,10 @@
     max-width: 85%;
   }
 
+  .message-wrapper {
+    max-width: 85%;
+  }
+
   .messages-area {
     padding: 12px 12px;
   }
@@ -153,6 +157,10 @@
     max-width: 90%;
     font-size: 15px;
     padding: 8px 12px;
+  }
+
+  .message-wrapper {
+    max-width: 90%;
   }
 
   .user-item {

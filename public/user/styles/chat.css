@@ -133,6 +133,8 @@
 /* ==================== MESSAGES ==================== */
 .messages-area {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -150,6 +152,7 @@
   margin-bottom: 8px;
   animation: msgIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
+  max-width: 80%;
 }
 
 @keyframes msgIn {
@@ -158,10 +161,12 @@
 }
 
 .message-wrapper.own {
+  align-self: flex-end;
   align-items: flex-end;
 }
 
 .message-wrapper.other {
+  align-self: flex-start;
   align-items: flex-start;
 }
 
@@ -287,6 +292,7 @@
   border-bottom-left-radius: 4px;
   margin-bottom: 8px;
   width: fit-content;
+  align-self: flex-start;
   align-items: center;
 }
 
@@ -337,6 +343,7 @@
   border-bottom-left-radius: 4px;
   margin-bottom: 8px;
   width: fit-content;
+  align-self: flex-start;
   align-items: center;
   gap: 6px;
 }
