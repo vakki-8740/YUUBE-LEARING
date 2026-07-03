@@ -5501,13 +5501,12 @@
           const avatar = (user && user.photoURL) ? '<img src="' + user.photoURL + '">' : initial;
           const isOwner = r.user_id === myId;
           const timeAgo = r.created_at ? getTimeAgo(new Date(r.created_at + 'Z')) : '';
-          const createdDate = r.created_at ? new Date(r.created_at + 'Z') : null;
-          const isRecent = createdDate && (Date.now() - createdDate.getTime()) < 24 * 60 * 60 * 1000;
-          return '<div class="voice-card' + (isRecent ? ' is-recent' : '') + '" data-id="' + r.id + '">' +
+          const listened = getListenedVoices().includes(r.id);
+          return '<div class="voice-card' + (!listened ? ' is-recent' : '') + '" data-id="' + r.id + '">' +
             '<div class="voice-card-header">' +
               '<div class="voice-card-avatar">' + avatar + '</div>' +
               '<div class="voice-card-info">' +
-                '<div class="voice-card-name">' + escapeHtml(name) + (isRecent ? '<span class="voice-new-badge">NEW</span>' : '') + '</div>' +
+                '<div class="voice-card-name">' + escapeHtml(name) + (!listened ? '<span class="voice-new-badge">NEW</span>' : '') + '</div>' +
                 '<div class="voice-card-time">' + timeAgo + '</div>' +
               '</div>' +
               (isOwner ? '<button class="voice-card-delete" onclick="deleteVoiceRecording(\'' + r.id + '\')" title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' : '') +
@@ -5533,6 +5532,7 @@
       const bar = card.querySelector('.voice-card-bar');
       const fill = card.querySelector('.voice-card-bar-fill');
       const dur = parseFloat(bar.dataset.dur) || 0;
+      const recId = card.dataset.id;
       if (voiceCardAudio && voiceCardPlayEl === btn && !voiceCardAudio.paused) {
         voiceCardAudio.pause();
         btn.classList.remove('playing');
@@ -5568,6 +5568,7 @@
         voiceCardPlayEl = null;
       };
       voiceCardAudio.play();
+      markVoiceListened(recId);
       btn.classList.add('playing');
       btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
       startVoiceCardProgress(bar, fill, dur);
@@ -5612,6 +5613,24 @@
       const days = Math.floor(hours / 24);
       if (days < 7) return days + 'd ago';
       return date.toLocaleDateString();
+    }
+
+    function getListenedVoices() {
+      try { return JSON.parse(localStorage.getItem('listenedVoices') || '[]'); } catch(e) { return []; }
+    }
+
+    function markVoiceListened(id) {
+      const listened = getListenedVoices();
+      if (!listened.includes(id)) {
+        listened.push(id);
+        localStorage.setItem('listenedVoices', JSON.stringify(listened));
+      }
+      const card = document.querySelector('.voice-card[data-id="' + id + '"]');
+      if (card) {
+        card.classList.remove('is-recent');
+        const badge = card.querySelector('.voice-new-badge');
+        if (badge) badge.remove();
+      }
     }
 
 
