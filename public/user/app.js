@@ -192,25 +192,6 @@ function loadProfile() {
   });
 }
 
-function initDarkMode() {
-  const saved = localStorage.getItem('darkMode') === 'true';
-  if (saved) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    const toggle = document.getElementById('darkModeToggle');
-    if (toggle) toggle.checked = true;
-  }
-}
-
-function toggleDarkMode(enabled) {
-  if (enabled) {
-    document.documentElement.setAttribute('data-theme', 'dark');
-    localStorage.setItem('darkMode', 'true');
-  } else {
-    document.documentElement.removeAttribute('data-theme');
-    localStorage.setItem('darkMode', 'false');
-  }
-}
-
 function copyCurrentPass() {
   const pass = document.getElementById('oldPassInput').value;
   if (!pass) return;
@@ -404,7 +385,6 @@ function showMainApp() {
   listenForIncomingCalls();
   listenNewMsgNotifications();
   listenBroadcast();
-  initDarkMode();
 }
 
 function setAvatarImg(elId, url) {
