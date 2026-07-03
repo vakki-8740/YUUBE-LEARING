@@ -10,10 +10,12 @@ function setMode(mode) {
 let visibilityHandler = null;
 let heartbeatInterval = null;
 
-// Auto-login if name exists
+// Auto-login if name exists (deferred so all scripts are loaded first)
 if (myName) {
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  showMainApp();
+  setTimeout(function() {
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    showMainApp();
+  }, 0);
 }
 
 // ==================== JOIN / LOGIN / SIGNUP ====================

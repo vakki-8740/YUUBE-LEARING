@@ -25,8 +25,6 @@ firebase.initializeApp({
   appId: "1:191123388943:web:2a352c0912c015e5e1017a"
 });
 
-initDarkMode();
-
 const db = firebase.firestore();
 const storage = firebase.storage();
 
