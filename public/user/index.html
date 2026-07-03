@@ -2766,6 +2766,10 @@
     .voice-card-bar { flex: 1; height: 4px; background: var(--ios-gray4); border-radius: 2px; cursor: pointer; position: relative; overflow: hidden; }
     .voice-card-bar-fill { height: 100%; background: var(--ios-blue); border-radius: 2px; width: 0%; transition: width 0.1s linear; pointer-events: none; }
     .voice-card-dur { font-size: 12px; color: var(--ios-gray); font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 32px; text-align: right; }
+    .voice-card.is-recent { background: rgba(52,199,89,0.08); border: 1px solid rgba(52,199,89,0.2); }
+    .voice-card.is-recent .voice-card-play { background: #34C759; box-shadow: 0 2px 6px rgba(52,199,89,0.35); }
+    .voice-new-badge { display: inline-flex; align-items: center; gap: 4px; background: #34C759; color: white; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 8px; margin-left: 8px; letter-spacing: 0.5px; animation: newPulse 2s ease-in-out infinite; flex-shrink: 0; }
+    @keyframes newPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 
     @media (max-width: 480px) {
       .voice-page { padding: 16px 12px; padding-bottom: 80px; }
@@ -5454,11 +5458,13 @@
           const avatar = (user && user.photoURL) ? '<img src="' + user.photoURL + '">' : initial;
           const isOwner = r.user_id === myId;
           const timeAgo = r.created_at ? getTimeAgo(new Date(r.created_at + 'Z')) : '';
-          return '<div class="voice-card" data-id="' + r.id + '">' +
+          const createdDate = r.created_at ? new Date(r.created_at + 'Z') : null;
+          const isRecent = createdDate && (Date.now() - createdDate.getTime()) < 24 * 60 * 60 * 1000;
+          return '<div class="voice-card' + (isRecent ? ' is-recent' : '') + '" data-id="' + r.id + '">' +
             '<div class="voice-card-header">' +
               '<div class="voice-card-avatar">' + avatar + '</div>' +
               '<div class="voice-card-info">' +
-                '<div class="voice-card-name">' + escapeHtml(name) + '</div>' +
+                '<div class="voice-card-name">' + escapeHtml(name) + (isRecent ? '<span class="voice-new-badge">NEW</span>' : '') + '</div>' +
                 '<div class="voice-card-time">' + timeAgo + '</div>' +
               '</div>' +
               (isOwner ? '<button class="voice-card-delete" onclick="deleteVoiceRecording(\'' + r.id + '\')" title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' : '') +
