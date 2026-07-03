@@ -717,6 +717,24 @@
     .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
 
+    .load-more-btn {
+      display: none;
+      text-align: center;
+      padding: 10px 16px;
+      margin: 8px auto;
+      background: var(--ios-gray5);
+      border: none;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--ios-blue);
+      cursor: pointer;
+      transition: all 0.2s;
+      width: fit-content;
+    }
+    .load-more-btn:hover { background: var(--ios-gray4); }
+    .load-more-btn:active { transform: scale(0.96); }
+
     @keyframes typingBounce {
       0%, 60%, 100% { transform: translateY(0); }
       30% { transform: translateY(-4px); }
@@ -3734,6 +3752,11 @@
     }
 
     // ==================== MESSAGES ====================
+    const MSG_PAGE_SIZE = 50;
+    let msgEarliestDoc = null;
+    let msgHasMore = true;
+    let msgLoadingOlder = false;
+
     function listenMessages() {
       if (!selectedUserId) return;
       const convId = [myId, selectedUserId].sort().join('_');
@@ -3744,36 +3767,86 @@
       area.appendChild(typingEl);
 
       let lastDate = '';
-      let isInitial = true;
+      msgEarliestDoc = null;
+      msgHasMore = true;
+      loadedMsgIds.clear();
 
+      // Add "Load More" button at top
+      const loadMoreBtn = document.createElement('div');
+      loadMoreBtn.id = 'loadMoreBtn';
+      loadMoreBtn.className = 'load-more-btn';
+      loadMoreBtn.textContent = 'Load older messages';
+      loadMoreBtn.onclick = () => loadOlderMessages(convId);
+      loadMoreBtn.style.display = 'none';
+      area.insertBefore(loadMoreBtn, typingEl);
+
+      // Listen to ALL messages (real-time for new ones)
       unsubMessages = db.collection('messages')
         .where('conversation', '==', convId)
-        .orderBy('created_at', 'asc')
+        .orderBy('created_at', 'desc')
+        .limit(MSG_PAGE_SIZE)
         .onSnapshot((snapshot) => {
-          snapshot.docChanges().forEach((change) => {
+          // On first load, snapshot has all latest 50 messages
+          // We need to reverse them since we queried desc
+          const changes = snapshot.docChanges();
+
+          // Handle initial load
+          if (!snapshot.metadata.fromCache && changes.length > 0) {
+            // Process in batches
+            const docs = [];
+            changes.forEach(change => {
+              if (change.type === 'added' && !loadedMsgIds.has(change.doc.id)) {
+                docs.push(change.doc);
+              }
+            });
+
+            // Reverse to get chronological order (oldest first)
+            docs.reverse();
+
+            docs.forEach(doc => {
+              loadedMsgIds.add(doc.id);
+              const data = doc.data();
+              const msg = { id: doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at };
+
+              const msgDate = new Date(msg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+              if (msgDate !== lastDate) {
+                const sep = document.createElement('div');
+                sep.className = 'date-separator';
+                sep.innerHTML = '<span>' + msgDate + '</span>';
+                area.insertBefore(sep, loadMoreBtn);
+                lastDate = msgDate;
+              }
+
+              appendMessageToArea(msg, loadMoreBtn, false);
+            });
+
+            // Track earliest doc for pagination
+            if (snapshot.docs.length > 0) {
+              msgEarliestDoc = snapshot.docs[snapshot.docs.length - 1];
+              if (snapshot.docs.length >= MSG_PAGE_SIZE) {
+                loadMoreBtn.style.display = 'block';
+                msgHasMore = true;
+              } else {
+                loadMoreBtn.style.display = 'none';
+                msgHasMore = false;
+              }
+            }
+
+            scrollToBottom();
+          }
+
+          // Handle real-time new messages (not in initial load)
+          if (snapshot.metadata.fromCache) return;
+          changes.forEach(change => {
             if (change.type === 'added' && !loadedMsgIds.has(change.doc.id)) {
               loadedMsgIds.add(change.doc.id);
               const data = change.doc.data();
               const msg = { id: change.doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at };
+              appendMessageToArea(msg, typingEl, true);
 
-              if (isInitial) {
-                const msgDate = new Date(msg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-                if (msgDate !== lastDate) {
-                  const sep = document.createElement('div');
-                  sep.className = 'date-separator';
-                  sep.innerHTML = '<span>' + msgDate + '</span>';
-                  area.insertBefore(sep, typingEl);
-                  lastDate = msgDate;
-                }
-              }
-
-              appendMessage(msg, !isInitial);
-              // Auto-scroll on received messages if near bottom
-              if (!isInitial) {
-                const area = document.getElementById('messagesArea');
-                if (area && area.scrollHeight - area.scrollTop - area.clientHeight < 200) {
-                  scrollToBottom();
-                }
+              const area = document.getElementById('messagesArea');
+              if (area && area.scrollHeight - area.scrollTop - area.clientHeight < 200) {
+                scrollToBottom();
               }
             } else if (change.type === 'modified') {
               const data = change.doc.data();
@@ -3781,15 +3854,10 @@
               updateMessageInDOM(msg);
             }
           });
-
-          if (isInitial) {
-            isInitial = false;
-            scrollToBottom();
-          }
         });
     }
 
-    function appendMessage(msg, animate) {
+    function appendMessageToArea(msg, insertBefore, animate) {
       const area = document.getElementById('messagesArea');
       const isOwn = msg.from === myId;
       const time = new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -3804,37 +3872,30 @@
       let content = '';
       let extraClass = '';
 
-      // Reply preview
       if (msg.reply_to) {
         const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
         content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
       }
 
-      // Deleted message
       if (msg.deleted) {
         content += '<div class="message-bubble msg-deleted">You deleted this message</div>';
         extraClass = ' msg-deleted';
       } else {
-        // Voice
         if (msg.voice) {
           const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
           content += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
         }
-        // Image
         if (msg.image) {
           content += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
         }
-        // Text
         if (msg.message) {
           content += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
         }
-        // Edited indicator
         if (msg.edited) {
           content += '<div class="msg-edited">edited</div>';
         }
       }
 
-      // Reactions display
       if (msg.reactions) {
         const emojis = Object.values(msg.reactions);
         const uniqueEmojis = [...new Set(emojis)];
@@ -3857,8 +3918,75 @@
         wrapper.innerHTML = content;
       }
 
-      const typingEl = document.getElementById('typingIndicator');
-      area.insertBefore(wrapper, typingEl);
+      area.insertBefore(wrapper, insertBefore);
+    }
+
+    async function loadOlderMessages(convId) {
+      if (msgLoadingOlder || !msgHasMore || !msgEarliestDoc) return;
+      msgLoadingOlder = true;
+
+      const btn = document.getElementById('loadMoreBtn');
+      btn.textContent = 'Loading...';
+
+      try {
+        const snapshot = await db.collection('messages')
+          .where('conversation', '==', convId)
+          .orderBy('created_at', 'desc')
+          .startAfter(msgEarliestDoc)
+          .limit(MSG_PAGE_SIZE)
+          .get();
+
+        if (snapshot.empty) {
+          btn.style.display = 'none';
+          msgHasMore = false;
+          msgLoadingOlder = false;
+          return;
+        }
+
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        const typingEl = document.getElementById('typingIndicator');
+        let lastDate = '';
+
+        // Get the current first date separator
+        const existingSeps = document.querySelectorAll('.date-separator');
+        if (existingSeps.length > 0) {
+          lastDate = existingSeps[0].textContent.trim();
+        }
+
+        // Reverse to get chronological order
+        const docs = [...snapshot.docs].reverse();
+
+        docs.forEach(doc => {
+          if (loadedMsgIds.has(doc.id)) return;
+          loadedMsgIds.add(doc.id);
+          const data = doc.data();
+          const msg = { id: doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at };
+
+          const msgDate = new Date(msg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+          if (msgDate !== lastDate) {
+            const sep = document.createElement('div');
+            sep.className = 'date-separator';
+            sep.innerHTML = '<span>' + msgDate + '</span>';
+            area.insertBefore(sep, loadMoreBtn);
+            lastDate = msgDate;
+          }
+
+          appendMessageToArea(msg, loadMoreBtn, false);
+        });
+
+        msgEarliestDoc = snapshot.docs[snapshot.docs.length - 1];
+        if (snapshot.docs.length >= MSG_PAGE_SIZE) {
+          btn.textContent = 'Load older messages';
+          msgHasMore = true;
+        } else {
+          btn.style.display = 'none';
+          msgHasMore = false;
+        }
+      } catch (err) {
+        console.error('Load older messages error:', err);
+        btn.textContent = 'Retry';
+      }
+      msgLoadingOlder = false;
     }
 
     function updateMessageInDOM(msg) {
