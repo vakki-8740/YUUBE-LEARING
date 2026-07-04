@@ -2104,6 +2104,10 @@ let voiceRecPlaying = false;
 let voiceCardAudio = null;
 let voiceCardInterval = null;
 let voiceCardPlayEl = null;
+let voicePackSendingAudioUrl = null;
+let voicePackSendingDuration = 0;
+let voicePackSendingId = null;
+let voiceRecData = {};
 
 function showVoiceSheet(id) {
   document.getElementById(id).style.display = 'block';
@@ -2285,6 +2289,7 @@ async function loadVoiceRecordings() {
   return new Promise(resolve => {
     _voiceLoadTimer = setTimeout(async () => {
       const list = document.getElementById('voiceList');
+      voiceRecData = {};
       try {
         const res = await fetch(VOICE_API + '/api/voices/list?t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) throw new Error('Server error');
@@ -2302,6 +2307,7 @@ async function loadVoiceRecordings() {
           const isOwner = r.user_id === myId;
           const timeAgo = r.created_at ? getTimeAgo(new Date(r.created_at + 'Z')) : '';
           const listened = getListenedVoices().includes(r.id);
+          voiceRecData[r.id] = r;
           return '<div class="voice-card' + (!listened ? ' is-recent' : '') + '" data-id="' + r.id + '">' +
             '<div class="voice-card-header">' +
               '<div class="voice-card-avatar">' + avatar + '</div>' +
@@ -2309,6 +2315,7 @@ async function loadVoiceRecordings() {
                 '<div class="voice-card-name">' + escapeHtml(name) + (!listened ? '<span class="voice-new-badge">NEW</span>' : '') + '</div>' +
                 '<div class="voice-card-time">' + timeAgo + '</div>' +
               '</div>' +
+              (isOwner ? '<button class="voice-card-delete" onclick="sendVoiceToUser(\'' + r.id + '\')" title="Send to user" style="color:var(--ios-blue);margin-right:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2L15 22L11 13L2 9L22 2Z"/></svg></button>' : '') +
               (isOwner ? '<button class="voice-card-delete" onclick="deleteVoiceRecording(\'' + r.id + '\')" title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' : '') +
             '</div>' +
             '<div class="voice-card-player">' +
@@ -2409,6 +2416,88 @@ async function deleteVoiceRecording(id) {
   } catch (err) {
     alert('Failed to delete.');
   }
+}
+
+function sendVoiceToUser(recordingId) {
+  const rec = voiceRecData[recordingId];
+  if (!rec) return;
+  voicePackSendingAudioUrl = rec.audio_url || '';
+  voicePackSendingDuration = rec.duration || 0;
+  voicePackSendingId = recordingId;
+  showVoiceUserSelect();
+}
+
+function showVoiceUserSelect() {
+  const list = document.getElementById('voiceUserSelectList');
+  if (allUsers.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--ios-gray);padding:20px;">No users found</div>';
+  } else {
+    list.innerHTML = allUsers.map(function(user) {
+      var initial = (user.name || 'U').charAt(0).toUpperCase();
+      var avatar = user.photoURL ? '<img src="' + user.photoURL + '" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">' : '<div style="width:36px;height:36px;border-radius:50%;background:var(--ios-gray5);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;color:var(--ios-gray);">' + initial + '</div>';
+      return '<div onclick="selectVoicePackRecipient(\'' + user.id + '\')" style="display:flex;align-items:center;gap:12px;padding:10px 4px;cursor:pointer;border-bottom:0.5px solid var(--ios-separator);">' + avatar + '<div style="font-size:15px;font-weight:500;">' + escapeHtml(user.name) + '</div></div>';
+    }).join('');
+  }
+  showVoiceSheet('voiceUserSelectUI');
+}
+
+function hideVoiceUserSelect() {
+  hideVoiceSheet('voiceUserSelectUI');
+  voicePackSendingAudioUrl = null;
+  voicePackSendingDuration = 0;
+  voicePackSendingId = null;
+}
+
+async function selectVoicePackRecipient(userId) {
+  if (!voicePackSendingAudioUrl || !myId) return;
+  hideVoiceUserSelect();
+
+  var user = allUsers.find(function(u) { return u.id === userId; });
+  var recipientName = user ? user.name : 'User';
+
+  showUploading('Sending voice pack...');
+
+  try {
+    var response = await fetch(voicePackSendingAudioUrl);
+    var blob = await response.blob();
+
+    var formData = new FormData();
+    formData.append('audio', blob, 'voice-pack.webm');
+    formData.append('userId', myId);
+    formData.append('title', '');
+    formData.append('duration', voicePackSendingDuration);
+
+    var uploadRes = await fetch(VOICE_API + '/api/voice-packs/upload', { method: 'POST', body: formData });
+    var uploadData = await uploadRes.json();
+
+    if (!uploadData.id) throw new Error('Upload failed');
+
+    var sendRes = await fetch(VOICE_API + '/api/voice-packs/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        senderId: myId,
+        receiverId: userId,
+        voicePackId: uploadData.id
+      })
+    });
+
+    var sendData = await sendRes.json();
+
+    if (sendData.id) {
+      showToast('Sent', 'Voice pack sent to ' + recipientName);
+    } else {
+      throw new Error('Send failed');
+    }
+  } catch (err) {
+    console.error('Send voice pack error:', err);
+    alert('Failed to send voice pack.');
+  }
+
+  hideUploading();
+  voicePackSendingAudioUrl = null;
+  voicePackSendingDuration = 0;
+  voicePackSendingId = null;
 }
 
 function getTimeAgo(date) {
