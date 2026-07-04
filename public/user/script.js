@@ -582,25 +582,31 @@ function listenMessages() {
     .limitToLast(messagePageLimit)
     .onSnapshot((snapshot) => {
       if (isInitial) {
-        // Batch render: collect all, sort, insert with DocumentFragment
         const msgs = [];
         snapshot.forEach((doc) => {
           if (!loadedMsgIds.has(doc.id)) {
             loadedMsgIds.add(doc.id);
             msgCount++;
             const data = doc.data();
-            msgs.push({ id: doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at });
+            const ts = data.created_at;
+            let timeVal;
+            if (ts && typeof ts.toDate === 'function') {
+              timeVal = ts.toDate().getTime();
+            } else if (ts) {
+              timeVal = new Date(ts).getTime();
+            } else {
+              timeVal = 0;
+            }
+            msgs.push({ id: doc.id, ...data, created_at: ts?.toDate?.()?.toISOString() || ts, _ts: timeVal });
           }
         });
 
-        // Sort by created_at ascending
-        msgs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        msgs.sort((a, b) => a._ts - b._ts);
 
-        // Use DocumentFragment for fast batch insert
         const frag = document.createDocumentFragment();
         let lastDate = '';
         msgs.forEach((msg, idx) => {
-          const msgDate = new Date(msg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+          const msgDate = new Date(msg._ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
           if (msgDate !== lastDate) {
             const sep = document.createElement('div');
             sep.className = 'date-separator';
@@ -625,7 +631,6 @@ function listenMessages() {
         isInitial = false;
         scrollToBottom();
       } else {
-        // Real-time updates: only process changes
         snapshot.docChanges().forEach((change) => {
           if (change.type === 'added' && !loadedMsgIds.has(change.doc.id)) {
             loadedMsgIds.add(change.doc.id);
@@ -690,18 +695,26 @@ async function loadMoreMessages() {
           if (!loadedMsgIds.has(doc.id)) {
             loadedMsgIds.add(doc.id);
             const data = doc.data();
-            newMsgs.push({ id: doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at });
+            const ts = data.created_at;
+            let timeVal;
+            if (ts && typeof ts.toDate === 'function') {
+              timeVal = ts.toDate().getTime();
+            } else if (ts) {
+              timeVal = new Date(ts).getTime();
+            } else {
+              timeVal = 0;
+            }
+            newMsgs.push({ id: doc.id, ...data, created_at: ts?.toDate?.()?.toISOString() || ts, _ts: timeVal });
           }
         });
 
-        // Sort by created_at ascending
-        newMsgs.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        newMsgs.sort((a, b) => a._ts - b._ts);
 
         // Batch insert with DocumentFragment
         const frag = document.createDocumentFragment();
         let lastDate = '';
         newMsgs.forEach((msg, idx) => {
-          const msgDate = new Date(msg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+          const msgDate = new Date(msg._ts).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
           if (msgDate !== lastDate) {
             const sep = document.createElement('div');
             sep.className = 'date-separator';
