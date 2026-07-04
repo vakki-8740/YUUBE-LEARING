@@ -30,3 +30,14 @@ CREATE TABLE IF NOT EXISTS images (
 );
 
 CREATE INDEX IF NOT EXISTS idx_images_user ON images(user_id);
+
+CREATE TABLE IF NOT EXISTS voice_recordings (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(255) NOT NULL,
+  audio_data TEXT NOT NULL,
+  duration INTEGER DEFAULT 0,
+  file_size INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_voice_recordings_user ON voice_recordings(user_id);

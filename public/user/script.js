@@ -2307,7 +2307,7 @@ async function loadVoiceRecordings() {
               (isOwner ? '<button class="voice-card-delete" onclick="deleteVoiceRecording(\'' + r.id + '\')" title="Delete"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' : '') +
             '</div>' +
             '<div class="voice-card-player">' +
-              '<button class="voice-card-play" onclick="playVoiceCard(this, \'' + VOICE_API + r.file_path + '\')">' +
+              '<button class="voice-card-play" onclick="playVoiceCard(this, \'' + (r.audio_url || '') + '\')">' +
                 '<svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
               '</button>' +
               '<div class="voice-card-bar" onclick="seekVoiceCard(event, this)" data-dur="' + (r.duration || 0) + '">' +
