@@ -616,7 +616,7 @@ button:active {
 .message-wrapper {
   display: flex;
   flex-direction: column;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   animation: msgIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
   max-width: 80%;
@@ -637,6 +637,26 @@ button:active {
   align-self: flex-start;
   align-items: flex-start;
   margin-right: auto;
+}
+
+/* Grouping: gap between different senders */
+.message-wrapper.own + .message-wrapper.other,
+.message-wrapper.other + .message-wrapper.own {
+  margin-top: 8px;
+}
+
+/* Grouping: small gap between consecutive same-sender */
+.message-wrapper.own + .message-wrapper.own {
+  margin-top: 1px;
+}
+
+.message-wrapper.other + .message-wrapper.other {
+  margin-top: 1px;
+}
+
+/* Date separator spacing */
+.date-separator + .message-wrapper {
+  margin-top: 8px;
 }
 
 .message-wrapper .msg-sender {
@@ -675,6 +695,26 @@ button:active {
 .message-wrapper.other .message-bubble {
   background: var(--ios-gray5);
   color: var(--ios-text);
+  border-bottom-left-radius: 4px;
+}
+
+/* Grouped own: first msg gets full top corners, last gets 4px bottom-left */
+.message-wrapper.own + .message-wrapper.own .message-bubble {
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
+}
+
+.message-wrapper.own + .message-wrapper.own:last-child .message-bubble {
+  border-bottom-right-radius: 4px;
+}
+
+/* Grouped other: first msg gets full top corners, last gets 4px bottom-left */
+.message-wrapper.other + .message-wrapper.other .message-bubble {
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+}
+
+.message-wrapper.other + .message-wrapper.other:last-child .message-bubble {
   border-bottom-left-radius: 4px;
 }
 
