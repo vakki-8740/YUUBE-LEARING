@@ -615,11 +615,13 @@ button:active {
 
 .message-wrapper {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: flex-end;
   margin-bottom: 2px;
   animation: msgIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
-  max-width: 80%;
+  max-width: 85%;
+  gap: 6px;
 }
 
 @keyframes msgIn {
@@ -629,34 +631,57 @@ button:active {
 
 .message-wrapper.own {
   align-self: flex-end;
-  align-items: flex-end;
   margin-left: auto;
+  flex-direction: row-reverse;
 }
 
 .message-wrapper.other {
   align-self: flex-start;
-  align-items: flex-start;
   margin-right: auto;
 }
 
-/* Grouping: gap between different senders */
-.message-wrapper.own + .message-wrapper.other,
-.message-wrapper.other + .message-wrapper.own {
-  margin-top: 8px;
+/* Avatar */
+.msg-avatar {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--ios-blue), #5856D6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-/* Grouping: small gap between consecutive same-sender */
-.message-wrapper.own + .message-wrapper.own {
-  margin-top: 1px;
+.msg-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.message-wrapper.other + .message-wrapper.other {
-  margin-top: 1px;
+.msg-avatar-spacer {
+  width: 28px;
+  min-width: 28px;
+  flex-shrink: 0;
 }
 
-/* Date separator spacing */
-.date-separator + .message-wrapper {
-  margin-top: 8px;
+/* Bubble wrap */
+.msg-bubble-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-wrapper.own .msg-bubble-wrap {
+  align-items: flex-end;
+}
+
+.message-wrapper.other .msg-bubble-wrap {
+  align-items: flex-start;
 }
 
 .message-wrapper .msg-sender {
@@ -672,7 +697,7 @@ button:active {
 }
 
 .message-bubble {
-  max-width: 75%;
+  max-width: 100%;
   padding: 8px 12px;
   border-radius: 18px;
   font-size: var(--msg-font-size);
@@ -686,36 +711,49 @@ button:active {
   cursor: pointer;
 }
 
+/* Instagram-style bubble tails */
+.message-wrapper.own.msg-first .message-bubble {
+  border-bottom-right-radius: 4px;
+}
+
+.message-wrapper.own.msg-mid .message-bubble {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.message-wrapper.own.msg-last .message-bubble {
+  border-top-right-radius: 4px;
+}
+
+.message-wrapper.own.msg-single .message-bubble {
+  border-bottom-right-radius: 4px;
+}
+
+.message-wrapper.other.msg-first .message-bubble {
+  border-bottom-left-radius: 4px;
+}
+
+.message-wrapper.other.msg-mid .message-bubble {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.message-wrapper.other.msg-last .message-bubble {
+  border-top-left-radius: 4px;
+}
+
+.message-wrapper.other.msg-single .message-bubble {
+  border-bottom-left-radius: 4px;
+}
+
 .message-wrapper.own .message-bubble {
   background: var(--ios-blue);
   color: white;
-  border-bottom-right-radius: 4px;
 }
 
 .message-wrapper.other .message-bubble {
   background: var(--ios-gray5);
   color: var(--ios-text);
-  border-bottom-left-radius: 4px;
-}
-
-/* Grouped own: first msg gets full top corners, last gets 4px bottom-left */
-.message-wrapper.own + .message-wrapper.own .message-bubble {
-  border-top-right-radius: 18px;
-  border-bottom-right-radius: 18px;
-}
-
-.message-wrapper.own + .message-wrapper.own:last-child .message-bubble {
-  border-bottom-right-radius: 4px;
-}
-
-/* Grouped other: first msg gets full top corners, last gets 4px bottom-left */
-.message-wrapper.other + .message-wrapper.other .message-bubble {
-  border-top-left-radius: 18px;
-  border-bottom-left-radius: 18px;
-}
-
-.message-wrapper.other + .message-wrapper.other:last-child .message-bubble {
-  border-bottom-left-radius: 4px;
 }
 
 .message-time {
@@ -2528,6 +2566,18 @@ button:active {
     max-width: 85%;
   }
 
+  .msg-avatar {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    font-size: 11px;
+  }
+
+  .msg-avatar-spacer {
+    width: 26px;
+    min-width: 26px;
+  }
+
   .messages-area {
     padding: 12px 12px;
   }
@@ -2729,6 +2779,19 @@ button:active {
 
   .message-wrapper {
     max-width: 88%;
+    gap: 5px;
+  }
+
+  .msg-avatar {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    font-size: 10px;
+  }
+
+  .msg-avatar-spacer {
+    width: 24px;
+    min-width: 24px;
   }
 
   .user-item {

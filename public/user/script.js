@@ -599,7 +599,7 @@ function listenMessages() {
         // Use DocumentFragment for fast batch insert
         const frag = document.createDocumentFragment();
         let lastDate = '';
-        msgs.forEach((msg) => {
+        msgs.forEach((msg, idx) => {
           const msgDate = new Date(msg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
           if (msgDate !== lastDate) {
             const sep = document.createElement('div');
@@ -608,7 +608,9 @@ function listenMessages() {
             frag.appendChild(sep);
             lastDate = msgDate;
           }
-          const el = createMessageElement(msg);
+          const prevMsg = idx > 0 ? msgs[idx - 1] : null;
+          const nextMsg = idx < msgs.length - 1 ? msgs[idx + 1] : null;
+          const el = createMessageElement(msg, prevMsg, nextMsg);
           if (el) frag.appendChild(el);
         });
         area.insertBefore(frag, typingEl);
@@ -698,7 +700,7 @@ async function loadMoreMessages() {
         // Batch insert with DocumentFragment
         const frag = document.createDocumentFragment();
         let lastDate = '';
-        newMsgs.forEach((msg) => {
+        newMsgs.forEach((msg, idx) => {
           const msgDate = new Date(msg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
           if (msgDate !== lastDate) {
             const sep = document.createElement('div');
@@ -707,7 +709,9 @@ async function loadMoreMessages() {
             frag.appendChild(sep);
             lastDate = msgDate;
           }
-          const el = createMessageElement(msg);
+          const prevMsg = idx > 0 ? newMsgs[idx - 1] : null;
+          const nextMsg = idx < newMsgs.length - 1 ? newMsgs[idx + 1] : null;
+          const el = createMessageElement(msg, prevMsg, nextMsg);
           if (el) frag.appendChild(el);
         });
         area.insertBefore(frag, loadMoreDiv);
@@ -748,39 +752,64 @@ async function loadMoreMessages() {
   isLoadingMore = false;
 }
 
-function createMessageElement(msg) {
+function createMessageElement(msg, prevMsg, nextMsg) {
   const isOwn = msg.from === myId;
   const time = new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
   if (msg.deleted && msg.from !== myId) return null;
 
   const wrapper = document.createElement('div');
-  wrapper.className = 'message-wrapper ' + (isOwn ? 'own' : 'other');
   wrapper.dataset.msgId = msg.id;
+
+  // Grouping detection
+  const prevIsSame = prevMsg && prevMsg.from === msg.from;
+  const nextIsSame = nextMsg && nextMsg.from === msg.from;
+  let groupClass = 'msg-single';
+  if (prevIsSame && nextIsSame) groupClass = 'msg-mid';
+  else if (prevIsSame && !nextIsSame) groupClass = 'msg-last';
+  else if (!prevIsSame && nextIsSame) groupClass = 'msg-first';
+
+  wrapper.className = 'message-wrapper ' + (isOwn ? 'own' : 'other') + ' ' + groupClass;
   wrapper.style.animation = 'none';
 
   let content = '';
 
+  // Avatar for other person's first message in group
+  if (!isOwn && !prevIsSame) {
+    const sender = allUsers.find(u => u.id === msg.from);
+    const initial = (sender?.name || 'U').charAt(0).toUpperCase();
+    if (sender?.photoURL) {
+      content += '<div class="msg-avatar"><img src="' + sender.photoURL + '" alt="" loading="lazy" onerror="this.outerHTML=\'' + initial + '\'"></div>';
+    } else {
+      content += '<div class="msg-avatar">' + initial + '</div>';
+    }
+  } else if (!isOwn) {
+    content += '<div class="msg-avatar-spacer"></div>';
+  }
+
+  const bubbleWrap = document.createElement('div');
+  bubbleWrap.className = 'msg-bubble-wrap';
+
   if (msg.reply_to) {
     const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
-    content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
+    bubbleWrap.innerHTML += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
   }
 
   if (msg.deleted) {
-    content += '<div class="message-bubble msg-deleted">You deleted this message</div>';
+    bubbleWrap.innerHTML += '<div class="message-bubble msg-deleted">You deleted this message</div>';
   } else {
     if (msg.voice) {
       const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
-      content += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
+      bubbleWrap.innerHTML += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
     }
     if (msg.image) {
-      content += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
+      bubbleWrap.innerHTML += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
     }
     if (msg.message) {
-      content += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
+      bubbleWrap.innerHTML += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
     }
     if (msg.edited) {
-      content += '<div class="msg-edited">edited</div>';
+      bubbleWrap.innerHTML += '<div class="msg-edited">edited</div>';
     }
   }
 
@@ -788,22 +817,24 @@ function createMessageElement(msg) {
     const emojis = Object.values(msg.reactions);
     const uniqueEmojis = [...new Set(emojis)];
     if (uniqueEmojis.length > 0) {
-      content += '<div class="msg-reactions">';
+      bubbleWrap.innerHTML += '<div class="msg-reactions">';
       uniqueEmojis.forEach(emoji => {
         const count = emojis.filter(e => e === emoji).length;
-        content += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
+        bubbleWrap.innerHTML += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
       });
-      content += '</div>';
+      bubbleWrap.innerHTML += '</div>';
     }
   }
 
+  // Time only on last message in group
+  const showTime = !nextIsSame;
+  if (showTime) {
+    bubbleWrap.innerHTML += '<div class="message-time">' + time + '</div>';
+  }
+
+  wrapper.appendChild(bubbleWrap);
   if (!msg.deleted) {
-    content += '<div class="message-time">' + time + '</div>';
-    wrapper.innerHTML = content;
     wrapper.onclick = function() { showActionPopup(msg.id, this, isOwn); };
-  } else {
-    content += '<div class="message-time">' + time + '</div>';
-    wrapper.innerHTML = content;
   }
 
   return wrapper;
@@ -816,35 +847,59 @@ function appendMessageToArea(msg, insertBefore, animate) {
 
   if (msg.deleted && msg.from !== myId) return;
 
+  // Find previous message for grouping
+  const allWrappers = area.querySelectorAll('.message-wrapper');
+  const lastWrapper = allWrappers.length > 0 ? allWrappers[allWrappers.length - 1] : null;
+  const prevMsg = lastWrapper ? { from: lastWrapper.classList.contains('own') ? myId : selectedUserId } : null;
+
   const wrapper = document.createElement('div');
-  wrapper.className = 'message-wrapper ' + (isOwn ? 'own' : 'other');
   wrapper.dataset.msgId = msg.id;
+
+  // Grouping detection
+  const prevIsSame = prevMsg && prevMsg.from === msg.from;
+  const groupClass = prevIsSame ? 'msg-mid' : 'msg-first';
+
+  wrapper.className = 'message-wrapper ' + (isOwn ? 'own' : 'other') + ' ' + groupClass;
   if (!animate) wrapper.style.animation = 'none';
 
   let content = '';
-  let extraClass = '';
+
+  // Avatar for other person's first message in group
+  if (!isOwn && !prevIsSame) {
+    const sender = allUsers.find(u => u.id === msg.from);
+    const initial = (sender?.name || 'U').charAt(0).toUpperCase();
+    if (sender?.photoURL) {
+      content += '<div class="msg-avatar"><img src="' + sender.photoURL + '" alt="" loading="lazy" onerror="this.outerHTML=\'' + initial + '\'"></div>';
+    } else {
+      content += '<div class="msg-avatar">' + initial + '</div>';
+    }
+  } else if (!isOwn) {
+    content += '<div class="msg-avatar-spacer"></div>';
+  }
+
+  const bubbleWrap = document.createElement('div');
+  bubbleWrap.className = 'msg-bubble-wrap';
 
   if (msg.reply_to) {
     const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
-    content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
+    bubbleWrap.innerHTML += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
   }
 
   if (msg.deleted) {
-    content += '<div class="message-bubble msg-deleted">You deleted this message</div>';
-    extraClass = ' msg-deleted';
+    bubbleWrap.innerHTML += '<div class="message-bubble msg-deleted">You deleted this message</div>';
   } else {
     if (msg.voice) {
       const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
-      content += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
+      bubbleWrap.innerHTML += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
     }
     if (msg.image) {
-      content += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
+      bubbleWrap.innerHTML += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
     }
     if (msg.message) {
-      content += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
+      bubbleWrap.innerHTML += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
     }
     if (msg.edited) {
-      content += '<div class="msg-edited">edited</div>';
+      bubbleWrap.innerHTML += '<div class="msg-edited">edited</div>';
     }
   }
 
@@ -852,22 +907,21 @@ function appendMessageToArea(msg, insertBefore, animate) {
     const emojis = Object.values(msg.reactions);
     const uniqueEmojis = [...new Set(emojis)];
     if (uniqueEmojis.length > 0) {
-      content += '<div class="msg-reactions">';
+      bubbleWrap.innerHTML += '<div class="msg-reactions">';
       uniqueEmojis.forEach(emoji => {
         const count = emojis.filter(e => e === emoji).length;
-        content += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
+        bubbleWrap.innerHTML += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
       });
-      content += '</div>';
+      bubbleWrap.innerHTML += '</div>';
     }
   }
 
+  // Real-time messages always show time (last in group)
+  bubbleWrap.innerHTML += '<div class="message-time">' + time + '</div>';
+
+  wrapper.appendChild(bubbleWrap);
   if (!msg.deleted) {
-    content += '<div class="message-time">' + time + '</div>';
-    wrapper.innerHTML = content;
     wrapper.onclick = function() { showActionPopup(msg.id, this, isOwn); };
-  } else {
-    content += '<div class="message-time">' + time + '</div>';
-    wrapper.innerHTML = content;
   }
 
   area.insertBefore(wrapper, insertBefore);
