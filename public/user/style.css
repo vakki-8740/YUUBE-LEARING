@@ -2489,18 +2489,23 @@ button:active {
   color: var(--ios-text2);
 }
 
-/* ==================== MOBILE ==================== */
+/* ==================== MOBILE FIRST ==================== */
 /* ==================== MOBILE 768px ==================== */
 @media (max-width: 768px) {
   .main-content {
     position: relative;
+    width: 100%;
+    height: 100%;
   }
 
   .user-list-area {
-    width: 35%;
-    min-width: 120px;
+    width: 100%;
     height: 100%;
     flex-shrink: 0;
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    background: var(--ios-card);
   }
 
   .user-list-area.hide {
@@ -2508,8 +2513,21 @@ button:active {
   }
 
   .chat-area {
-    flex: 1;
-    width: auto;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: none;
+  }
+
+  .chat-area.show {
+    display: flex;
+  }
+
+  .chat-view {
+    width: 100%;
+    height: 100%;
   }
 
   .chat-view .back-btn {
@@ -2624,6 +2642,103 @@ button:active {
     left: 12px;
     right: 12px;
     padding: 10px 14px;
+  }
+
+  .input-bar {
+    padding: 6px 8px calc(6px + var(--safe-bottom));
+    gap: 6px;
+  }
+
+  .input-bar .img-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+
+  .input-bar .send-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+  }
+
+  .input-wrapper textarea {
+    font-size: 16px;
+    padding: 8px 12px;
+    min-height: 36px;
+  }
+
+  .app-topbar {
+    padding: 10px 14px 10px;
+    padding-top: calc(10px + var(--safe-top));
+  }
+
+  .app-topbar .my-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .app-topbar .app-title {
+    font-size: 18px;
+  }
+
+  .name-title {
+    font-size: 24px;
+  }
+
+  .name-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 32px;
+  }
+
+  .name-sub {
+    font-size: 14px;
+    max-width: 260px;
+  }
+
+  .name-input-group {
+    max-width: 100%;
+    padding: 0 16px;
+  }
+
+  .name-screen {
+    padding: 16px;
+  }
+
+  .voice-page {
+    padding: 16px 12px;
+    padding-bottom: 80px;
+  }
+
+  .voice-fab {
+    bottom: 80px;
+    width: 58px;
+    height: 58px;
+  }
+
+  .voice-fab svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .voice-rec-timer {
+    font-size: 40px;
+  }
+
+  .voice-preview-actions {
+    flex-direction: column;
+  }
+
+  .voice-preview-btn {
+    padding: 14px 8px;
+  }
+
+  .scroll-to-bottom {
+    bottom: 80px;
+    right: 12px;
+    width: 38px;
+    height: 38px;
   }
 }
 
@@ -2994,23 +3109,5 @@ button:active {
   .adj-footer input[type="range"] {
     width: 140px;
   }
-}
-
-/* ==================== LOGO MOBILE 420px ==================== */
-@media (max-width: 420px) {
-  .adj-circle-mask { width: 200px; height: 200px; }
-  .adj-footer input[type="range"] { width: 140px; }
-  .logo-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .logo-picker-box { padding: 16px; }
-}
-
-/* ==================== VOICE MOBILE 480px ==================== */
-@media (max-width: 480px) {
-  .voice-page { padding: 16px 12px; padding-bottom: 80px; }
-  .voice-fab { bottom: 80px; width: 58px; height: 58px; }
-  .voice-fab svg { width: 24px; height: 24px; }
-  .voice-rec-timer { font-size: 40px; }
-  .voice-preview-actions { flex-direction: column; }
-  .voice-preview-btn { padding: 14px 8px; }
 }
 

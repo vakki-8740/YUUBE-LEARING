@@ -527,6 +527,12 @@ function selectUser(userId) {
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('chatView').classList.add('show');
 
+  // Mobile: hide user list, show chat
+  if (window.innerWidth <= 768) {
+    document.getElementById('userListArea').classList.add('hide');
+    document.getElementById('chatArea').classList.add('show');
+  }
+
   const initial = user.name.charAt(0).toUpperCase();
   const chatAv = document.getElementById('chatAvatar');
   if (user.photoURL) {
@@ -558,6 +564,13 @@ function goBack() {
   selectedUserId = null;
   document.getElementById('emptyState').style.display = 'flex';
   document.getElementById('chatView').classList.remove('show');
+
+  // Mobile: show user list, hide chat
+  if (window.innerWidth <= 768) {
+    document.getElementById('userListArea').classList.remove('hide');
+    document.getElementById('chatArea').classList.remove('show');
+  }
+
   if (unsubMessages) { unsubMessages(); unsubMessages = null; }
   if (unsubTyping) { unsubTyping(); unsubTyping = null; }
   if (unsubRecording) { unsubRecording(); unsubRecording = null; }
@@ -1148,6 +1161,12 @@ function handleTyping() {
 function switchTab(tab) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  // Mobile: reset user list/chat visibility when switching tabs
+  if (window.innerWidth <= 768) {
+    document.getElementById('userListArea').classList.remove('hide');
+    document.getElementById('chatArea').classList.remove('show');
+  }
 
   if (tab === 'chat') {
     document.getElementById('chatPage').classList.add('active');
