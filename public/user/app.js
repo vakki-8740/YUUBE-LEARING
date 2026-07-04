@@ -401,6 +401,7 @@ function showMainApp() {
           db.collection('users').doc(myId).update({ last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
         }, 30000);
       }
+      listenUsers();
     }
   };
   document.addEventListener('visibilitychange', visibilityHandler);
@@ -432,6 +433,10 @@ function listenUsers() {
       allUsers.push({ id: doc.id, name: data.name || 'User', photoURL: data.photoURL || '', is_online: isOnline, last_seen: data.last_seen?.toDate?.()?.toISOString() || data.last_seen || null, created_at: data.created_at?.toDate?.()?.toISOString() || '' });
     });
     renderUsers();
+  }, (error) => {
+    console.error('listenUsers snapshot error:', error);
+    unsubUsers = null;
+    setTimeout(() => { if (myId) listenUsers(); }, 3000);
   });
 }
 
