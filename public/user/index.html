@@ -19,6 +19,7 @@
   --ios-green: #34C759;
   --ios-red: #FF3B30;
   --ios-gray: #8E8E93;
+  --msg-font-size: 16px;
   --ios-gray2: #AEAEB2;
   --ios-gray3: #C7C7CC;
   --ios-gray4: #D1D1D6;
@@ -742,7 +743,7 @@ button:active {
   max-width: 75%;
   padding: 10px 14px;
   border-radius: 18px;
-  font-size: 16px;
+  font-size: var(--msg-font-size);
   line-height: 1.35;
   word-wrap: break-word;
   position: relative;
@@ -1200,6 +1201,99 @@ button:active {
 @keyframes voicePlay {
   0% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* ==================== LOAD MORE & SCROLL BTN ==================== */
+.load-more-msgs {
+  display: none;
+  text-align: center;
+  padding: 8px 16px;
+  flex-shrink: 0;
+}
+.load-more-msgs.show { display: block; }
+.load-more-msgs button {
+  padding: 8px 20px;
+  background: var(--ios-gray6);
+  border: 0.5px solid var(--ios-separator);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--ios-blue);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.load-more-msgs button:active { transform: scale(0.96); background: var(--ios-gray5); }
+
+.scroll-to-bottom {
+  position: fixed;
+  bottom: 80px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ios-card);
+  border: 0.5px solid var(--ios-separator);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 50;
+  transition: all 0.2s;
+}
+.scroll-to-bottom.show { display: flex; }
+.scroll-to-bottom:active { transform: scale(0.9); }
+
+/* ==================== FONT SIZE SLIDER ==================== */
+.font-size-section {
+  width: 100%;
+  max-width: 360px;
+  background: var(--ios-card);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.font-size-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.font-size-label {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--ios-text);
+  flex-shrink: 0;
+  min-width: 20px;
+  text-align: center;
+}
+.font-size-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: var(--ios-gray5);
+  border-radius: 2px;
+  outline: none;
+}
+.font-size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--ios-blue);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,122,255,0.3);
+}
+.font-size-preview {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: var(--ios-gray6);
+  border-radius: 12px;
+  font-size: var(--msg-font-size);
+  line-height: 1.35;
+  color: var(--ios-text2);
+  text-align: center;
 }
 
 .broadcast-msg {
@@ -2558,7 +2652,7 @@ button:active {
 @media (max-width: 420px) {
   .message-bubble {
     max-width: 90%;
-    font-size: 15px;
+    font-size: var(--msg-font-size);
     padding: 8px 12px;
   }
 
@@ -3118,6 +3212,16 @@ button:active {
             Log Out
           </button>
 
+          <div class="font-size-section">
+            <div class="ps-label">Chat Text Size</div>
+            <div class="font-size-row">
+              <span class="font-size-label">A</span>
+              <input type="range" class="font-size-slider" id="fontSizeSlider" min="12" max="24" value="16" oninput="changeFontSize(this.value)">
+              <span class="font-size-label" style="font-size:22px;">A</span>
+            </div>
+            <div class="font-size-preview" id="fontSizePreview">Sample message text</div>
+          </div>
+
           <div class="profile-section">
             <div class="ps-label">Change Password</div>
             <div class="profile-input-group" style="flex-direction:column;gap:8px;">
@@ -3376,6 +3480,13 @@ button:active {
       <div class="uploading-label" id="uploadingLabel">Uploading...</div>
     </div>
   </div>
+
+  <!-- Scroll to Bottom Button -->
+  <button class="scroll-to-bottom" id="scrollToBottomBtn" onclick="scrollToBottomSmooth()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ios-gray)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  </button>
 
   <!-- Image Viewer Lightbox -->
   <div class="logo-picker-overlay" id="imgViewerOverlay" onclick="closeImgViewer()" style="background:rgba(0,0,0,0.85);">

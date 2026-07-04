@@ -111,6 +111,31 @@ function scrollToBottom() {
   setTimeout(() => c.scrollTop = c.scrollHeight, 50);
 }
 
+function scrollToBottomSmooth() {
+  const c = document.getElementById('messagesArea');
+  if (c) c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' });
+}
+
+// ==================== FONT SIZE ====================
+function initFontSize() {
+  const saved = localStorage.getItem('chatFontSize') || '16';
+  document.documentElement.style.setProperty('--msg-font-size', saved + 'px');
+  const slider = document.getElementById('fontSizeSlider');
+  if (slider) slider.value = saved;
+  updateFontSizePreview(saved);
+}
+
+function changeFontSize(size) {
+  document.documentElement.style.setProperty('--msg-font-size', size + 'px');
+  localStorage.setItem('chatFontSize', size);
+  updateFontSizePreview(size);
+}
+
+function updateFontSizePreview(size) {
+  const preview = document.getElementById('fontSizePreview');
+  if (preview) preview.style.fontSize = size + 'px';
+}
+
 function escapeHtml(text) {
   const d = document.createElement('div');
   d.textContent = text;
@@ -382,6 +407,7 @@ function showMainApp() {
 
   listenUsers();
   loadProfile();
+  initFontSize();
   listenForIncomingCalls();
   listenNewMsgNotifications();
   listenBroadcast();
@@ -537,9 +563,16 @@ function goBack() {
   if (unsubRecording) { unsubRecording(); unsubRecording = null; }
   cancelReply();
   renderChatHeadRow();
+  messagePageLimit = 50;
+  const sbtn = document.getElementById('scrollToBottomBtn');
+  if (sbtn) sbtn.classList.remove('show');
 }
 
 // ==================== MESSAGES ====================
+let hasMoreMessages = true;
+let isLoadingMore = false;
+let messagePageLimit = 50;
+
 function listenMessages() {
   if (!selectedUserId) return;
   const convId = [myId, selectedUserId].sort().join('_');
@@ -551,16 +584,29 @@ function listenMessages() {
   area.appendChild(typingEl);
   area.appendChild(recEl);
 
+  loadedMsgIds.clear();
+  hasMoreMessages = true;
+
+  // Add load more button
+  const loadMoreDiv = document.createElement('div');
+  loadMoreDiv.className = 'load-more-msgs';
+  loadMoreDiv.id = 'loadMoreDiv';
+  loadMoreDiv.innerHTML = '<button onclick="loadMoreMessages()">Load earlier messages</button>';
+  area.insertBefore(loadMoreDiv, typingEl);
+
   let lastDate = '';
   let isInitial = true;
+  let msgCount = 0;
 
   unsubMessages = db.collection('messages')
     .where('conversation', '==', convId)
     .orderBy('created_at', 'asc')
+    .limitToLast(messagePageLimit)
     .onSnapshot((snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === 'added' && !loadedMsgIds.has(change.doc.id)) {
           loadedMsgIds.add(change.doc.id);
+          msgCount++;
           const data = change.doc.data();
           const msg = { id: change.doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at };
 
@@ -591,9 +637,176 @@ function listenMessages() {
 
       if (isInitial) {
         isInitial = false;
+        if (msgCount >= messagePageLimit) {
+          hasMoreMessages = true;
+          loadMoreDiv.classList.add('show');
+        } else {
+          hasMoreMessages = false;
+          loadMoreDiv.classList.remove('show');
+        }
         scrollToBottom();
       }
     });
+
+  setupScrollTracking();
+}
+
+function setupScrollTracking() {
+  const area = document.getElementById('messagesArea');
+  const btn = document.getElementById('scrollToBottomBtn');
+  if (!area || !btn) return;
+
+  area.onscroll = function() {
+    const nearBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 200;
+    if (nearBottom) {
+      btn.classList.remove('show');
+    } else {
+      btn.classList.add('show');
+    }
+  };
+}
+
+async function loadMoreMessages() {
+  if (isLoadingMore || !hasMoreMessages || !selectedUserId) return;
+  isLoadingMore = true;
+
+  const convId = [myId, selectedUserId].sort().join('_');
+  const area = document.getElementById('messagesArea');
+  const loadMoreDiv = document.getElementById('loadMoreDiv');
+  const oldScrollHeight = area.scrollHeight;
+
+  // Stop old listener
+  if (unsubMessages) { unsubMessages(); unsubMessages = null; }
+
+  // Find oldest loaded message timestamp
+  let oldestTs = null;
+  const wrappers = area.querySelectorAll('.message-wrapper');
+  for (let i = 0; i < wrappers.length; i++) {
+    const msgId = wrappers[i].dataset.msgId;
+    if (loadedMsgIds.has(msgId)) {
+      const timeEl = wrappers[i].querySelector('.message-time');
+      if (timeEl) {
+        const parts = timeEl.textContent.trim().split(':');
+        if (parts.length === 2) {
+          oldestTs = timeEl.textContent.trim();
+          break;
+        }
+      }
+    }
+  }
+
+  // Increase limit for next load
+  messagePageLimit += 50;
+
+  // Re-setup listener with higher limit
+  let newMsgCount = 0;
+  let lastDate = '';
+
+  unsubMessages = db.collection('messages')
+    .where('conversation', '==', convId)
+    .orderBy('created_at', 'asc')
+    .limitToLast(messagePageLimit)
+    .onSnapshot((snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added' && !loadedMsgIds.has(change.doc.id)) {
+          loadedMsgIds.add(change.doc.id);
+          newMsgCount++;
+          const data = change.doc.data();
+          const msg = { id: change.doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at };
+
+          const msgDate = new Date(msg.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+          if (msgDate !== lastDate) {
+            const sep = document.createElement('div');
+            sep.className = 'date-separator';
+            sep.innerHTML = '<span>' + msgDate + '</span>';
+            area.insertBefore(sep, loadMoreDiv);
+            lastDate = msgDate;
+          }
+
+          const wrapper = createMessageElement(msg);
+          if (wrapper) area.insertBefore(wrapper, loadMoreDiv);
+        }
+      });
+
+      // Maintain scroll position after prepending
+      if (newMsgCount > 0) {
+        const newScrollHeight = area.scrollHeight;
+        area.scrollTop = newScrollHeight - oldScrollHeight;
+        newMsgCount = 0;
+      }
+
+      // Check if we loaded everything
+      const totalMsgs = area.querySelectorAll('.message-wrapper').length;
+      if (totalMsgs < messagePageLimit) {
+        hasMoreMessages = false;
+        loadMoreDiv.classList.remove('show');
+      }
+
+      setupScrollTracking();
+    });
+
+  isLoadingMore = false;
+}
+
+function createMessageElement(msg) {
+  const isOwn = msg.from === myId;
+  const time = new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+  if (msg.deleted && msg.from !== myId) return null;
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'message-wrapper ' + (isOwn ? 'own' : 'other');
+  wrapper.dataset.msgId = msg.id;
+  wrapper.style.animation = 'none';
+
+  let content = '';
+
+  if (msg.reply_to) {
+    const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
+    content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
+  }
+
+  if (msg.deleted) {
+    content += '<div class="message-bubble msg-deleted">You deleted this message</div>';
+  } else {
+    if (msg.voice) {
+      const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
+      content += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
+    }
+    if (msg.image) {
+      content += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
+    }
+    if (msg.message) {
+      content += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
+    }
+    if (msg.edited) {
+      content += '<div class="msg-edited">edited</div>';
+    }
+  }
+
+  if (msg.reactions) {
+    const emojis = Object.values(msg.reactions);
+    const uniqueEmojis = [...new Set(emojis)];
+    if (uniqueEmojis.length > 0) {
+      content += '<div class="msg-reactions">';
+      uniqueEmojis.forEach(emoji => {
+        const count = emojis.filter(e => e === emoji).length;
+        content += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
+      });
+      content += '</div>';
+    }
+  }
+
+  if (!msg.deleted) {
+    content += '<div class="message-time">' + time + '</div>';
+    wrapper.innerHTML = content;
+    wrapper.onclick = function() { showActionPopup(msg.id, this, isOwn); };
+  } else {
+    content += '<div class="message-time">' + time + '</div>';
+    wrapper.innerHTML = content;
+  }
+
+  return wrapper;
 }
 
 function appendMessageToArea(msg, insertBefore, animate) {
