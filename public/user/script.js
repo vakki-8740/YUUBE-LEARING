@@ -2461,6 +2461,7 @@ function hideVoiceUserSelect() {
 
 async function selectVoicePackRecipient(userId) {
   if (!voicePackSendingId || !myId) return;
+  var sendId = voicePackSendingId;
   hideVoiceUserSelect();
 
   var user = allUsers.find(function(u) { return u.id === userId; });
@@ -2473,7 +2474,7 @@ async function selectVoicePackRecipient(userId) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        recordingId: voicePackSendingId,
+        recordingId: sendId,
         senderId: myId,
         receiverId: userId
       })
