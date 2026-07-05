@@ -37,9 +37,14 @@ CREATE TABLE IF NOT EXISTS voice_recordings (
   audio_data TEXT NOT NULL,
   duration INTEGER DEFAULT 0,
   file_size INTEGER DEFAULT 0,
-  receiver_id VARCHAR(255) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_voice_recordings_user ON voice_recordings(user_id);
+
+DO $$ BEGIN
+  ALTER TABLE voice_recordings ADD COLUMN receiver_id VARCHAR(255) DEFAULT NULL;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_voice_recordings_receiver ON voice_recordings(receiver_id);
