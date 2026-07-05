@@ -378,11 +378,11 @@ function showMainApp() {
 
   db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
-  // Heartbeat - update last_active every 30 sec
+  // Heartbeat - update last_active every 15 sec
   if (heartbeatInterval) clearInterval(heartbeatInterval);
   heartbeatInterval = setInterval(() => {
-    db.collection('users').doc(myId).update({ last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
-  }, 30000);
+    db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+  }, 15000);
 
   // Tab visibility → online/offline
   if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
@@ -429,7 +429,7 @@ function listenUsers() {
     snapshot.forEach(doc => {
       if (doc.id === myId) return;
       const data = doc.data();
-      const isOnline = data.is_online && data.last_active?.toDate?.() ? (Date.now() - data.last_active.toDate().getTime() < 60000) : false;
+      const isOnline = data.last_active?.toDate?.() ? (Date.now() - data.last_active.toDate().getTime() < 60000) : false;
       allUsers.push({ id: doc.id, name: data.name || 'User', photoURL: data.photoURL || '', is_online: isOnline, last_seen: data.last_seen?.toDate?.()?.toISOString() || data.last_seen || null, created_at: data.created_at?.toDate?.()?.toISOString() || '' });
     });
     renderUsers();
@@ -2291,7 +2291,7 @@ async function loadVoiceRecordings() {
       const list = document.getElementById('voiceList');
       voiceRecData = {};
       try {
-        const res = await fetch(VOICE_API + '/api/voices/list?t=' + Date.now(), { cache: 'no-store' });
+        const res = await fetch(VOICE_API + '/api/voices/list?userId=' + encodeURIComponent(myId) + '&t=' + Date.now(), { cache: 'no-store' });
         if (!res.ok) throw new Error('Server error');
         const recordings = await res.json();
         if (recordings.length === 0) {
@@ -2449,7 +2449,7 @@ function hideVoiceUserSelect() {
 }
 
 async function selectVoicePackRecipient(userId) {
-  if (!voicePackSendingAudioUrl || !myId) return;
+  if (!voicePackSendingId || !myId) return;
   hideVoiceUserSelect();
 
   var user = allUsers.find(function(u) { return u.id === userId; });
@@ -2458,34 +2458,21 @@ async function selectVoicePackRecipient(userId) {
   showUploading('Sending voice pack...');
 
   try {
-    var response = await fetch(voicePackSendingAudioUrl);
-    var blob = await response.blob();
-
-    var formData = new FormData();
-    formData.append('audio', blob, 'voice-pack.webm');
-    formData.append('userId', myId);
-    formData.append('title', '');
-    formData.append('duration', voicePackSendingDuration);
-
-    var uploadRes = await fetch(VOICE_API + '/api/voice-packs/upload', { method: 'POST', body: formData });
-    var uploadData = await uploadRes.json();
-
-    if (!uploadData.id) throw new Error('Upload failed');
-
-    var sendRes = await fetch(VOICE_API + '/api/voice-packs/send', {
+    var sendRes = await fetch(VOICE_API + '/api/voices/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        recordingId: voicePackSendingId,
         senderId: myId,
-        receiverId: userId,
-        voicePackId: uploadData.id
+        receiverId: userId
       })
     });
 
     var sendData = await sendRes.json();
 
-    if (sendData.id) {
+    if (sendData.success) {
       showToast('Sent', 'Voice pack sent to ' + recipientName);
+      loadVoiceRecordings();
     } else {
       throw new Error('Send failed');
     }
@@ -2527,6 +2514,49 @@ function markVoiceListened(id) {
     card.classList.remove('is-recent');
     const badge = card.querySelector('.voice-new-badge');
     if (badge) badge.remove();
+  }
+}
+
+async function migrateToJasmine() {
+  try {
+    var jasmineUser = allUsers.find(function(u) { return (u.name || '').toUpperCase() === 'JASMINE'; });
+    if (!jasmineUser) {
+      alert('Jasmine user not found!');
+      return;
+    }
+
+    var confirmSend = confirm('Send all your recordings to ' + jasmineUser.name + '?');
+    if (!confirmSend) return;
+
+    showUploading('Sending all recordings to Jasmine...');
+
+    var res = await fetch(VOICE_API + '/api/voices/list?userId=' + encodeURIComponent(myId) + '&t=' + Date.now(), { cache: 'no-store' });
+    var recordings = await res.json();
+    var myRecordings = recordings.filter(function(r) { return r.user_id === myId && !r.receiver_id; });
+
+    var sent = 0;
+    for (var i = 0; i < myRecordings.length; i++) {
+      try {
+        var sendRes = await fetch(VOICE_API + '/api/voices/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recordingId: myRecordings[i].id,
+            senderId: myId,
+            receiverId: jasmineUser.id
+          })
+        });
+        var sendData = await sendRes.json();
+        if (sendData.success) sent++;
+      } catch (e) {}
+    }
+
+    hideUploading();
+    alert('Done! Sent ' + sent + ' recordings to Jasmine.');
+    loadVoiceRecordings();
+  } catch (err) {
+    hideUploading();
+    alert('Migration failed: ' + err.message);
   }
 }
 

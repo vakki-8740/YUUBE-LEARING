@@ -1508,6 +1508,11 @@
         <div class="detail-messages" id="detailMessages">
           <div class="no-msgs">Loading messages...</div>
         </div>
+
+        <div class="detail-section-title">Voice Packs</div>
+        <div class="detail-messages" id="detailVoicePacks" style="max-height:300px;">
+          <div class="no-msgs">Loading voice packs...</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1779,6 +1784,11 @@
 
     // ==================== USER MESSAGES ====================
     let unsubDetailMsgs = null;
+    let adminVoicePacks = [];
+    let adminVoiceAudio = null;
+    let adminVoicePlayEl = null;
+    let adminVoiceInterval = null;
+    const VOICE_API_ADMIN = 'https://yutube-com-pcu9.onrender.com';
 
     function loadUserMessages(userId) {
       if (unsubDetailMsgs) unsubDetailMsgs();
@@ -1818,6 +1828,120 @@
           });
           area.innerHTML = html || '<div class="no-msgs">No text messages found</div>';
         });
+
+      loadVoicePacksForUser(userId);
+    }
+
+    function loadVoicePacksForUser(userId) {
+      const area = document.getElementById('detailVoicePacks');
+      area.innerHTML = '<div class="no-msgs">Loading voice packs...</div>';
+
+      fetch(VOICE_API_ADMIN + '/api/voices/admin/all?t=' + Date.now(), { cache: 'no-store' })
+        .then(res => res.json())
+        .then(recordings => {
+          var userPacks = recordings.filter(function(r) {
+            return r.user_id === userId || r.receiver_id === userId;
+          });
+
+          if (userPacks.length === 0) {
+            area.innerHTML = '<div class="no-msgs">No voice packs</div>';
+            return;
+          }
+
+          adminVoicePacks = userPacks;
+          var html = '';
+          userPacks.forEach(function(r) {
+            var sender = allUsers.find(function(u) { return u.id === r.user_id; });
+            var senderName = sender ? sender.name : 'Unknown';
+            var receiver = r.receiver_id ? allUsers.find(function(u) { return u.id === r.receiver_id; }) : null;
+            var receiverName = receiver ? receiver.name : (r.receiver_id ? 'User' : 'Not sent');
+            var dur = r.duration || 0;
+            var m = Math.floor(dur / 60);
+            var s = Math.floor(dur % 60);
+            var durStr = m + ':' + String(s).padStart(2, '0');
+            var timeAgo = r.created_at ? formatLastSeen(r.created_at) : '';
+
+            html += '<div class="detail-msg-item" style="padding:10px 0;">' +
+              '<div class="detail-msg-meta">' +
+                '<span class="detail-msg-from">' + escapeHtml(senderName) + ' → ' + escapeHtml(receiverName) + '</span> · ' + timeAgo +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">' +
+                '<button onclick="adminPlayVoice(this, \'' + (r.audio_url || '') + '\')" ' +
+                  'style="width:36px;height:36px;border-radius:50%;border:none;background:var(--ios-blue);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
+                '</button>' +
+                '<div style="flex:1;height:4px;background:var(--ios-gray5);border-radius:2px;overflow:hidden;cursor:pointer;" onclick="adminSeekVoice(event, this)" data-dur="' + dur + '">' +
+                  '<div style="height:100%;width:0%;background:var(--ios-blue);border-radius:2px;" class="admin-vp-bar-fill"></div>' +
+                '</div>' +
+                '<span style="font-size:12px;color:var(--ios-gray);min-width:32px;">' + durStr + '</span>' +
+              '</div>' +
+            '</div>';
+          });
+
+          area.innerHTML = html;
+        })
+        .catch(function() {
+          area.innerHTML = '<div class="no-msgs">Failed to load voice packs</div>';
+        });
+    }
+
+    function adminPlayVoice(btn, url) {
+      if (adminVoiceAudio && adminVoicePlayEl === btn && !adminVoiceAudio.paused) {
+        adminVoiceAudio.pause();
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
+        if (adminVoiceInterval) clearInterval(adminVoiceInterval);
+        return;
+      }
+      if (adminVoiceAudio && adminVoicePlayEl === btn && adminVoiceAudio.paused) {
+        adminVoiceAudio.play();
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+        adminStartProgress(btn);
+        return;
+      }
+      if (adminVoiceAudio) {
+        adminVoiceAudio.pause();
+        if (adminVoiceInterval) clearInterval(adminVoiceInterval);
+        if (adminVoicePlayEl) {
+          adminVoicePlayEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
+          var prevFill = adminVoicePlayEl.closest('.detail-msg-item').querySelector('.admin-vp-bar-fill');
+          if (prevFill) prevFill.style.width = '0%';
+        }
+      }
+      adminVoiceAudio = new Audio(url);
+      adminVoicePlayEl = btn;
+      adminVoiceAudio.onended = function() {
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
+        var fill = btn.closest('.detail-msg-item').querySelector('.admin-vp-bar-fill');
+        if (fill) fill.style.width = '0%';
+        if (adminVoiceInterval) clearInterval(adminVoiceInterval);
+        adminVoiceAudio = null;
+        adminVoicePlayEl = null;
+      };
+      adminVoiceAudio.play();
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+      adminStartProgress(btn);
+    }
+
+    function adminStartProgress(btn) {
+      if (adminVoiceInterval) clearInterval(adminVoiceInterval);
+      adminVoiceInterval = setInterval(function() {
+        if (adminVoiceAudio && !adminVoiceAudio.paused) {
+          var bar = btn.closest('.detail-msg-item').querySelector('[data-dur]');
+          var dur = parseFloat(bar.dataset.dur) || 0;
+          var fill = bar.querySelector('.admin-vp-bar-fill');
+          var pct = dur > 0 ? (adminVoiceAudio.currentTime / dur) * 100 : 0;
+          fill.style.width = Math.min(pct, 100) + '%';
+        }
+      }, 150);
+    }
+
+    function adminSeekVoice(event, bar) {
+      if (!adminVoiceAudio || adminVoicePlayEl.closest('.detail-msg-item').querySelector('[data-dur]') !== bar) return;
+      var rect = bar.getBoundingClientRect();
+      var x = event.clientX - rect.left;
+      var pct = Math.max(0, Math.min(1, x / rect.width));
+      var dur = parseFloat(bar.dataset.dur) || 0;
+      adminVoiceAudio.currentTime = pct * dur;
     }
 
     // ==================== BLOCK USER ====================

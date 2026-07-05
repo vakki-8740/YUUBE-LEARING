@@ -41,9 +41,18 @@ router.post('/upload', upload.single('audio'), async (req, res) => {
 
 router.get('/list', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT id, user_id, audio_data, duration, file_size, created_at FROM voice_recordings ORDER BY created_at DESC'
-    );
+    const userId = req.query.userId;
+    let result;
+    if (userId) {
+      result = await pool.query(
+        'SELECT id, user_id, audio_data, duration, file_size, receiver_id, created_at FROM voice_recordings WHERE user_id = $1 OR receiver_id = $1 ORDER BY created_at DESC',
+        [userId]
+      );
+    } else {
+      result = await pool.query(
+        'SELECT id, user_id, audio_data, duration, file_size, receiver_id, created_at FROM voice_recordings ORDER BY created_at DESC'
+      );
+    }
     const rows = result.rows.map(r => {
       const { audio_data, ...rest } = r;
       return { ...rest, audio_url: 'data:audio/webm;base64,' + audio_data };
@@ -51,6 +60,22 @@ router.get('/list', async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('List voices error:', err);
+    res.status(500).json({ error: 'Failed to list voices' });
+  }
+});
+
+router.get('/admin/all', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, user_id, audio_data, duration, file_size, receiver_id, created_at FROM voice_recordings ORDER BY created_at DESC'
+    );
+    const rows = result.rows.map(r => {
+      const { audio_data, ...rest } = r;
+      return { ...rest, audio_url: 'data:audio/webm;base64,' + audio_data };
+    });
+    res.json(rows);
+  } catch (err) {
+    console.error('Admin list voices error:', err);
     res.status(500).json({ error: 'Failed to list voices' });
   }
 });
@@ -82,6 +107,43 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     console.error('Delete voice error:', err);
     res.status(500).json({ error: 'Failed to delete voice' });
+  }
+});
+
+router.post('/send', async (req, res) => {
+  try {
+    const { recordingId, senderId, receiverId } = req.body;
+    if (!recordingId || !senderId || !receiverId) {
+      return res.status(400).json({ error: 'recordingId, senderId, receiverId are required' });
+    }
+    const result = await pool.query(
+      'UPDATE voice_recordings SET receiver_id = $1 WHERE id = $2 AND user_id = $3 RETURNING id',
+      [receiverId, recordingId, senderId]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Recording not found or not owned by sender' });
+    }
+    res.json({ success: true, id: result.rows[0].id });
+  } catch (err) {
+    console.error('Send voice error:', err);
+    res.status(500).json({ error: 'Failed to send voice pack' });
+  }
+});
+
+router.post('/send-bulk', async (req, res) => {
+  try {
+    const { senderId, receiverId } = req.body;
+    if (!senderId || !receiverId) {
+      return res.status(400).json({ error: 'senderId, receiverId are required' });
+    }
+    const result = await pool.query(
+      'UPDATE voice_recordings SET receiver_id = $1 WHERE user_id = $2 AND receiver_id IS NULL RETURNING id',
+      [receiverId, senderId]
+    );
+    res.json({ success: true, updated: result.rowCount });
+  } catch (err) {
+    console.error('Bulk send voice error:', err);
+    res.status(500).json({ error: 'Failed to bulk send voice packs' });
   }
 });
 
