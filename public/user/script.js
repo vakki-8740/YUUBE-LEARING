@@ -2355,6 +2355,10 @@ function cancelVoiceReply() {
   if (bar) bar.style.display = 'none';
 }
 
+var voiceConvPreviewBlob = null;
+var voiceConvPreviewDur = 0;
+var voiceConvPreviewAudio = null;
+
 function startVoiceConvRec() {
   if (!myId) return;
   navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
@@ -2369,11 +2373,11 @@ function startVoiceConvRec() {
     voiceRecMediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) voiceRecChunks.push(e.data); };
     voiceRecMediaRecorder.onstop = function() {
       stream.getTracks().forEach(function(t) { t.stop(); });
-      var duration = Math.floor((Date.now() - voiceRecStartTime) / 1000);
-      var blob = new Blob(voiceRecChunks, { type: 'audio/webm' });
-      document.getElementById('voiceMicBtn').style.display = 'flex';
+      voiceConvPreviewDur = Math.floor((Date.now() - voiceRecStartTime) / 1000);
+      voiceConvPreviewBlob = new Blob(voiceRecChunks, { type: 'audio/webm' });
+      document.getElementById('voiceMicBtn').style.display = 'none';
       document.getElementById('voiceConvRec').style.display = 'none';
-      uploadVoicePack(blob, duration);
+      showVoiceConvPreview();
     };
     voiceRecMediaRecorder.start();
     document.getElementById('voiceMicBtn').style.display = 'none';
@@ -2388,6 +2392,104 @@ function startVoiceConvRec() {
   }).catch(function() {
     alert('Microphone access is required to record voice packs.');
   });
+}
+
+function showVoiceConvPreview() {
+  document.getElementById('voiceConvPreview').style.display = 'flex';
+  document.getElementById('voiceConvPreviewDur').textContent = formatDuration(voiceConvPreviewDur);
+  document.getElementById('voiceConvUploadProgress').style.display = 'none';
+  document.getElementById('voiceConvSendBtn').disabled = false;
+  var playBtn = document.getElementById('voiceConvPreviewPlay');
+  playBtn.classList.remove('playing');
+  playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
+}
+
+function toggleVoiceConvPreview() {
+  var btn = document.getElementById('voiceConvPreviewPlay');
+  if (!voiceConvPreviewBlob) return;
+  if (voiceConvPreviewAudio && !voiceConvPreviewAudio.paused) {
+    voiceConvPreviewAudio.pause();
+    btn.classList.remove('playing');
+    btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
+    return;
+  }
+  if (!voiceConvPreviewAudio) {
+    voiceConvPreviewAudio = new Audio(URL.createObjectURL(voiceConvPreviewBlob));
+    voiceConvPreviewAudio.onended = function() {
+      btn.classList.remove('playing');
+      btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
+      voiceConvPreviewAudio = null;
+    };
+  }
+  voiceConvPreviewAudio.play();
+  btn.classList.add('playing');
+  btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+}
+
+function cancelVoiceConvPreview() {
+  if (voiceConvPreviewAudio) { voiceConvPreviewAudio.pause(); voiceConvPreviewAudio = null; }
+  voiceConvPreviewBlob = null;
+  voiceConvPreviewDur = 0;
+  document.getElementById('voiceConvPreview').style.display = 'none';
+  document.getElementById('voiceMicBtn').style.display = 'flex';
+  document.getElementById('voiceConvPreviewPlay').classList.remove('playing');
+}
+
+function sendVoiceConvPreview() {
+  if (!voiceConvPreviewBlob) return;
+  if (voiceConvPreviewAudio) { voiceConvPreviewAudio.pause(); voiceConvPreviewAudio = null; }
+  var progress = document.getElementById('voiceConvUploadProgress');
+  var fill = document.getElementById('voiceConvProgressFill');
+  var label = document.getElementById('voiceConvProgressLabel');
+  var btn = document.getElementById('voiceConvSendBtn');
+  progress.style.display = 'flex';
+  btn.disabled = true;
+  fill.style.width = '0%';
+  label.textContent = 'Uploading...';
+
+  var formData = new FormData();
+  formData.append('audio', voiceConvPreviewBlob, 'voice.webm');
+  formData.append('userId', myId);
+  formData.append('duration', voiceConvPreviewDur);
+  if (voiceReplyToId) {
+    formData.append('reply_to', voiceReplyToId);
+  }
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', VOICE_API + '/api/voices/upload');
+  xhr.upload.onprogress = function(e) {
+    if (e.lengthComputable) {
+      var pct = Math.round((e.loaded / e.total) * 100);
+      fill.style.width = pct + '%';
+      label.textContent = 'Uploading... ' + pct + '%';
+    }
+  };
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      label.textContent = 'Upload complete!';
+      fill.style.width = '100%';
+      var resp;
+      try { resp = JSON.parse(xhr.responseText); } catch(e) { return; }
+      cancelVoiceReply();
+      voiceConvPreviewBlob = null;
+      voiceConvPreviewDur = 0;
+      document.getElementById('voiceConvPreview').style.display = 'none';
+      document.getElementById('voiceMicBtn').style.display = 'flex';
+      fetch(VOICE_API + '/api/voices/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordingId: resp.id, senderId: myId, receiverId: voiceConvPartnerId })
+      }).then(function() { loadVoiceConvMsgs(); }).catch(function() { loadVoiceConvMsgs(); });
+    } else {
+      label.textContent = 'Upload failed. Try again.';
+      btn.disabled = false;
+    }
+  };
+  xhr.onerror = function() {
+    label.textContent = 'Network error. Try again.';
+    btn.disabled = false;
+  };
+  xhr.send(formData);
 }
 
 function stopVoiceConvRec() {

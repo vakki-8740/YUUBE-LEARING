@@ -2304,8 +2304,18 @@ button:active {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   overflow: hidden;
   background: var(--ios-bg);
+}
+
+#voiceUserView, #voiceConvView {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Voice User List */
@@ -2615,6 +2625,61 @@ button:active {
   transition: all 0.2s;
 }
 .voice-mic-btn:active { transform: scale(0.9); }
+
+/* Preview Overlay inside Conversation */
+.voice-conv-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 0;
+  animation: slideUp 0.2s ease;
+}
+.voice-conv-preview-player {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--ios-gray6);
+  padding: 8px 20px;
+  border-radius: 14px;
+}
+.voice-conv-preview-play {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ios-blue);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,122,255,0.3);
+}
+.voice-conv-preview-play:active { transform: scale(0.9); }
+.voice-conv-preview-play.playing { background: var(--ios-red); box-shadow: 0 2px 8px rgba(255,59,48,0.3); }
+.voice-conv-preview-dur { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ios-text); min-width: 40px; text-align: center; }
+.voice-conv-preview-actions { display: flex; gap: 8px; width: 100%; }
+.voice-conv-preview-btn {
+  flex: 1;
+  padding: 10px 6px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.voice-conv-preview-btn:active { transform: scale(0.94); }
+.voice-conv-preview-btn.cancel { background: var(--ios-gray5); color: var(--ios-gray); }
+.voice-conv-preview-btn.send { background: var(--ios-green); color: white; box-shadow: 0 2px 8px rgba(52,199,89,0.25); }
+.voice-conv-upload-progress { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.voice-conv-progress-bar { width: 100%; height: 4px; background: var(--ios-gray5); border-radius: 2px; overflow: hidden; }
+.voice-conv-progress-fill { height: 100%; background: linear-gradient(90deg, var(--ios-blue), #5AC8FA); border-radius: 2px; width: 0%; transition: width 0.3s ease; }
+.voice-conv-progress-label { font-size: 12px; color: var(--ios-gray); text-align: center; }
 
 /* Recording Overlay inside Conversation */
 .voice-conv-rec {
@@ -2981,6 +3046,21 @@ button:active {
   .voice-emoji-picker {
     right: 8px;
     bottom: 56px;
+  }
+
+  .voice-conv-preview-player {
+    padding: 6px 14px;
+  }
+  .voice-conv-preview-play {
+    width: 36px;
+    height: 36px;
+  }
+  .voice-conv-preview-dur {
+    font-size: 16px;
+  }
+  .voice-conv-preview-btn {
+    font-size: 13px;
+    padding: 8px 4px;
   }
 
   .scroll-to-bottom {
