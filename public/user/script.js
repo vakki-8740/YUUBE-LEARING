@@ -2246,7 +2246,7 @@ function renderVoicePackBubble(p) {
 
   var deleteBtn = '';
   if (isOutgoing) {
-    deleteBtn = '<button class="voice-pack-action delete-action" onclick="deleteVoicePack(\'' + p.id + '\')">🗑️ Delete</button>';
+    deleteBtn = '<button class="voice-pack-action delete-action" onclick="deleteVoicePack(\'' + p.id + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>';
   }
 
   return '<div class="voice-pack-bubble ' + side + '">' +
@@ -2269,8 +2269,8 @@ function renderVoicePackBubble(p) {
     '</div>' +
     '<div class="voice-pack-actions">' +
       deleteBtn +
-      '<button class="voice-pack-action" onclick="replyToVoiceMsg(\'' + p.id + '\',\'' + escapeHtmlAttr(name) + '\')">💬 Reply</button>' +
-      '<button class="voice-pack-action" onclick="showEmojiPicker(event,\'' + p.id + '\')">😊 React</button>' +
+      '<button class="voice-pack-action" onclick="replyToVoiceMsg(\'' + p.id + '\',\'' + escapeHtmlAttr(name) + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg> Reply</button>' +
+      '<button class="voice-pack-action" onclick="showEmojiPicker(event,\'' + p.id + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> React</button>' +
     '</div>' +
   '</div>';
 }
