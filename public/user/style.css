@@ -2409,6 +2409,28 @@ button:active {
 .voice-conv-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .voice-conv-name { font-size: 17px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+.voice-select-btn, .voice-delete-selected-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ios-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.voice-select-btn:active, .voice-delete-selected-btn:active { background: var(--ios-gray6); }
+.voice-select-btn.active { color: var(--ios-red); }
+.voice-delete-selected-btn { color: var(--ios-red); gap: 2px; width: auto; padding: 0 8px; border-radius: 8px; }
+.voice-delete-selected-btn:active { background: rgba(255,59,48,0.1); }
+#voiceDeleteCount { font-size: 14px; font-weight: 700; }
+
 /* Conversation Messages */
 .voice-conv-msgs {
   flex: 1;
@@ -2428,7 +2450,30 @@ button:active {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  position: relative;
 }
+.voice-pack-bubble.selectable { cursor: pointer; }
+.voice-pack-bubble.selected { opacity: 0.7; }
+.voice-pack-check {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--ios-gray);
+  background: var(--ios-card);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: all 0.15s;
+}
+.voice-pack-bubble.outgoing .voice-pack-check { left: auto; right: 4px; }
+.voice-pack-bubble.select-allowed .voice-pack-check { display: flex; }
+.voice-pack-bubble.selected .voice-pack-check { background: var(--ios-blue); border-color: var(--ios-blue); }
+.voice-pack-check svg { display: none; }
+.voice-pack-bubble.selected .voice-pack-check svg { display: block; }
 .voice-pack-bubble.outgoing { align-self: flex-end; }
 .voice-pack-bubble.incoming { align-self: flex-start; }
 .voice-pack-header {
@@ -3065,6 +3110,13 @@ button:active {
     font-size: 13px;
     padding: 8px 4px;
   }
+
+  .voice-select-btn, .voice-delete-selected-btn {
+    width: 32px;
+    height: 32px;
+  }
+  .voice-delete-selected-btn { width: auto; padding: 0 6px; }
+  .voice-select-btn svg, .voice-delete-selected-btn svg { width: 16px; height: 16px; }
 
   .scroll-to-bottom {
     bottom: 80px;

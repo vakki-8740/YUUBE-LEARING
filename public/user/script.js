@@ -2148,6 +2148,8 @@ function loadVoiceUserList() {
 function openVoiceConv(userId, userName) {
   voiceConvPartnerId = userId;
   voiceConvPartnerName = userName;
+  voiceSelectMode = false;
+  voiceSelectedIds = [];
   document.getElementById('voiceUserView').style.display = 'none';
   var cv = document.getElementById('voiceConvView');
   cv.style.display = 'flex';
@@ -2161,9 +2163,16 @@ function openVoiceConv(userId, userName) {
   } else {
     avatar.textContent = (userName || 'U').charAt(0).toUpperCase();
   }
+  updateVoiceSelectUI();
   loadVoiceConvMsgs();
   if (voiceConvPollTimer) clearInterval(voiceConvPollTimer);
   voiceConvPollTimer = setInterval(loadVoiceConvMsgs, 3000);
+  document.getElementById('voiceConvMsgs').onclick = function(e) {
+    var bubble = e.target.closest('.voice-pack-bubble');
+    if (!bubble || !voiceSelectMode) return;
+    if (e.target.closest('button, .voice-pack-action, .voice-pack-play, .voice-reaction, .voice-emoji-picker')) return;
+    toggleVoiceSelectItem(bubble.dataset.vpId);
+  };
 }
 
 function closeVoiceConv() {
@@ -2173,6 +2182,8 @@ function closeVoiceConv() {
   voiceConvPlayEl = null;
   voiceConvPartnerId = null;
   voiceConvData = [];
+  voiceSelectMode = false;
+  voiceSelectedIds = [];
   cancelVoiceReply();
   var cv = document.getElementById('voiceConvView');
   if (cv) cv.style.display = 'none';
@@ -2249,7 +2260,16 @@ function renderVoicePackBubble(p) {
     deleteBtn = '<button class="voice-pack-action delete-action" onclick="deleteVoicePack(\'' + p.id + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Delete</button>';
   }
 
-  return '<div class="voice-pack-bubble ' + side + '">' +
+  var isSelected = voiceSelectedIds.indexOf(p.id) > -1;
+  var selectClass = '';
+  if (voiceSelectMode) {
+    selectClass = ' select-allowed' + (isSelected ? ' selected' : '');
+  }
+
+  return '<div class="voice-pack-bubble ' + side + selectClass + '" data-vp-id="' + p.id + '">' +
+    '<div class="voice-pack-check">' +
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+    '</div>' +
     '<div class="voice-pack-header">' +
       '<span class="vpb-name">' + escapeHtml(name) + '</span>' +
       '<span class="vpb-time">' + time + '</span>' +
@@ -2547,6 +2567,72 @@ function uploadVoicePack(blob, duration) {
 }
 
 var voiceReactingId = null;
+var voiceSelectMode = false;
+var voiceSelectedIds = [];
+
+function toggleVoiceSelectMode() {
+  voiceSelectMode = !voiceSelectMode;
+  voiceSelectedIds = [];
+  updateVoiceSelectUI();
+  loadVoiceConvMsgs();
+}
+
+function toggleVoiceSelectItem(id) {
+  var idx = voiceSelectedIds.indexOf(id);
+  if (idx > -1) {
+    voiceSelectedIds.splice(idx, 1);
+  } else {
+    voiceSelectedIds.push(id);
+  }
+  updateVoiceSelectUI();
+  var bubble = document.querySelector('.voice-pack-bubble[data-vp-id="' + id + '"]');
+  if (bubble) {
+    if (voiceSelectedIds.indexOf(id) > -1) {
+      bubble.classList.add('selected');
+    } else {
+      bubble.classList.remove('selected');
+    }
+  }
+}
+
+function updateVoiceSelectUI() {
+  var selectBtn = document.getElementById('voiceSelectBtn');
+  var deleteBtn = document.getElementById('voiceDeleteSelectedBtn');
+  var countEl = document.getElementById('voiceDeleteCount');
+  if (!selectBtn || !deleteBtn || !countEl) return;
+  if (voiceSelectMode) {
+    selectBtn.classList.add('active');
+    selectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    if (voiceSelectedIds.length > 0) {
+      deleteBtn.style.display = 'flex';
+      countEl.textContent = voiceSelectedIds.length;
+    } else {
+      deleteBtn.style.display = 'none';
+    }
+  } else {
+    selectBtn.classList.remove('active');
+    selectBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>';
+    deleteBtn.style.display = 'none';
+  }
+}
+
+async function deleteSelectedVoicePacks() {
+  if (voiceSelectedIds.length === 0) return;
+  var count = voiceSelectedIds.length;
+  if (!confirm('Delete ' + count + ' selected voice pack' + (count > 1 ? 's' : '') + '?')) return;
+  var deleted = 0;
+  for (var i = 0; i < voiceSelectedIds.length; i++) {
+    try {
+      var res = await fetch(VOICE_API + '/api/voices/' + voiceSelectedIds[i], { method: 'DELETE' });
+      if (res.ok) deleted++;
+    } catch(e) {}
+  }
+  voiceSelectMode = false;
+  voiceSelectedIds = [];
+  updateVoiceSelectUI();
+  loadVoiceConvMsgs();
+  showToast('Deleted', deleted + ' voice pack' + (deleted > 1 ? 's' : '') + ' deleted');
+}
 
 function showEmojiPicker(event, id) {
   event.stopPropagation();
