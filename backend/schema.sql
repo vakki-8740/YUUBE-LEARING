@@ -48,3 +48,13 @@ EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_voice_recordings_receiver ON voice_recordings(receiver_id);
+
+DO $$ BEGIN
+  ALTER TABLE voice_recordings ADD COLUMN reply_to VARCHAR(36) DEFAULT NULL;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE voice_recordings ADD COLUMN reactions TEXT DEFAULT '{}';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
