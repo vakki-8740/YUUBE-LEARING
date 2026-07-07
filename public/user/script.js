@@ -695,6 +695,11 @@ function listenMessages() {
           if (el) frag.appendChild(el);
         });
         area.insertBefore(frag, typingEl);
+        // Disable animation on initial batch
+        var allWrappers = area.querySelectorAll('.message-wrapper');
+        for (var ci = allWrappers.length - msgs.length; ci < allWrappers.length; ci++) {
+          allWrappers[ci].style.animation = 'none';
+        }
 
         if (msgCount >= messagePageLimit) {
           hasMoreMessages = true;
@@ -807,6 +812,11 @@ async function loadMoreMessages() {
           if (el) frag.appendChild(el);
         });
         area.insertBefore(frag, loadMoreDiv);
+        // Disable animation on loaded batch
+        var lmw = area.querySelectorAll('.message-wrapper');
+        for (var li = lmw.length - newMsgs.length; li < lmw.length; li++) {
+          lmw[li].style.animation = 'none';
+        }
 
         // Maintain scroll position
         const newScrollHeight = area.scrollHeight;
@@ -847,6 +857,27 @@ async function loadMoreMessages() {
   isLoadingMore = false;
 }
 
+// ==================== SHARED GROUPING HELPERS ====================
+function getMessageGroupClass(prevMsg, nextMsg, msg) {
+  var prevIsSame = prevMsg && prevMsg.from === msg.from;
+  var nextIsSame = nextMsg && nextMsg.from === msg.from;
+  if (prevIsSame && nextIsSame) return 'msg-mid';
+  if (prevIsSame && !nextIsSame) return 'msg-last';
+  if (!prevIsSame && nextIsSame) return 'msg-first';
+  return 'msg-single';
+}
+
+function setMsgGroupClass(wrapper, prevMsg, nextMsg, msg) {
+  var gc = getMessageGroupClass(prevMsg, nextMsg, msg);
+  wrapper.className = 'message-wrapper ' + (wrapper.classList.contains('own') ? 'own' : 'other') + ' ' + gc;
+}
+
+function computePrevMsgData(prevEl) {
+  if (!prevEl || !prevEl.classList || !prevEl.classList.contains('message-wrapper')) return null;
+  return { from: prevEl.classList.contains('own') ? myId : selectedUserId };
+}
+
+// ==================== CREATE MESSAGE ELEMENT (single source of truth) ====================
 function createMessageElement(msg, prevMsg, nextMsg) {
   const isOwn = msg.from === myId;
   const time = new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
@@ -856,20 +887,12 @@ function createMessageElement(msg, prevMsg, nextMsg) {
   const wrapper = document.createElement('div');
   wrapper.dataset.msgId = msg.id;
 
-  // Grouping detection
-  const prevIsSame = prevMsg && prevMsg.from === msg.from;
-  const nextIsSame = nextMsg && nextMsg.from === msg.from;
-  let groupClass = 'msg-single';
-  if (prevIsSame && nextIsSame) groupClass = 'msg-mid';
-  else if (prevIsSame && !nextIsSame) groupClass = 'msg-last';
-  else if (!prevIsSame && nextIsSame) groupClass = 'msg-first';
-
-  wrapper.className = 'message-wrapper ' + (isOwn ? 'own' : 'other') + ' ' + groupClass;
-  wrapper.style.animation = 'none';
+  setMsgGroupClass(wrapper, prevMsg, nextMsg, msg);
 
   let content = '';
 
   // Avatar for other person's first message in group
+  const prevIsSame = prevMsg && prevMsg.from === msg.from;
   if (!isOwn && !prevIsSame) {
     const sender = allUsers.find(u => u.id === msg.from);
     const initial = (sender?.name || 'U').charAt(0).toUpperCase();
@@ -882,51 +905,10 @@ function createMessageElement(msg, prevMsg, nextMsg) {
     content += '<div class="msg-avatar-spacer"></div>';
   }
 
+  const nextIsSame = nextMsg && nextMsg.from === msg.from;
   const bubbleWrap = document.createElement('div');
   bubbleWrap.className = 'msg-bubble-wrap';
-
-  if (msg.reply_to) {
-    const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
-    bubbleWrap.innerHTML += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
-  }
-
-  if (msg.deleted) {
-    bubbleWrap.innerHTML += '<div class="message-bubble msg-deleted">You deleted this message</div>';
-  } else {
-    if (msg.voice) {
-      const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
-      bubbleWrap.innerHTML += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
-    }
-    if (msg.image) {
-      bubbleWrap.innerHTML += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
-    }
-    if (msg.message) {
-      bubbleWrap.innerHTML += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
-    }
-    if (msg.edited) {
-      bubbleWrap.innerHTML += '<div class="msg-edited">edited</div>';
-    }
-  }
-
-  if (msg.reactions) {
-    const emojis = Object.values(msg.reactions);
-    const uniqueEmojis = [...new Set(emojis)];
-    if (uniqueEmojis.length > 0) {
-      bubbleWrap.innerHTML += '<div class="msg-reactions">';
-      uniqueEmojis.forEach(emoji => {
-        const count = emojis.filter(e => e === emoji).length;
-        bubbleWrap.innerHTML += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
-      });
-      bubbleWrap.innerHTML += '</div>';
-    }
-  }
-
-  // Time only on last message in group
-  const showTime = !nextIsSame;
-  if (showTime) {
-    var seenHtml = (isOwn && msg.seen) ? ' <span style="color:var(--ios-green);font-size:11px">✓✓</span>' : '';
-    bubbleWrap.innerHTML += '<div class="message-time">' + time + seenHtml + '</div>';
-  }
+  bubbleWrap.innerHTML = buildBubbleContent(msg, isOwn, time, !nextIsSame);
 
   wrapper.appendChild(bubbleWrap);
   if (!msg.deleted) {
@@ -936,66 +918,30 @@ function createMessageElement(msg, prevMsg, nextMsg) {
   return wrapper;
 }
 
-function appendMessageToArea(msg, insertBefore, animate) {
-  const area = document.getElementById('messagesArea');
-  const isOwn = msg.from === myId;
-  const time = new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-
-  if (msg.deleted && msg.from !== myId) return;
-
-  // Find previous message for grouping
-  const allWrappers = area.querySelectorAll('.message-wrapper');
-  const lastWrapper = allWrappers.length > 0 ? allWrappers[allWrappers.length - 1] : null;
-  const prevMsg = lastWrapper ? { from: lastWrapper.classList.contains('own') ? myId : selectedUserId } : null;
-
-  const wrapper = document.createElement('div');
-  wrapper.dataset.msgId = msg.id;
-
-  // Grouping detection
-  const prevIsSame = prevMsg && prevMsg.from === msg.from;
-  const groupClass = prevIsSame ? 'msg-mid' : 'msg-first';
-
-  wrapper.className = 'message-wrapper ' + (isOwn ? 'own' : 'other') + ' ' + groupClass;
-  if (!animate) wrapper.style.animation = 'none';
-
-  let content = '';
-
-  // Avatar for other person's first message in group
-  if (!isOwn && !prevIsSame) {
-    const sender = allUsers.find(u => u.id === msg.from);
-    const initial = (sender?.name || 'U').charAt(0).toUpperCase();
-    if (sender?.photoURL) {
-      content += '<div class="msg-avatar"><img src="' + sender.photoURL + '" alt="" loading="lazy" onerror="this.outerHTML=\'' + initial + '\'"></div>';
-    } else {
-      content += '<div class="msg-avatar">' + initial + '</div>';
-    }
-  } else if (!isOwn) {
-    content += '<div class="msg-avatar-spacer"></div>';
-  }
-
-  const bubbleWrap = document.createElement('div');
-  bubbleWrap.className = 'msg-bubble-wrap';
+// ==================== BUILD BUBBLE CONTENT (shared by create + update) ====================
+function buildBubbleContent(msg, isOwn, time, showTime) {
+  var html = '';
 
   if (msg.reply_to) {
     const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
-    bubbleWrap.innerHTML += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
+    html += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
   }
 
   if (msg.deleted) {
-    bubbleWrap.innerHTML += '<div class="message-bubble msg-deleted">You deleted this message</div>';
+    html += '<div class="message-bubble msg-deleted">You deleted this message</div>';
   } else {
     if (msg.voice) {
       const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
-      bubbleWrap.innerHTML += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
+      html += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
     }
     if (msg.image) {
-      bubbleWrap.innerHTML += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
+      html += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
     }
     if (msg.message) {
-      bubbleWrap.innerHTML += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
+      html += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
     }
     if (msg.edited) {
-      bubbleWrap.innerHTML += '<div class="msg-edited">edited</div>';
+      html += '<div class="msg-edited">edited</div>';
     }
   }
 
@@ -1003,76 +949,78 @@ function appendMessageToArea(msg, insertBefore, animate) {
     const emojis = Object.values(msg.reactions);
     const uniqueEmojis = [...new Set(emojis)];
     if (uniqueEmojis.length > 0) {
-      bubbleWrap.innerHTML += '<div class="msg-reactions">';
+      html += '<div class="msg-reactions">';
       uniqueEmojis.forEach(emoji => {
         const count = emojis.filter(e => e === emoji).length;
-        bubbleWrap.innerHTML += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
+        html += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
       });
-      bubbleWrap.innerHTML += '</div>';
+      html += '</div>';
     }
   }
 
-  // Real-time messages always show time (last in group)
-  var seenHtml = (isOwn && msg.seen) ? ' <span style="color:var(--ios-green);font-size:11px">✓✓</span>' : '';
-  bubbleWrap.innerHTML += '<div class="message-time">' + time + seenHtml + '</div>';
-
-  wrapper.appendChild(bubbleWrap);
-  if (!msg.deleted) {
-    wrapper.onclick = function() { showActionPopup(msg.id, this, isOwn); };
+  if (showTime !== false) {
+    var seenHtml = (isOwn && msg.seen) ? ' <span style="color:var(--ios-green);font-size:11px">✓✓</span>' : '';
+    html += '<div class="message-time">' + time + seenHtml + '</div>';
   }
 
-  area.insertBefore(wrapper, insertBefore);
+  return html;
+}
+
+function appendMessageToArea(msg, insertBefore, animate) {
+  if (msg.deleted && msg.from !== myId) return;
+
+  var area = document.getElementById('messagesArea');
+  var lastWrapper = area.lastElementChild;
+  // Find last .message-wrapper (skip typing/recording indicators)
+  while (lastWrapper && !lastWrapper.classList.contains('message-wrapper')) {
+    lastWrapper = lastWrapper.previousElementSibling;
+  }
+
+  var prevMsgData = computePrevMsgData(lastWrapper);
+
+  var el = createMessageElement(msg, prevMsgData, null);
+  if (!el) return;
+
+  if (animate) {
+    el.style.animation = '';
+  } else {
+    el.style.animation = 'none';
+  }
+
+  area.insertBefore(el, insertBefore);
+
+  // Update previous message's group class now that it has a new next message
+  if (lastWrapper) {
+    var prevPrevData = computePrevMsgData(lastWrapper.previousElementSibling);
+    var lastFrom = lastWrapper.classList.contains('own') ? myId : selectedUserId;
+    setMsgGroupClass(lastWrapper, prevPrevData, msg, { from: lastFrom });
+    lastWrapper.style.animation = 'none';
+  }
 }
 
 function updateMessageInDOM(msg) {
-  const wrapper = document.querySelector('.message-wrapper[data-msg-id="' + msg.id + '"]');
+  var wrapper = document.querySelector('.message-wrapper[data-msg-id="' + msg.id + '"]');
   if (!wrapper) return;
 
-  const isOwn = msg.from === myId;
-  const time = new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  var isOwn = msg.from === myId;
+  var time = new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-  let content = '';
-
-  if (msg.reply_to) {
-    const rpName = msg.reply_to.from === myId ? 'You' : (allUsers.find(u => u.id === msg.reply_to.from)?.name || 'Unknown');
-    content += '<div class="reply-preview"><div class="rp-name">' + escapeHtml(rpName) + '</div><div class="rp-text">' + escapeHtml(msg.reply_to.message || 'Image') + '</div></div>';
-  }
-
-  if (msg.deleted) {
-    content += '<div class="message-bubble msg-deleted">You deleted this message</div>';
-  } else {
-    if (msg.voice) {
-      const dur = msg.voice_duration ? formatDuration(msg.voice_duration) : '0:00';
-      content += '<div class="message-bubble voice-msg"><div class="voice-msg-inner" onclick="playVoiceMsg(this,\'' + msg.voice + '\')"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><span class="voice-dur">' + dur + '</span></div></div>';
-    }
-    if (msg.image) {
-      content += '<div class="message-bubble img-msg"><img src="' + msg.image.url + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;" onclick="openImgViewer(\'' + msg.image.url + '\')"></div>';
-    }
-    if (msg.message) {
-      content += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
-    }
-    if (msg.edited) {
-      content += '<div class="msg-edited">edited</div>';
+  // Preserve msg-avatar/msg-avatar-spacer — find or create msg-bubble-wrap
+  var bubbleWrap = wrapper.querySelector('.msg-bubble-wrap');
+  if (!bubbleWrap) {
+    // Lost bubbleWrap due to old bug — recreate structure
+    bubbleWrap = document.createElement('div');
+    bubbleWrap.className = 'msg-bubble-wrap';
+    var refEl = wrapper.querySelector('.msg-avatar, .msg-avatar-spacer');
+    if (refEl) {
+      wrapper.insertBefore(bubbleWrap, refEl.nextSibling);
+    } else {
+      wrapper.insertBefore(bubbleWrap, wrapper.firstChild);
     }
   }
 
-  // Reactions display
-  if (msg.reactions) {
-    const emojis = Object.values(msg.reactions);
-    const uniqueEmojis = [...new Set(emojis)];
-    if (uniqueEmojis.length > 0) {
-      content += '<div class="msg-reactions">';
-      uniqueEmojis.forEach(emoji => {
-        const count = emojis.filter(e => e === emoji).length;
-        content += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
-      });
-      content += '</div>';
-    }
-  }
+  bubbleWrap.innerHTML = buildBubbleContent(msg, isOwn, time, true);
 
-  var seenHtml = (isOwn && msg.seen) ? ' <span style="color:var(--ios-green);font-size:11px">✓✓</span>' : '';
-  content += '<div class="message-time">' + time + seenHtml + '</div>';
-  wrapper.innerHTML = content;
   if (!msg.deleted) {
     wrapper.onclick = function() { showActionPopup(msg.id, this, isOwn); };
   }
