@@ -380,49 +380,107 @@ function showMainApp() {
   document.getElementById('nameScreen').classList.add('hide');
   document.getElementById('mainApp').classList.add('show');
 
-  const initial = myName.charAt(0).toUpperCase();
-  if (myPhotoURL) {
-    setAvatarImg('myAvatar', myPhotoURL);
-  } else {
-    document.getElementById('myAvatar').innerHTML = '<span class="my-av-initial">' + initial + '</span>';
+  wakeBackend(function() {
+    const initial = myName.charAt(0).toUpperCase();
+    if (myPhotoURL) {
+      setAvatarImg('myAvatar', myPhotoURL);
+    } else {
+      document.getElementById('myAvatar').innerHTML = '<span class="my-av-initial">' + initial + '</span>';
+    }
+
+    db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+    // Heartbeat - update last_active every 15 sec
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(() => {
+      db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+    }, 15000);
+
+    // Tab visibility → online/offline
+    if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
+    visibilityHandler = function() {
+      if (document.hidden) {
+        db.collection('users').doc(myId).update({
+          is_online: false,
+          last_seen: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        if (heartbeatInterval) clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      } else {
+        db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        if (!heartbeatInterval) {
+          heartbeatInterval = setInterval(() => {
+            db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+          }, 15000);
+        }
+        listenUsers();
+      }
+    };
+    document.addEventListener('visibilitychange', visibilityHandler);
+
+    listenUsers();
+    loadProfile();
+    initFontSize();
+    listenForIncomingCalls();
+    listenNewMsgNotifications();
+    listenBroadcast();
+  });
+}
+
+// ==================== WAKE BACKEND ====================
+var wakeOverlayEl = null;
+var wakeLabelEl = null;
+
+function wakeBackend(callback) {
+  if (!wakeOverlayEl) {
+    wakeOverlayEl = document.createElement('div');
+    wakeOverlayEl.id = 'wakeBackendOverlay';
+    wakeOverlayEl.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:var(--ios-bg,#F2F2F7);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
+    wakeOverlayEl.innerHTML =
+      '<div style="width:48px;height:48px;border:4px solid var(--ios-gray4,#D1D1D6);border-top-color:var(--ios-blue,#007AFF);border-radius:50%;animation:wkSpin 0.8s linear infinite;"></div>' +
+      '<div style="margin-top:16px;font-size:14px;color:var(--ios-gray,#8E8E93);">Waking up server...</div>' +
+      '<div id="wakeLabel" style="margin-top:6px;font-size:12px;color:var(--ios-gray3,#C7C7CC);">Please wait</div>';
+    // Add keyframe animation
+    var style = document.createElement('style');
+    style.textContent = '@keyframes wkSpin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+    document.body.appendChild(wakeOverlayEl);
+    wakeLabelEl = document.getElementById('wakeLabel');
+  }
+  wakeOverlayEl.style.display = 'flex';
+  if (wakeLabelEl) wakeLabelEl.textContent = 'Please wait';
+
+  var attempts = 0;
+  var maxWait = 120;
+  var retryMs = 2500;
+
+  function ping() {
+    attempts++;
+    if (attempts > 1 && wakeLabelEl) {
+      wakeLabelEl.textContent = 'Attempt ' + attempts + '...';
+    }
+    fetch(VOICE_API + '/api/health', { method: 'GET', mode: 'cors', cache: 'no-store' })
+      .then(function(r) {
+        if (r.ok) {
+          if (wakeOverlayEl) wakeOverlayEl.style.display = 'none';
+          if (callback) callback();
+        } else {
+          scheduleRetry();
+        }
+      })
+      .catch(function() {
+        scheduleRetry();
+      });
   }
 
-  db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-
-  // Heartbeat - update last_active every 15 sec
-  if (heartbeatInterval) clearInterval(heartbeatInterval);
-  heartbeatInterval = setInterval(() => {
-    db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
-  }, 15000);
-
-  // Tab visibility → online/offline
-  if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
-  visibilityHandler = function() {
-    if (document.hidden) {
-      db.collection('users').doc(myId).update({
-        is_online: false,
-        last_seen: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      if (heartbeatInterval) clearInterval(heartbeatInterval);
-      heartbeatInterval = null;
-    } else {
-      db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      if (!heartbeatInterval) {
-        heartbeatInterval = setInterval(() => {
-          db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
-        }, 15000);
-      }
-      listenUsers();
+  function scheduleRetry() {
+    if (attempts * retryMs / 1000 >= maxWait) {
+      if (wakeLabelEl) wakeLabelEl.textContent = 'Server is taking longer than usual. Retrying...';
     }
-  };
-  document.addEventListener('visibilitychange', visibilityHandler);
+    setTimeout(ping, retryMs);
+  }
 
-  listenUsers();
-  loadProfile();
-  initFontSize();
-  listenForIncomingCalls();
-  listenNewMsgNotifications();
-  listenBroadcast();
+  ping();
 }
 
 function setAvatarImg(elId, url) {
