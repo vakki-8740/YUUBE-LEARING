@@ -171,17 +171,36 @@ router.get('/conversation/:user1/:user2', async (req, res) => {
   try {
     const { user1, user2 } = req.params;
     const result = await pool.query(
-      'SELECT id, user_id, audio_data, duration, file_size, receiver_id, reply_to, reactions, seen, created_at FROM voice_recordings WHERE (user_id = $1 AND receiver_id = $2) OR (user_id = $2 AND receiver_id = $1) ORDER BY created_at ASC',
+      'SELECT id, user_id, duration, file_size, receiver_id, reply_to, reactions, seen, created_at FROM voice_recordings WHERE (user_id = $1 AND receiver_id = $2) OR (user_id = $2 AND receiver_id = $1) ORDER BY created_at ASC',
       [user1, user2]
     );
-    const rows = result.rows.map(r => {
-      const { audio_data, ...rest } = r;
-      return { ...rest, audio_url: 'data:audio/webm;base64,' + audio_data };
-    });
-    res.json(rows);
+    res.json(result.rows);
   } catch (err) {
     console.error('Conversation error:', err);
     res.status(500).json({ error: 'Failed to get conversation' });
+  }
+});
+
+router.get('/:id/audio', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, audio_data, duration, file_size FROM voice_recordings WHERE id = $1',
+      [req.params.id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Recording not found' });
+    }
+    const r = result.rows[0];
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.json({
+      id: r.id,
+      duration: r.duration,
+      file_size: r.file_size,
+      audio_url: 'data:audio/webm;base64,' + r.audio_data
+    });
+  } catch (err) {
+    console.error('Audio fetch error:', err);
+    res.status(500).json({ error: 'Failed to get audio' });
   }
 });
 

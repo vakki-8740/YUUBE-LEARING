@@ -2226,6 +2226,55 @@ let voiceReplyToId = null;
 let voiceReplyToName = '';
 let voiceUnsubRecording = null;
 
+var voiceAudioCache = {
+  _data: {},
+  _order: [],
+  _size: 0,
+  _maxEntries: 30,
+  _maxSize: 50 * 1024 * 1024,
+  get: function(id) {
+    var item = this._data[id];
+    if (!item) return null;
+    var idx = this._order.indexOf(id);
+    if (idx > -1) { this._order.splice(idx, 1); this._order.push(id); }
+    return item.url;
+  },
+  set: function(id, url, fileSize) {
+    if (this._data[id]) {
+      this._size -= this._data[id].size || 0;
+      var idx = this._order.indexOf(id);
+      if (idx > -1) this._order.splice(idx, 1);
+    }
+    var entrySize = fileSize || (url ? Math.round(url.length * 0.75) : 0);
+    this._data[id] = { url: url, size: entrySize };
+    this._order.push(id);
+    this._size += entrySize;
+    this._evict();
+  },
+  _evict: function() {
+    while ((this._order.length > this._maxEntries || this._size > this._maxSize) && this._order.length > 0) {
+      var oldest = this._order.shift();
+      if (oldest && this._data[oldest]) {
+        this._size -= this._data[oldest].size;
+        delete this._data[oldest];
+      }
+    }
+  },
+  remove: function(id) {
+    if (this._data[id]) {
+      this._size -= this._data[id].size || 0;
+      delete this._data[id];
+      var idx = this._order.indexOf(id);
+      if (idx > -1) this._order.splice(idx, 1);
+    }
+  },
+  clear: function() {
+    this._data = {};
+    this._order = [];
+    this._size = 0;
+  }
+};
+
 let voiceRecMediaRecorder = null;
 let voiceRecChunks = [];
 let voiceRecStartTime = null;
@@ -2345,7 +2394,6 @@ function renderVoicePackBubble(p) {
   var name = user ? user.name : 'User';
   var time = p.created_at ? getTimeAgo(new Date(p.created_at + 'Z')) : '';
   var dur = formatDuration(p.duration || 0);
-  var audioUrl = p.audio_url || '';
   var reacted = {};
   try { reacted = JSON.parse(p.reactions) || {}; } catch(e) {}
   var myReactions = [];
@@ -2396,7 +2444,7 @@ function renderVoicePackBubble(p) {
     '<div class="voice-pack-body">' +
       replyHtml +
       '<div class="voice-pack-player">' +
-        '<button class="voice-pack-play" onclick="voiceConvPlay(this,\'' + audioUrl + '\')">' +
+        '<button class="voice-pack-play" onclick="voiceConvPlay(this)" data-id="' + p.id + '">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
         '</button>' +
         '<div class="voice-pack-bar" onclick="voiceConvSeek(event,this)" data-dur="' + (p.duration || 0) + '">' +
@@ -2414,14 +2462,16 @@ function renderVoicePackBubble(p) {
   '</div>';
 }
 
-function voiceConvPlay(btn, url) {
+function voiceConvPlay(btn) {
+  var id = btn.dataset.id;
   var bubble = btn.closest('.voice-pack-bubble');
-  if (!bubble) return;
+  if (!bubble || !id) return;
   var bar = bubble.querySelector('.voice-pack-bar');
   var fill = bubble.querySelector('.voice-pack-bar-fill');
   var dur = parseFloat(bar ? bar.dataset.dur : 0) || 0;
   var playSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
   var pauseSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+
   if (voiceConvAudio && voiceConvPlayEl === btn && !voiceConvAudio.paused) {
     voiceConvAudio.pause();
     btn.classList.remove('playing');
@@ -2433,22 +2483,45 @@ function voiceConvPlay(btn, url) {
     voiceConvAudio.play();
     btn.classList.add('playing');
     btn.innerHTML = pauseSvg;
-    if (voiceConvInterval) clearInterval(voiceConvInterval);
-    voiceConvInterval = setInterval(function() {
-      if (voiceConvAudio && !voiceConvAudio.paused) {
-        fill.style.width = Math.min((voiceConvAudio.currentTime / Math.max(dur,1)) * 100, 100) + '%';
-      }
-    }, 150);
+    startPlaybackTimer(fill, dur);
     return;
   }
+
+  var cachedUrl = voiceAudioCache.get(id);
+  if (cachedUrl) {
+    playNewAudio(btn, cachedUrl, fill, dur, playSvg, pauseSvg, id);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+  fetch(VOICE_API + '/api/voices/' + id + '/audio?t=' + Date.now(), { cache: 'no-store' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      voiceAudioCache.set(id, data.audio_url, data.file_size || 0);
+      btn.disabled = false;
+      playNewAudio(btn, data.audio_url, fill, dur, playSvg, pauseSvg, id);
+      preloadNextVoice(id);
+    })
+    .catch(function() {
+      btn.disabled = false;
+      btn.innerHTML = playSvg;
+    });
+}
+
+function playNewAudio(btn, url, fill, dur, playSvg, pauseSvg, id) {
+  if (!voiceConvPartnerId) return;
   if (voiceConvAudio) {
     voiceConvAudio.pause();
     if (voiceConvInterval) clearInterval(voiceConvInterval);
     if (voiceConvPlayEl) {
       voiceConvPlayEl.classList.remove('playing');
       voiceConvPlayEl.innerHTML = playSvg;
-      var pf = voiceConvPlayEl.closest('.voice-pack-bubble').querySelector('.voice-pack-bar-fill');
-      if (pf) pf.style.width = '0%';
+      var pf = voiceConvPlayEl.closest('.voice-pack-bubble');
+      if (pf) {
+        var pfBar = pf.querySelector('.voice-pack-bar-fill');
+        if (pfBar) pfBar.style.width = '0%';
+      }
     }
   }
   voiceConvAudio = new Audio(url);
@@ -2460,16 +2533,38 @@ function voiceConvPlay(btn, url) {
     if (voiceConvInterval) clearInterval(voiceConvInterval);
     voiceConvAudio = null;
     voiceConvPlayEl = null;
+    if (id) preloadNextVoice(id);
   };
   voiceConvAudio.play();
   btn.classList.add('playing');
   btn.innerHTML = pauseSvg;
+  startPlaybackTimer(fill, dur);
+}
+
+function startPlaybackTimer(fill, dur) {
   if (voiceConvInterval) clearInterval(voiceConvInterval);
   voiceConvInterval = setInterval(function() {
     if (voiceConvAudio && !voiceConvAudio.paused) {
-      fill.style.width = Math.min((voiceConvAudio.currentTime / Math.max(dur,1)) * 100, 100) + '%';
+      fill.style.width = Math.min((voiceConvAudio.currentTime / Math.max(dur, 1)) * 100, 100) + '%';
     }
   }, 150);
+}
+
+function preloadNextVoice(currentId) {
+  if (!voiceConvData || voiceConvData.length === 0) return;
+  var idx = -1;
+  for (var i = 0; i < voiceConvData.length; i++) {
+    if (voiceConvData[i].id === currentId) { idx = i; break; }
+  }
+  if (idx < 0 || idx >= voiceConvData.length - 1) return;
+  var next = voiceConvData[idx + 1];
+  if (!next || voiceAudioCache.get(next.id)) return;
+  fetch(VOICE_API + '/api/voices/' + next.id + '/audio?t=' + Date.now(), { cache: 'no-store' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      voiceAudioCache.set(next.id, data.audio_url, data.file_size || 0);
+    })
+    .catch(function() {});
 }
 
 function voiceConvSeek(event, bar) {
@@ -2792,8 +2887,10 @@ async function deleteVoicePack(id) {
   if (!confirm('Delete this voice pack?')) return;
   try {
     var res = await fetch(VOICE_API + '/api/voices/' + id, { method: 'DELETE' });
-    if (res.ok) loadVoiceConvMsgs();
-    else alert('Failed to delete.');
+    if (res.ok) {
+      voiceAudioCache.remove(id);
+      loadVoiceConvMsgs();
+    } else alert('Failed to delete.');
   } catch (err) {
     alert('Failed to delete.');
   }
