@@ -63,3 +63,8 @@ DO $$ BEGIN
   ALTER TABLE voice_recordings ADD COLUMN seen BOOLEAN DEFAULT FALSE;
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
+
+DO $$ BEGIN
+  ALTER TABLE voice_recordings ADD COLUMN media_type VARCHAR(50) DEFAULT 'audio/webm';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;

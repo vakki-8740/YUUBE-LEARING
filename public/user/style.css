@@ -2547,11 +2547,26 @@ button:active {
   border-radius: 2px;
   cursor: pointer;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
-.voice-pack-bar-fill { height: 100%; background: var(--ios-blue); border-radius: 2px; width: 0%; transition: width 0.1s linear; pointer-events: none; }
+.voice-pack-bar-fill { height: 100%; background: var(--ios-blue); border-radius: 2px; width: 0%; pointer-events: none; position: relative; }
+.voice-pack-bar-knob {
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  transform: translateY(-50%) scale(0);
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+.voice-pack-bar-fill.active .voice-pack-bar-knob { transform: translateY(-50%) scale(1); }
 .voice-pack-bubble.outgoing .voice-pack-bar { background: rgba(255,255,255,0.25); }
 .voice-pack-bubble.outgoing .voice-pack-bar-fill { background: white; }
+.voice-pack-bubble.outgoing .voice-pack-bar-knob { background: white; }
 .voice-pack-dur { font-size: 11px; color: var(--ios-text2); font-variant-numeric: tabular-nums; flex-shrink: 0; min-width: 28px; text-align: right; }
 .voice-pack-bubble.outgoing .voice-pack-dur { color: var(--ios-text2); }
 
@@ -2731,14 +2746,18 @@ button:active {
 /* Recording Overlay inside Conversation */
 .voice-conv-rec {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
+  gap: 8px;
   padding: 10px 16px;
   background: var(--ios-card);
   border-top: 0.5px solid var(--ios-separator);
   animation: slideUp 0.2s ease;
+  width: 100%;
 }
+.voice-rec-top { width: 100%; flex-shrink: 0; }
+.voice-rec-bottom { display: flex; align-items: center; justify-content: center; gap: 20px; width: 100%; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .voice-conv-rec-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--ios-red); text-transform: uppercase; letter-spacing: 0.5px; }
 .voice-rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ios-red); animation: voicePulse 1s ease-in-out infinite; }

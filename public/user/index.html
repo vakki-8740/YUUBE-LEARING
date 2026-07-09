@@ -276,8 +276,8 @@
                   <line x1="12" y1="19" x2="12" y2="23"/>
                   <line x1="8" y1="23" x2="16" y2="23"/>
                 </svg>
-                <div>No voice packs yet</div>
-                <div style="font-size:12px;margin-top:4px;">Tap the mic to send a voice pack</div>
+                <div>No media yet</div>
+                <div style="font-size:12px;margin-top:4px;">Tap the mic or switch to video to send media</div>
               </div>
             </div>
 
@@ -304,34 +304,56 @@
             </div>
 
             <!-- Input / Recording Bar -->
-            <div class="voice-input-area">
+            <div class="voice-input-area" id="voiceInputArea">
+              <button class="voice-mode-toggle" id="voiceModeToggle" onclick="toggleVoiceMode()" title="Switch to Video" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--ios-gray5);color:var(--ios-gray);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;margin-right:12px;">
+                <svg id="voiceToggleIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="23 7 16 12 23 17 23 7"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+              </button>
               <button class="voice-mic-btn" id="voiceMicBtn" onclick="startVoiceConvRec()" title="Record Voice Pack">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg id="voiceMicIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                   <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                   <line x1="12" y1="19" x2="12" y2="23"/>
                   <line x1="8" y1="23" x2="16" y2="23"/>
                 </svg>
               </button>
+              <button class="voice-gallery-btn" id="voiceGalleryBtn" onclick="triggerVoiceVideoPicker()" title="Pick Video from Gallery" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--ios-gray5);color:var(--ios-gray);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;margin-left:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </button>
 
+              <input type="file" id="voiceVideoPicker" accept="video/*" style="display:none" onchange="onVoiceVideoPicked(event)">
               <div class="voice-conv-rec" id="voiceConvRec" style="display:none;">
-                <div class="voice-conv-rec-indicator">
-                  <div class="voice-rec-dot"></div>
-                  <span>Recording</span>
+                <div class="voice-rec-top">
+                  <video id="voiceRecCamPreview" autoplay playsinline muted style="display:none;width:100%;max-height:180px;border-radius:10px;background:#000;object-fit:cover;"></video>
                 </div>
-                <div class="voice-conv-rec-timer" id="voiceConvTimer">0:00</div>
-                <div class="voice-conv-rec-actions">
-                  <button class="voice-rec-action-btn cancel" onclick="cancelVoiceConvRec()">Cancel</button>
-                  <button class="voice-rec-action-btn send" onclick="stopVoiceConvRec()">Send</button>
+                <div class="voice-rec-bottom">
+                  <div class="voice-conv-rec-indicator">
+                    <div class="voice-rec-dot"></div>
+                    <span id="voiceRecLabel">Recording</span>
+                  </div>
+                  <div class="voice-conv-rec-timer" id="voiceConvTimer">0:00</div>
+                  <div class="voice-conv-rec-actions">
+                    <button class="voice-rec-action-btn cancel" onclick="cancelVoiceConvRec()">Cancel</button>
+                    <button class="voice-rec-action-btn send" onclick="stopVoiceConvRec()">Send</button>
+                  </div>
                 </div>
               </div>
 
               <div class="voice-conv-preview" id="voiceConvPreview" style="display:none;">
-                <div class="voice-conv-preview-player">
+                <div class="voice-conv-preview-player" id="voicePreviewPlayer">
                   <button class="voice-conv-preview-play" id="voiceConvPreviewPlay" onclick="toggleVoiceConvPreview()">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
                   </button>
                   <span class="voice-conv-preview-dur" id="voiceConvPreviewDur">0:00</span>
+                </div>
+                <div class="voice-conv-preview-video" id="voiceConvPreviewVideo" style="display:none;">
+                  <video id="voicePreviewVideoEl" controls playsinline style="width:200px;max-height:200px;border-radius:12px;background:#000;"></video>
                 </div>
                 <div class="voice-conv-preview-actions">
                   <button class="voice-conv-preview-btn cancel" onclick="cancelVoiceConvPreview()">Delete</button>

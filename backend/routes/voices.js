@@ -7,35 +7,38 @@ const router = express.Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['audio/webm', 'audio/ogg', 'audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/mp4'];
-    if (allowed.includes(file.mimetype) || file.originalname.match(/\.(webm|ogg|wav|mp3|mp4)$/i)) {
+    const allowedAudio = ['audio/webm', 'audio/ogg', 'audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/mp4'];
+    const allowedVideo = ['video/webm', 'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/x-matroska'];
+    const allowedExt = /\.(webm|ogg|wav|mp3|mp4|mov|avi|mkv)$/i;
+    if (allowedAudio.includes(file.mimetype) || allowedVideo.includes(file.mimetype) || file.originalname.match(allowedExt)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid audio format'), false);
+      cb(new Error('Invalid media format'), false);
     }
   }
 });
 
 router.post('/upload', upload.single('audio'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No audio file uploaded' });
+    if (!req.file) return res.status(400).json({ error: 'No media file uploaded' });
     if (!req.body.userId) return res.status(400).json({ error: 'userId is required' });
 
     const id = uuidv4();
     const audioBase64 = req.file.buffer.toString('base64');
     const duration = parseInt(req.body.duration) || 0;
+    const mediaType = req.file.mimetype || 'audio/webm';
 
     const replyTo = req.body.reply_to || null;
 
     await pool.query(
-      'INSERT INTO voice_recordings (id, user_id, audio_data, duration, file_size, reply_to) VALUES ($1, $2, $3, $4, $5, $6)',
-      [id, req.body.userId, audioBase64, duration, req.file.size, replyTo]
+      'INSERT INTO voice_recordings (id, user_id, audio_data, duration, file_size, reply_to, media_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [id, req.body.userId, audioBase64, duration, req.file.size, replyTo, mediaType]
     );
 
-    const audioUrl = 'data:audio/webm;base64,' + audioBase64;
-    res.json({ id, duration, file_size: req.file.size, created_at: new Date().toISOString(), audio_url: audioUrl });
+    const dataUrl = 'data:' + mediaType + ';base64,' + audioBase64;
+    res.json({ id, duration, file_size: req.file.size, created_at: new Date().toISOString(), audio_url: dataUrl, media_type: mediaType });
   } catch (err) {
     console.error('Voice upload error:', err);
     res.status(500).json({ error: 'Upload failed' });
@@ -48,17 +51,18 @@ router.get('/list', async (req, res) => {
     let result;
     if (userId) {
       result = await pool.query(
-        'SELECT id, user_id, audio_data, duration, file_size, receiver_id, reply_to, reactions, seen, created_at FROM voice_recordings WHERE user_id = $1 OR receiver_id = $1 ORDER BY created_at DESC',
+        'SELECT id, user_id, audio_data, duration, file_size, receiver_id, reply_to, reactions, seen, created_at, media_type FROM voice_recordings WHERE user_id = $1 OR receiver_id = $1 ORDER BY created_at DESC',
         [userId]
       );
     } else {
       result = await pool.query(
-      'SELECT id, user_id, audio_data, duration, file_size, receiver_id, reply_to, reactions, created_at FROM voice_recordings ORDER BY created_at DESC'
+      'SELECT id, user_id, audio_data, duration, file_size, receiver_id, reply_to, reactions, created_at, media_type FROM voice_recordings ORDER BY created_at DESC'
       );
     }
     const rows = result.rows.map(r => {
       const { audio_data, ...rest } = r;
-      return { ...rest, audio_url: 'data:audio/webm;base64,' + audio_data };
+      const mt = r.media_type || 'audio/webm';
+      return { ...rest, audio_url: 'data:' + mt + ';base64,' + audio_data };
     });
     res.json(rows);
   } catch (err) {
@@ -70,11 +74,12 @@ router.get('/list', async (req, res) => {
 router.get('/admin/all', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, user_id, audio_data, duration, file_size, receiver_id, created_at FROM voice_recordings ORDER BY created_at DESC'
+      'SELECT id, user_id, audio_data, duration, file_size, receiver_id, created_at, media_type FROM voice_recordings ORDER BY created_at DESC'
     );
     const rows = result.rows.map(r => {
       const { audio_data, ...rest } = r;
-      return { ...rest, audio_url: 'data:audio/webm;base64,' + audio_data };
+      const mt = r.media_type || 'audio/webm';
+      return { ...rest, audio_url: 'data:' + mt + ';base64,' + audio_data };
     });
     res.json(rows);
   } catch (err) {
@@ -86,12 +91,13 @@ router.get('/admin/all', async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, user_id, audio_data, duration, file_size, reply_to, reactions, created_at FROM voice_recordings WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT id, user_id, audio_data, duration, file_size, reply_to, reactions, created_at, media_type FROM voice_recordings WHERE user_id = $1 ORDER BY created_at DESC',
       [req.params.userId]
     );
     const rows = result.rows.map(r => {
       const { audio_data, ...rest } = r;
-      return { ...rest, audio_url: 'data:audio/webm;base64,' + audio_data };
+      const mt = r.media_type || 'audio/webm';
+      return { ...rest, audio_url: 'data:' + mt + ';base64,' + audio_data };
     });
     res.json(rows);
   } catch (err) {
@@ -171,7 +177,7 @@ router.get('/conversation/:user1/:user2', async (req, res) => {
   try {
     const { user1, user2 } = req.params;
     const result = await pool.query(
-      'SELECT id, user_id, duration, file_size, receiver_id, reply_to, reactions, seen, created_at FROM voice_recordings WHERE (user_id = $1 AND receiver_id = $2) OR (user_id = $2 AND receiver_id = $1) ORDER BY created_at ASC',
+      'SELECT id, user_id, duration, file_size, receiver_id, reply_to, reactions, seen, created_at, media_type FROM voice_recordings WHERE (user_id = $1 AND receiver_id = $2) OR (user_id = $2 AND receiver_id = $1) ORDER BY created_at ASC',
       [user1, user2]
     );
     res.json(result.rows);
@@ -184,19 +190,20 @@ router.get('/conversation/:user1/:user2', async (req, res) => {
 router.get('/:id/audio', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, audio_data, duration, file_size FROM voice_recordings WHERE id = $1',
+      'SELECT id, audio_data, duration, file_size, media_type FROM voice_recordings WHERE id = $1',
       [req.params.id]
     );
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Recording not found' });
     }
     const r = result.rows[0];
+    const mt = r.media_type || 'audio/webm';
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.json({
       id: r.id,
       duration: r.duration,
       file_size: r.file_size,
-      audio_url: 'data:audio/webm;base64,' + r.audio_data
+      audio_url: 'data:' + mt + ';base64,' + r.audio_data
     });
   } catch (err) {
     console.error('Audio fetch error:', err);

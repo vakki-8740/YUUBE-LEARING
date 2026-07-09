@@ -1860,22 +1860,38 @@
             var s = Math.floor(dur % 60);
             var durStr = m + ':' + String(s).padStart(2, '0');
             var timeAgo = r.created_at ? formatLastSeen(r.created_at) : '';
+            var isVideo = r.media_type && r.media_type.startsWith('video/');
 
-            html += '<div class="detail-msg-item" style="padding:10px 0;">' +
-              '<div class="detail-msg-meta">' +
-                '<span class="detail-msg-from">' + escapeHtml(senderName) + ' → ' + escapeHtml(receiverName) + '</span> · ' + timeAgo +
-              '</div>' +
-              '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">' +
-                '<button onclick="adminPlayVoice(this, \'' + (r.audio_url || '') + '\')" ' +
-                  'style="width:36px;height:36px;border-radius:50%;border:none;background:var(--ios-blue);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
-                '</button>' +
-                '<div style="flex:1;height:4px;background:var(--ios-gray5);border-radius:2px;overflow:hidden;cursor:pointer;" onclick="adminSeekVoice(event, this)" data-dur="' + dur + '">' +
-                  '<div style="height:100%;width:0%;background:var(--ios-blue);border-radius:2px;" class="admin-vp-bar-fill"></div>' +
+            if (isVideo) {
+              html += '<div class="detail-msg-item" style="padding:10px 0;">' +
+                '<div class="detail-msg-meta">' +
+                  '<span class="detail-msg-from">' + escapeHtml(senderName) + ' → ' + escapeHtml(receiverName) + '</span> · ' + timeAgo +
                 '</div>' +
-                '<span style="font-size:12px;color:var(--ios-gray);min-width:32px;">' + durStr + '</span>' +
-              '</div>' +
-            '</div>';
+                '<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">' +
+                  '<video src="' + (r.audio_url || '') + '" controls playsinline style="width:200px;max-height:200px;border-radius:8px;background:#000;"></video>' +
+                  '<div style="display:flex;align-items:center;gap:10px;">' +
+                    '<span style="font-size:12px;color:var(--ios-gray);">' + durStr + '</span>' +
+                    '<span style="font-size:11px;color:var(--ios-blue);">Video</span>' +
+                  '</div>' +
+                '</div>' +
+              '</div>';
+            } else {
+              html += '<div class="detail-msg-item" style="padding:10px 0;">' +
+                '<div class="detail-msg-meta">' +
+                  '<span class="detail-msg-from">' + escapeHtml(senderName) + ' → ' + escapeHtml(receiverName) + '</span> · ' + timeAgo +
+                '</div>' +
+                '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">' +
+                  '<button onclick="adminPlayVoice(this, \'' + (r.audio_url || '') + '\')" ' +
+                    'style="width:36px;height:36px;border-radius:50%;border:none;background:var(--ios-blue);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
+                  '</button>' +
+                  '<div style="flex:1;height:4px;background:var(--ios-gray5);border-radius:2px;overflow:hidden;cursor:pointer;" onclick="adminSeekVoice(event, this)" data-dur="' + dur + '">' +
+                    '<div style="height:100%;width:0%;background:var(--ios-blue);border-radius:2px;" class="admin-vp-bar-fill"></div>' +
+                  '</div>' +
+                  '<span style="font-size:12px;color:var(--ios-gray);min-width:32px;">' + durStr + '</span>' +
+                '</div>' +
+              '</div>';
+            }
           });
 
           area.innerHTML = html;
