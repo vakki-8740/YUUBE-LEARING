@@ -2259,41 +2259,51 @@
       const area = document.getElementById('detailMessages');
       area.innerHTML = '<div class="no-msgs">Loading messages...</div>';
 
-      unsubDetailMsgs = db.collection('messages')
-        .where('from', '==', userId)
-        .onSnapshot((snap) => {
-          if (snap.empty) {
-            area.innerHTML = '<div class="no-msgs">No messages sent by this user</div>';
-            return;
-          }
-          const msgs = [];
-          snap.forEach(doc => msgs.push({ id: doc.id, ...doc.data() }));
-          msgs.sort((a, b) => {
-            const ta = a.created_at?.toDate?.() || 0;
-            const tb = b.created_at?.toDate?.() || 0;
-            return tb - ta;
-          });
-          const maxMsgs = msgs.slice(0, 50);
-          let html = '';
-          maxMsgs.forEach(d => {
-            const ts = d.created_at?.toDate?.() || new Date();
-            const time = ts.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-            const toUser = allUsers.find(u => u.id === d.to);
-            const toName = toUser ? toUser.name : (d.to === 'admin' ? 'Admin' : 'Unknown');
-            const msgText = d.message || '';
-            const imgHtml = d.image ? `<br><img src="${d.image}" alt="" style="max-width:120px;border-radius:8px;">` : '';
-            html += `
-              <div class="detail-msg-item">
-                <div class="detail-msg-meta">
-                  <span class="detail-msg-from">→ ${escapeHtml(toName)}</span> · ${time}
-                </div>
-                <div class="detail-msg-text">${escapeHtml(msgText)}${imgHtml}</div>
-              </div>`;
-          });
-          area.innerHTML = html || '<div class="no-msgs">No text messages found</div>';
-        });
+      unsubDetailMsgs = function() {};
 
-      loadVoicePacksForUser(userId);
+      Promise.all([
+        db.collection('messages').where('from', '==', userId).get(),
+        db.collection('messages').where('to', '==', userId).get()
+      ])
+      .then(function([snap1, snap2]) {
+        var seen = new Set();
+        var msgs = [];
+        snap1.forEach(function(doc) {
+          if (!seen.has(doc.id)) { seen.add(doc.id); msgs.push({ id: doc.id, ...doc.data() }); }
+        });
+        snap2.forEach(function(doc) {
+          if (!seen.has(doc.id)) { seen.add(doc.id); msgs.push({ id: doc.id, ...doc.data() }); }
+        });
+        if (msgs.length === 0) {
+          area.innerHTML = '<div class="no-msgs">No messages found for this user</div>';
+          loadVoicePacksForUser(userId);
+          return;
+        }
+        msgs.sort(function(a, b) {
+          var ta = a.created_at?.toDate?.() || new Date(0);
+          var tb = b.created_at?.toDate?.() || new Date(0);
+          return ta - tb;
+        });
+        var html = '<div style="font-size:11px;color:var(--ios-gray);padding:8px 12px;text-align:center;border-bottom:1px solid var(--ios-gray5);">' + msgs.length + ' messages · oldest first</div>';
+        msgs.forEach(function(d) {
+          var ts = d.created_at?.toDate?.() || new Date();
+          var time = ts.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+          var senderUser = allUsers.find(function(u) { return u.id === d.from; });
+          var senderName = senderUser ? senderUser.name : (d.from === 'admin' ? 'Admin' : d.from || 'Unknown');
+          var receiverUser = d.to ? allUsers.find(function(u) { return u.id === d.to; }) : null;
+          var receiverName = receiverUser ? receiverUser.name : (d.to === 'admin' ? 'Admin' : d.to || 'Unknown');
+          var isOutgoing = d.from === userId;
+          var msgText = d.message || '';
+          var imgHtml = d.image ? '<br><img src="' + d.image + '" alt="" style="max-width:180px;border-radius:8px;cursor:pointer;" onclick="window.open(this.src)">' : '';
+          html += '<div class="detail-msg-item" style="' + (isOutgoing ? 'border-left:3px solid var(--ios-blue);' : '') + '"><div class="detail-msg-meta"><span class="detail-msg-from" style="color:' + (isOutgoing ? 'var(--ios-blue)' : 'var(--ios-green)') + ';">' + (isOutgoing ? '→ ' + escapeHtml(receiverName) : '← ' + escapeHtml(senderName)) + '</span> · ' + time + '</div><div class="detail-msg-text">' + escapeHtml(msgText) + imgHtml + '</div></div>';
+        });
+        area.innerHTML = html;
+        loadVoicePacksForUser(userId);
+      })
+      .catch(function() {
+        area.innerHTML = '<div class="no-msgs">Failed to load messages</div>';
+        loadVoicePacksForUser(userId);
+      });
     }
 
     function loadVoicePacksForUser(userId) {
@@ -2325,38 +2335,22 @@
             var s = Math.floor(dur % 60);
             var durStr = m + ':' + String(s).padStart(2, '0');
             var timeAgo = r.created_at ? formatLastSeen(r.created_at) : '';
-            var isVideo = r.media_type && r.media_type.startsWith('video/');
 
-            if (isVideo) {
-              html += '<div class="detail-msg-item" style="padding:10px 0;">' +
-                '<div class="detail-msg-meta">' +
-                  '<span class="detail-msg-from">' + escapeHtml(senderName) + ' → ' + escapeHtml(receiverName) + '</span> · ' + timeAgo +
+            html += '<div class="detail-msg-item" style="padding:10px 0;">' +
+              '<div class="detail-msg-meta">' +
+                '<span class="detail-msg-from">' + escapeHtml(senderName) + ' → ' + escapeHtml(receiverName) + '</span> · ' + timeAgo +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">' +
+                '<button onclick="adminPlayVoice(this, \'' + r.id + '\')" ' +
+                  'style="width:36px;height:36px;border-radius:50%;border:none;background:var(--ios-blue);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                  '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
+                '</button>' +
+                '<div style="flex:1;height:4px;background:var(--ios-gray5);border-radius:2px;overflow:hidden;cursor:pointer;" onclick="adminSeekVoice(event, this)" data-dur="' + dur + '">' +
+                  '<div style="height:100%;width:0%;background:var(--ios-blue);border-radius:2px;" class="admin-vp-bar-fill"></div>' +
                 '</div>' +
-                '<div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">' +
-                  '<video src="' + (r.audio_url || '') + '" controls playsinline style="width:200px;max-height:200px;border-radius:8px;background:#000;"></video>' +
-                  '<div style="display:flex;align-items:center;gap:10px;">' +
-                    '<span style="font-size:12px;color:var(--ios-gray);">' + durStr + '</span>' +
-                    '<span style="font-size:11px;color:var(--ios-blue);">Video</span>' +
-                  '</div>' +
-                '</div>' +
-              '</div>';
-            } else {
-              html += '<div class="detail-msg-item" style="padding:10px 0;">' +
-                '<div class="detail-msg-meta">' +
-                  '<span class="detail-msg-from">' + escapeHtml(senderName) + ' → ' + escapeHtml(receiverName) + '</span> · ' + timeAgo +
-                '</div>' +
-                '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">' +
-                  '<button onclick="adminPlayVoice(this, \'' + (r.audio_url || '') + '\')" ' +
-                    'style="width:36px;height:36px;border-radius:50%;border:none;background:var(--ios-blue);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
-                  '</button>' +
-                  '<div style="flex:1;height:4px;background:var(--ios-gray5);border-radius:2px;overflow:hidden;cursor:pointer;" onclick="adminSeekVoice(event, this)" data-dur="' + dur + '">' +
-                    '<div style="height:100%;width:0%;background:var(--ios-blue);border-radius:2px;" class="admin-vp-bar-fill"></div>' +
-                  '</div>' +
-                  '<span style="font-size:12px;color:var(--ios-gray);min-width:32px;">' + durStr + '</span>' +
-                '</div>' +
-              '</div>';
-            }
+                '<span style="font-size:12px;color:var(--ios-gray);min-width:32px;">' + durStr + '</span>' +
+              '</div>' +
+            '</div>';
           });
 
           area.innerHTML = html;
@@ -2366,7 +2360,10 @@
         });
     }
 
-    function adminPlayVoice(btn, url) {
+    function adminPlayVoice(btn, recordingId) {
+      var rec = adminVoicePacks.find(function(r) { return r.id === recordingId; });
+      if (!rec || !rec.audio_url) { console.error('Recording not found:', recordingId); return; }
+      var url = rec.audio_url;
       if (adminVoiceAudio && adminVoicePlayEl === btn && !adminVoiceAudio.paused) {
         adminVoiceAudio.pause();
         btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
