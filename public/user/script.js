@@ -2487,9 +2487,6 @@ function playNewVideo(btn, videoEl, url, fill, dur, playSvg, pauseSvg, id) {
   }
   voiceConvAudio = videoEl;
   voiceConvPlayEl = btn;
-  videoEl.preload = 'auto';
-  videoEl.src = url;
-  videoEl.load();
   btn.classList.add('playing');
   btn.innerHTML = pauseSvg;
   setVideoOverlay(videoEl, false);
@@ -2502,7 +2499,7 @@ function playNewVideo(btn, videoEl, url, fill, dur, playSvg, pauseSvg, id) {
     voiceConvPlayEl = null;
     if (id) preloadNextVoice(id);
   };
-  videoEl.addEventListener('canplay', function() {
+  function doPlay() {
     var playPromise = videoEl.play();
     if (playPromise !== undefined) {
       playPromise.then(function() {
@@ -2516,7 +2513,15 @@ function playNewVideo(btn, videoEl, url, fill, dur, playSvg, pauseSvg, id) {
     } else {
       startPlaybackRAF(fill, dur);
     }
-  }, { once: true });
+  }
+  videoEl.addEventListener('canplay', doPlay, { once: true });
+  if (videoEl.readyState >= 3) {
+    videoEl.removeEventListener('canplay', doPlay);
+    doPlay();
+  }
+  videoEl.preload = 'auto';
+  videoEl.src = url;
+  videoEl.load();
 }
 
 function setVideoOverlay(videoEl, show) {
