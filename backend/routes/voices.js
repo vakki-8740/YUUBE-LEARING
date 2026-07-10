@@ -88,6 +88,16 @@ router.get('/admin/all', async (req, res) => {
   }
 });
 
+router.get('/admin/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) as count FROM voice_recordings');
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
+  } catch (err) {
+    console.error('Admin count voices error:', err);
+    res.status(500).json({ error: 'Failed to count voices' });
+  }
+});
+
 router.get('/user/:userId', async (req, res) => {
   try {
     const result = await pool.query(

@@ -772,6 +772,243 @@
       text-overflow: ellipsis;
     }
 
+  /* ==================== TABS ==================== */
+    .admin-tabs {
+      display: flex;
+      gap: 0;
+      background: var(--ios-gray6);
+      border-radius: 10px;
+      padding: 3px;
+      margin: 0 20px 12px;
+    }
+    .admin-tab {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ios-gray);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .admin-tab.active {
+      background: var(--ios-card);
+      color: var(--ios-text);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .admin-tab:hover:not(.active) { color: var(--ios-text); }
+    .tab-content { display: none; flex-direction: column; height: 100%; }
+    .tab-content.active { display: flex; }
+
+  /* ==================== DASHBOARD ==================== */
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px 20px;
+    }
+    .dash-card {
+      background: var(--ios-card);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .dash-card-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .dash-card-num {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .dash-card-label {
+      font-size: 12px;
+      color: var(--ios-gray);
+      font-weight: 500;
+    }
+    .dash-card-sub {
+      font-size: 11px;
+      color: var(--ios-gray2);
+      margin-top: 2px;
+    }
+    .dash-section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ios-gray);
+      padding: 16px 20px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .dash-activity {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 20px 20px;
+    }
+    .dash-activity::-webkit-scrollbar { display: none; }
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 0.5px solid var(--ios-separator);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 14px;
+    }
+    .activity-info { flex: 1; min-width: 0; }
+    .activity-text { font-size: 14px; font-weight: 500; }
+    .activity-desc { font-size: 12px; color: var(--ios-gray); margin-top: 1px; }
+    .activity-time { font-size: 11px; color: var(--ios-gray2); flex-shrink: 0; }
+
+  /* ==================== ANALYTICS ==================== */
+    .analytics-section {
+      padding: 0 20px;
+      flex: 1;
+      overflow-y: auto;
+    }
+    .analytics-section::-webkit-scrollbar { display: none; }
+    .analytics-card {
+      background: var(--ios-card);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .analytics-card-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .analytics-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 0.5px solid var(--ios-separator);
+    }
+    .analytics-row:last-child { border-bottom: none; }
+    .analytics-row-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+    .analytics-row-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--ios-blue), #5856D6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .analytics-row-name {
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .analytics-row-stat {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .analytics-row-stat-num {
+      font-size: 16px;
+      font-weight: 700;
+    }
+    .analytics-row-stat-label {
+      font-size: 10px;
+      color: var(--ios-gray);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+  /* ==================== USER DETAIL TABS ==================== */
+    .detail-tabs {
+      display: flex;
+      gap: 0;
+      background: var(--ios-gray6);
+      border-radius: 8px;
+      padding: 2px;
+      margin: 8px 16px;
+    }
+    .detail-tab {
+      flex: 1;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ios-gray);
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .detail-tab.active {
+      background: var(--ios-card);
+      color: var(--ios-text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .detail-tab-content { display: none; }
+    .detail-tab-content.active { display: block; }
+
+  /* ==================== ACTIVITY STATS ==================== */
+    .activity-stats {
+      display: flex;
+      gap: 8px;
+      padding: 8px 16px;
+    }
+    .activity-stat-card {
+      flex: 1;
+      background: var(--ios-gray6);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+    .activity-stat-num {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ios-blue);
+    }
+    .activity-stat-label {
+      font-size: 10px;
+      color: var(--ios-gray);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+    }
+
     /* Mobile */
     @media (max-width: 768px) {
       .sidebar {
@@ -1417,41 +1654,82 @@
     <div class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <div style="display:flex; align-items:center; justify-content:space-between;">
-          <h1 style="margin:0;">Chats</h1>
+          <h1 style="margin:0;">Admin</h1>
           <button id="tgSettingsBtn" style="background:none; border:none; cursor:pointer; padding:4px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--ios-gray); transition:background 0.2s;" title="Telegram Settings" type="button">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
-        <div class="admin-badge">⚡ Admin Panel</div>
-      </div>
-
-      <div class="sidebar-stats">
-        <div class="stat-card">
-          <div class="stat-num" id="totalUsers">0</div>
-          <div class="stat-label">Total Users</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="onlineUsers">0</div>
-          <div class="stat-label">Online</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-num" id="unreadCount">0</div>
-          <div class="stat-label">Blocked</div>
+        <div class="admin-badge" style="margin-bottom:10px;">⚡ Admin Panel</div>
+        <div class="admin-tabs">
+          <button class="admin-tab active" onclick="switchAdminTab('dashboard')">📊 Dashboard</button>
+          <button class="admin-tab" onclick="switchAdminTab('users')">👥 Users</button>
+          <button class="admin-tab" onclick="switchAdminTab('analytics')">📈 Analytics</button>
         </div>
       </div>
 
-      <div class="search-box">
-        <div class="search-wrapper">
-          <span class="search-icon">🔍</span>
-          <input type="text" class="search-input" id="searchInput" placeholder="Search users..." oninput="filterUsers()">
+      <!-- Dashboard Tab -->
+      <div class="tab-content active" id="tabDashboard">
+        <div class="sidebar-stats">
+          <div class="stat-card">
+            <div class="stat-num" id="totalUsers">0</div>
+            <div class="stat-label">Total Users</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="onlineUsers">0</div>
+            <div class="stat-label">Online</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="unreadCount">0</div>
+            <div class="stat-label">Blocked</div>
+          </div>
+        </div>
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-card-icon" style="background:#E8F5E9;color:var(--ios-green);">💬</div>
+            <div class="dash-card-num" id="dashMessages">0</div>
+            <div class="dash-card-label">Messages Today</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-icon" style="background:#E3F2FD;color:var(--ios-blue);">🎤</div>
+            <div class="dash-card-num" id="dashVoices">0</div>
+            <div class="dash-card-label">Voice Recordings</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-icon" style="background:#FFF3E0;color:var(--ios-orange);">📷</div>
+            <div class="dash-card-num" id="dashImages">0</div>
+            <div class="dash-card-label">Images Shared</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-icon" style="background:#F3E5F5;color:#9C27B0;">👤</div>
+            <div class="dash-card-num" id="dashActiveUsers">0</div>
+            <div class="dash-card-label">Active Users</div>
+          </div>
+        </div>
+        <div class="dash-section-title">Recent Activity</div>
+        <div class="dash-activity" id="dashActivity">
+          <div style="text-align:center;padding:20px;color:var(--ios-gray);font-size:13px;">Loading activity...</div>
         </div>
       </div>
 
-      <div class="user-list" id="userList">
-        <div class="no-users">
-          <div class="icon">📭</div>
-          <div>No users yet</div>
+      <!-- Users Tab -->
+      <div class="tab-content" id="tabUsers">
+        <div class="search-box">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search users..." oninput="filterUsers()">
+          </div>
         </div>
+        <div class="user-list" id="userList">
+          <div class="no-users">
+            <div class="icon">📭</div>
+            <div>No users yet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Tab -->
+      <div class="tab-content" id="tabAnalytics">
+        <div class="analytics-section" id="analyticsSection"></div>
       </div>
     </div>
 
@@ -1484,34 +1762,41 @@
           </button>
         </div>
 
-        <div class="detail-section-title">User Info</div>
-        <div class="detail-info-section">
-          <div class="detail-row">
-            <span class="detail-label">User ID</span>
-            <span class="detail-value" id="detailUserId">-</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Username</span>
-            <span class="detail-value" id="detailUsername">-</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Joined</span>
-            <span class="detail-value" id="detailJoined">-</span>
-          </div>
-          <div class="detail-row">
-            <span class="detail-label">Status</span>
-            <span class="detail-value" id="detailStatus">-</span>
+        <div class="detail-tabs">
+          <button class="detail-tab active" onclick="switchDetailTab('info',this)">Info</button>
+          <button class="detail-tab" onclick="switchDetailTab('activity',this)">Activity</button>
+          <button class="detail-tab" onclick="switchDetailTab('messages',this)">Messages</button>
+          <button class="detail-tab" onclick="switchDetailTab('voice',this)">Voice</button>
+        </div>
+
+        <!-- Info Tab -->
+        <div class="detail-tab-content active" id="detailTabInfo" style="overflow-y:auto;flex:1;">
+          <div class="detail-info-section" style="margin:0 16px;">
+            <div class="detail-row"><span class="detail-label">User ID</span><span class="detail-value" id="detailUserId">-</span></div>
+            <div class="detail-row"><span class="detail-label">Username</span><span class="detail-value" id="detailUsername">-</span></div>
+            <div class="detail-row"><span class="detail-label">Joined</span><span class="detail-value" id="detailJoined">-</span></div>
+            <div class="detail-row"><span class="detail-label">Status</span><span class="detail-value" id="detailStatus">-</span></div>
           </div>
         </div>
 
-        <div class="detail-section-title">Recent Messages</div>
-        <div class="detail-messages" id="detailMessages">
-          <div class="no-msgs">Loading messages...</div>
+        <!-- Activity Tab -->
+        <div class="detail-tab-content" id="detailTabActivity" style="overflow-y:auto;flex:1;">
+          <div class="activity-stats" id="activityStats">
+            <div class="activity-stat-card"><div class="activity-stat-num" id="actMsgCount">0</div><div class="activity-stat-label">Messages</div></div>
+            <div class="activity-stat-card"><div class="activity-stat-num" id="actVoiceCount">0</div><div class="activity-stat-label">Voice</div></div>
+            <div class="activity-stat-card"><div class="activity-stat-num" id="actImageCount">0</div><div class="activity-stat-label">Images</div></div>
+          </div>
+          <div style="padding:0 16px;"><div class="detail-section-title" style="padding-left:0;">Recent Activity</div><div id="actTimeline"><div class="no-msgs">Loading...</div></div></div>
         </div>
 
-        <div class="detail-section-title">Voice Packs</div>
-        <div class="detail-messages" id="detailVoicePacks" style="max-height:300px;">
-          <div class="no-msgs">Loading voice packs...</div>
+        <!-- Messages Tab -->
+        <div class="detail-tab-content" id="detailTabMessages" style="overflow-y:auto;flex:1;">
+          <div class="detail-messages" id="detailMessages"><div class="no-msgs">Loading messages...</div></div>
+        </div>
+
+        <!-- Voice Tab -->
+        <div class="detail-tab-content" id="detailTabVoice" style="overflow-y:auto;flex:1;">
+          <div class="detail-messages" id="detailVoicePacks"><div class="no-msgs">Loading voice packs...</div></div>
         </div>
       </div>
     </div>
@@ -1709,6 +1994,115 @@
       }).join('');
     }
 
+    // ==================== TAB SWITCHING ====================
+    let dashActivityMsgs = [];
+    function switchAdminTab(tab) {
+      document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelector('.admin-tab[onclick*="' + tab + '"]').classList.add('active');
+      document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+      if (tab === 'analytics') updateAnalytics();
+    }
+
+    // ==================== DETAIL TAB SWITCHING ====================
+    function switchDetailTab(tab, btn) {
+      var parent = btn.closest('#userDetailView') || btn.closest('.detail-tabs').parentNode;
+      parent.querySelectorAll('.detail-tab').forEach(function(t) { t.classList.remove('active'); });
+      parent.querySelectorAll('.detail-tab-content').forEach(function(t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+      var contentId = 'detailTab' + tab.charAt(0).toUpperCase() + tab.slice(1);
+      var content = parent.querySelector('#' + contentId);
+      if (content) content.classList.add('active');
+    }
+
+    // ==================== DASHBOARD ACTIVITY ====================
+    function updateDashboard() {
+      var today = new Date();
+      today.setHours(0, 0, 0, 0);
+      var todayMsgs = 0, todayImages = 0, voiceCount = 0;
+      var activity = [];
+
+      // Count from existing user data + latest messages
+      allUsers.forEach(function(u) {
+        if (u.last_time) {
+          var t = new Date(u.last_time);
+          if (t >= today) {
+            todayMsgs++;
+            var icon = u.last_message && u.last_message.includes('[Image]') ? '📷' : '💬';
+            activity.push({ icon: icon, iconBg: icon === '📷' ? '#FFF3E0' : '#E3F2FD', text: u.name || 'User', desc: u.last_message || 'Sent a message', time: formatTime(u.last_time) });
+          }
+        }
+      });
+
+      document.getElementById('dashMessages').textContent = todayMsgs;
+      document.getElementById('dashActiveUsers').textContent = allUsers.filter(function(u) { return u.is_online; }).length;
+
+      // Fetch voice recordings count
+      fetch(VOICE_API_ADMIN + '/api/voices/admin/count?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.json(); }).then(function(d) {
+          document.getElementById('dashVoices').textContent = d.count || 0;
+        }).catch(function() { document.getElementById('dashVoices').textContent = '?'; });
+
+      // Render activity feed
+      var area = document.getElementById('dashActivity');
+      if (activity.length === 0) {
+        area.innerHTML = '<div style="text-align:center;padding:20px;color:var(--ios-gray);font-size:13px;">No activity today yet</div>';
+        return;
+      }
+      activity.sort(function(a, b) { return new Date(b.time) - new Date(a.time); });
+      area.innerHTML = activity.slice(0, 20).map(function(a) {
+        return '<div class="activity-item"><div class="activity-icon" style="background:' + a.iconBg + ';">' + a.icon + '</div><div class="activity-info"><div class="activity-text">' + escapeHtml(a.text) + '</div><div class="activity-desc">' + escapeHtml(a.desc) + '</div></div><div class="activity-time">' + a.time + '</div></div>';
+      }).join('');
+    }
+
+    // ==================== ANALYTICS ====================
+    function updateAnalytics() {
+      var area = document.getElementById('analyticsSection');
+      area.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ios-gray);">Loading analytics...</div>';
+
+      // Fetch voice recordings for all users
+      fetch(VOICE_API_ADMIN + '/api/voices/admin/all?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.json(); }).then(function(recordings) {
+          // Compute per-user stats
+          var userStats = {};
+          allUsers.forEach(function(u) { userStats[u.id] = { name: u.name || 'User', msgCount: 0, voiceCount: 0, imageCount: 0, lastActive: u.last_seen || '' }; });
+          recordings.forEach(function(r) {
+            if (userStats[r.user_id]) userStats[r.user_id].voiceCount++;
+          });
+
+          var sorted = Object.keys(userStats).map(function(uid) { return { id: uid, ...userStats[uid] }; });
+          sorted.sort(function(a, b) { return b.voiceCount - a.voiceCount; });
+
+          var topVoices = sorted.slice(0, 10);
+          var totalVoices = recordings.length;
+          var totalUsers = allUsers.length;
+          var onlineUsers = allUsers.filter(function(u) { return u.is_online; }).length;
+
+          var html = '';
+          // Summary card
+          html += '<div class="analytics-card"><div class="analytics-card-title">📊 Summary</div>' +
+            '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+            '<div style="flex:1;min-width:80px;text-align:center;padding:10px;background:var(--ios-gray6);border-radius:10px;"><div style="font-size:22px;font-weight:700;color:var(--ios-blue);">' + totalUsers + '</div><div style="font-size:10px;color:var(--ios-gray);text-transform:uppercase;letter-spacing:0.2px;">Total Users</div></div>' +
+            '<div style="flex:1;min-width:80px;text-align:center;padding:10px;background:var(--ios-gray6);border-radius:10px;"><div style="font-size:22px;font-weight:700;color:var(--ios-green);">' + onlineUsers + '</div><div style="font-size:10px;color:var(--ios-gray);text-transform:uppercase;letter-spacing:0.2px;">Online Now</div></div>' +
+            '<div style="flex:1;min-width:80px;text-align:center;padding:10px;background:var(--ios-gray6);border-radius:10px;"><div style="font-size:22px;font-weight:700;color:var(--ios-orange);">' + totalVoices + '</div><div style="font-size:10px;color:var(--ios-gray);text-transform:uppercase;letter-spacing:0.2px;">Voice Recordings</div></div>' +
+            '</div></div>';
+
+          // Top voice users
+          html += '<div class="analytics-card"><div class="analytics-card-title">🎤 Most Voice Recordings</div>';
+          topVoices.forEach(function(u) {
+            if (u.voiceCount === 0) return;
+            var initial = u.name.charAt(0).toUpperCase();
+            html += '<div class="analytics-row"><div class="analytics-row-left"><div class="analytics-row-avatar">' + initial + '</div><div class="analytics-row-name">' + escapeHtml(u.name) + '</div></div><div class="analytics-row-stat" style="color:var(--ios-blue);">' + u.voiceCount + ' <span style="font-size:10px;color:var(--ios-gray);">recordings</span></div></div>';
+          });
+          html += '</div>';
+
+          area.innerHTML = html;
+        })
+        .catch(function() {
+          area.innerHTML = '<div class="analytics-card"><div class="analytics-card-title">📊 Summary</div><div style="padding:10px 0;">Failed to load analytics. Check backend connection.</div></div>';
+        });
+    }
+
     function filterUsers() {
       const q = document.getElementById('searchInput').value.toLowerCase();
       const filtered = allUsers.filter(u =>
@@ -1722,6 +2116,7 @@
       document.getElementById('onlineUsers').textContent = allUsers.filter(u => u.is_online).length;
       const blockedCount = allUsers.filter(u => u.blocked).length;
       document.getElementById('unreadCount').textContent = blockedCount;
+      updateDashboard();
     }
 
     // ==================== SELECT USER ====================
@@ -1780,6 +2175,51 @@
       }
 
       loadUserMessages(user.id);
+      loadVoicePacksForUser(user.id);
+      loadUserActivityStats(user.id);
+    }
+
+    // ==================== USER ACTIVITY STATS ====================
+    let userActivityCache = {};
+    function loadUserActivityStats(userId) {
+      var msgCount = 0, imageCount = 0;
+      // Queries can be heavy, so we estimate from the loaded data
+      document.getElementById('actMsgCount').textContent = '...';
+      document.getElementById('actVoiceCount').textContent = '...';
+      document.getElementById('actImageCount').textContent = '...';
+      document.getElementById('actTimeline').innerHTML = '<div class="no-msgs">Loading...</div>';
+
+      // Count from Firestore (last 100 messages)
+      db.collection('messages').where('from', '==', userId).orderBy('created_at', 'desc').limit(100).get()
+        .then(function(snap) {
+          msgCount = snap.size;
+          var images = 0;
+          var timeline = [];
+          snap.forEach(function(doc) {
+            var d = doc.data();
+            if (d.image) images++;
+            var ts = d.created_at?.toDate?.() || new Date();
+            timeline.push({ icon: d.image ? '📷' : '💬', text: d.message || (d.image ? 'Shared an image' : ''), time: ts });
+          });
+          imageCount = images;
+          document.getElementById('actMsgCount').textContent = msgCount;
+          document.getElementById('actImageCount').textContent = imageCount;
+
+          // Render timeline (newest first, already sorted)
+          var area = document.getElementById('actTimeline');
+          if (timeline.length === 0) {
+            area.innerHTML = '<div style="text-align:center;padding:16px;color:var(--ios-gray);font-size:13px;">No recent activity</div>';
+            return;
+          }
+          area.innerHTML = timeline.slice(0, 20).map(function(a) {
+            var timeStr = a.time.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            return '<div class="activity-item"><div class="activity-icon" style="background:' + (a.icon === '📷' ? '#FFF3E0' : '#E3F2FD') + ';">' + a.icon + '</div><div class="activity-info"><div class="activity-text">' + escapeHtml(a.text || 'Sent a message') + '</div></div><div class="activity-time">' + timeStr + '</div></div>';
+          }).join('');
+        })
+        .catch(function() {
+          document.getElementById('actMsgCount').textContent = '?';
+          document.getElementById('actImageCount').textContent = '?';
+        });
     }
 
     // ==================== USER MESSAGES ====================
@@ -1849,6 +2289,7 @@
           }
 
           adminVoicePacks = userPacks;
+          document.getElementById('actVoiceCount').textContent = userPacks.length;
           var html = '';
           userPacks.forEach(function(r) {
             var sender = allUsers.find(function(u) { return u.id === r.user_id; });
