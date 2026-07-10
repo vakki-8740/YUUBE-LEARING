@@ -4,7 +4,7 @@
 // <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
 
 document.addEventListener('contextmenu', function(e) {
-  if (e.target.closest('.img-msg, .voice-msg, .voice-card, .vp-msg, .voice-pack-player, .voice-pack-actions, .voice-pack-video, #imgViewerOverlay')) {
+  if (e.target.closest('.img-msg, .voice-msg, .voice-card, .vp-msg, .voice-pack-player, .voice-pack-actions, #imgViewerOverlay')) {
     e.preventDefault();
     return false;
   }
@@ -2180,8 +2180,6 @@ let voiceReplyToId = null;
 let voiceReplyToName = '';
 let voiceUnsubRecording = null;
 
-let voiceIsVideo = false;
-
 var voiceAudioCache = {
   _data: {},
   _order: [],
@@ -2261,29 +2259,6 @@ function loadVoiceUserList() {
   }).join('');
 }
 
-function toggleVoiceMode() {
-  voiceIsVideo = !voiceIsVideo;
-  var toggle = document.getElementById('voiceModeToggle');
-  var micBtn = document.getElementById('voiceMicBtn');
-  var toggleIcon = document.getElementById('voiceToggleIcon');
-  var micIcon = document.getElementById('voiceMicIcon');
-  if (voiceIsVideo) {
-    toggle.style.background = 'var(--ios-green)';
-    toggle.style.color = 'white';
-    toggle.title = 'Switch to Voice';
-    toggleIcon.innerHTML = '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>';
-    micBtn.title = 'Record Video';
-    micIcon.innerHTML = '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>';
-  } else {
-    toggle.style.background = 'var(--ios-gray5)';
-    toggle.style.color = 'var(--ios-gray)';
-    toggle.title = 'Switch to Video';
-    toggleIcon.innerHTML = '<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>';
-    micBtn.title = 'Record Voice Pack';
-    micIcon.innerHTML = '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>';
-  }
-}
-
 function openVoiceConv(userId, userName) {
   voiceConvPartnerId = userId;
   voiceConvPartnerName = userName;
@@ -2316,7 +2291,7 @@ function openVoiceConv(userId, userName) {
   document.getElementById('voiceConvMsgs').onclick = function(e) {
     var bubble = e.target.closest('.voice-pack-bubble');
     if (!bubble || !voiceSelectMode) return;
-    if (e.target.closest('button, .voice-pack-action, .voice-pack-play, .voice-pack-video, .voice-reaction, .voice-emoji-picker')) return;
+    if (e.target.closest('button, .voice-pack-action, .voice-pack-play, .voice-reaction, .voice-emoji-picker')) return;
     toggleVoiceSelectItem(bubble.dataset.vpId);
   };
 }
@@ -2357,7 +2332,7 @@ async function loadVoiceConvMsgs() {
     var prevCount = voiceConvData.length;
     voiceConvData = data;
     if (data.length === 0) {
-      msgsEl.innerHTML = '<div class="voice-conv-empty" id="voiceConvEmpty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--ios-gray3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg><div>No media yet</div><div style="font-size:12px;margin-top:4px;">Tap the mic or switch to video to send media</div></div>';
+      msgsEl.innerHTML = '<div class="voice-conv-empty" id="voiceConvEmpty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--ios-gray3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg><div>No media yet</div><div style="font-size:12px;margin-top:4px;">Tap the mic to send media</div></div>';
       return;
     }
     var html = data.map(function(p) { return renderVoicePackBubble(p); }).join('');
@@ -2417,34 +2392,15 @@ function renderVoicePackBubble(p) {
     selectClass = ' select-allowed' + (isSelected ? ' selected' : '');
   }
 
-  var mediaHtml;
-  var mediaType = p.media_type || 'audio/webm';
-  if (isVideo) {
-    var playOverlaySvg = '<svg width="32" height="32" viewBox="0 0 24 24" fill="white" opacity="0.9"><path d="M8 5v14l11-7z"/></svg>';
-    mediaHtml = '<div class="voice-pack-player" style="flex-direction:column;gap:6px;">' +
-      '<div class="voice-video-wrap" style="position:relative;width:100%;border-radius:8px;overflow:hidden;background:#000;">' +
-        '<video class="voice-pack-video" id="vpv-' + p.id + '" src="" preload="none" playsinline style="width:100%;height:200px;object-fit:cover;display:block;background:#000;" data-id="' + p.id + '"></video>' +
-        '<button class="voice-pack-play" onclick="voiceConvPlay(this)" data-id="' + p.id + '" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;background:transparent;z-index:2;"></button>' +
-        '<div class="voice-video-play-overlay" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1;border:2px solid rgba(255,255,255,0.3);">' + playOverlaySvg + '</div>' +
-      '</div>' +
-      '<div style="display:flex;align-items:center;gap:8px;width:100%;">' +
-        '<div class="voice-pack-bar" onclick="voiceConvSeek(event,this)" data-dur="' + (p.duration || 0) + '" style="flex:1;">' +
-          '<div class="voice-pack-bar-fill"><div class="voice-pack-bar-knob"></div></div>' +
-        '</div>' +
-        '<span class="voice-pack-dur">' + dur + '</span>' +
-      '</div>' +
-    '</div>';
-  } else {
-    mediaHtml = '<div class="voice-pack-player">' +
-      '<button class="voice-pack-play" onclick="voiceConvPlay(this)" data-id="' + p.id + '">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
-      '</button>' +
-      '<div class="voice-pack-bar" onclick="voiceConvSeek(event,this)" data-dur="' + (p.duration || 0) + '">' +
-        '<div class="voice-pack-bar-fill"><div class="voice-pack-bar-knob"></div></div>' +
-      '</div>' +
-      '<span class="voice-pack-dur">' + dur + '</span>' +
-    '</div>';
-  }
+  var mediaHtml = '<div class="voice-pack-player">' +
+    '<button class="voice-pack-play" onclick="voiceConvPlay(this)" data-id="' + p.id + '">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
+    '</button>' +
+    '<div class="voice-pack-bar" onclick="voiceConvSeek(event,this)" data-dur="' + (p.duration || 0) + '">' +
+      '<div class="voice-pack-bar-fill"><div class="voice-pack-bar-knob"></div></div>' +
+    '</div>' +
+    '<span class="voice-pack-dur">' + dur + '</span>' +
+  '</div>';
 
   return '<div class="voice-pack-bubble ' + side + selectClass + '" data-vp-id="' + p.id + '">' +
     '<div class="voice-pack-check">' +
@@ -2467,72 +2423,6 @@ function renderVoicePackBubble(p) {
   '</div>';
 }
 
-function playNewVideo(btn, videoEl, url, fill, dur, playSvg, pauseSvg, id) {
-  if (voiceConvAudio) {
-    voiceConvAudio.pause();
-    if (voiceConvPlayEl) {
-      voiceConvPlayEl.classList.remove('playing');
-      voiceConvPlayEl.innerHTML = playSvg;
-      var pf = voiceConvPlayEl.closest('.voice-pack-bubble');
-      if (pf) {
-        var pfBar = pf.querySelector('.voice-pack-bar-fill');
-        stopPlaybackRAF(pfBar);
-        var pfVideo = pf.querySelector('.voice-pack-video');
-        setVideoOverlay(pfVideo, true);
-        if (pfVideo && pfVideo !== videoEl) pfVideo.src = '';
-      }
-    } else {
-      stopPlaybackRAF(null);
-    }
-  }
-  voiceConvAudio = videoEl;
-  voiceConvPlayEl = btn;
-  btn.classList.add('playing');
-  btn.innerHTML = pauseSvg;
-  setVideoOverlay(videoEl, false);
-  voiceConvAudio.onended = function() {
-    btn.classList.remove('playing');
-    btn.innerHTML = playSvg;
-    setVideoOverlay(videoEl, true);
-    stopPlaybackRAF(fill);
-    voiceConvAudio = null;
-    voiceConvPlayEl = null;
-    if (id) preloadNextVoice(id);
-  };
-  function doPlay() {
-    var playPromise = videoEl.play();
-    if (playPromise !== undefined) {
-      playPromise.then(function() {
-        startPlaybackRAF(fill, dur);
-      }).catch(function(err) {
-        console.error('Video play error:', err);
-        btn.classList.remove('playing');
-        btn.innerHTML = playSvg;
-        setVideoOverlay(videoEl, true);
-      });
-    } else {
-      startPlaybackRAF(fill, dur);
-    }
-  }
-  videoEl.addEventListener('canplay', doPlay, { once: true });
-  if (videoEl.readyState >= 3) {
-    videoEl.removeEventListener('canplay', doPlay);
-    doPlay();
-  }
-  videoEl.preload = 'auto';
-  videoEl.src = url;
-  videoEl.load();
-}
-
-function setVideoOverlay(videoEl, show) {
-  if (!videoEl) return;
-  var wrap = videoEl.closest('.voice-video-wrap');
-  if (!wrap) return;
-  var overlay = wrap.querySelector('.voice-video-play-overlay');
-  if (!overlay) return;
-  overlay.style.display = show ? 'flex' : 'none';
-}
-
 function voiceConvPlay(btn) {
   var id = btn.dataset.id;
   var bubble = btn.closest('.voice-pack-bubble');
@@ -2542,13 +2432,11 @@ function voiceConvPlay(btn) {
   var dur = parseFloat(bar ? bar.dataset.dur : 0) || 0;
   var playSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
   var pauseSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="white"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-  var videoEl = bubble.querySelector('.voice-pack-video');
 
   if (voiceConvAudio && voiceConvPlayEl === btn && !voiceConvAudio.paused) {
     voiceConvAudio.pause();
     btn.classList.remove('playing');
     btn.innerHTML = playSvg;
-    setVideoOverlay(videoEl, true);
     stopPlaybackRAF(null);
     return;
   }
@@ -2556,7 +2444,6 @@ function voiceConvPlay(btn) {
     voiceConvAudio.play();
     btn.classList.add('playing');
     btn.innerHTML = pauseSvg;
-    setVideoOverlay(videoEl, false);
     startPlaybackRAF(fill, dur);
     return;
   }
@@ -2570,9 +2457,6 @@ function voiceConvPlay(btn) {
       if (pf) {
         var pfBar = pf.querySelector('.voice-pack-bar-fill');
         stopPlaybackRAF(pfBar);
-        var pfVideo = pf.querySelector('.voice-pack-video');
-        setVideoOverlay(pfVideo, true);
-        if (pfVideo && pfVideo !== videoEl) pfVideo.src = '';
       }
     } else {
       stopPlaybackRAF(null);
@@ -2583,11 +2467,7 @@ function voiceConvPlay(btn) {
 
   var cachedUrl = voiceAudioCache.get(id);
   if (cachedUrl) {
-    if (videoEl) {
-      playNewVideo(btn, videoEl, cachedUrl, fill, dur, playSvg, pauseSvg, id);
-    } else {
-      playNewAudio(btn, cachedUrl, fill, dur, playSvg, pauseSvg, id);
-    }
+    playNewAudio(btn, cachedUrl, fill, dur, playSvg, pauseSvg, id);
     return;
   }
 
@@ -2596,25 +2476,10 @@ function voiceConvPlay(btn) {
   fetch(VOICE_API + '/api/voices/' + id + '/audio?t=' + Date.now(), { cache: 'no-store' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      function playWithUrl(url) {
-        voiceAudioCache.set(id, url, data.file_size || 0);
-        btn.disabled = false;
-        if (videoEl) {
-          playNewVideo(btn, videoEl, url, fill, dur, playSvg, pauseSvg, id);
-        } else {
-          playNewAudio(btn, url, fill, dur, playSvg, pauseSvg, id);
-        }
-        preloadNextVoice(id);
-      }
-      if (videoEl && data.audio_url && data.audio_url.length > 500000) {
-        fetch(data.audio_url).then(function(r) { return r.blob(); }).then(function(blob) {
-          playWithUrl(URL.createObjectURL(blob));
-        }).catch(function() {
-          playWithUrl(data.audio_url);
-        });
-      } else {
-        playWithUrl(data.audio_url);
-      }
+      voiceAudioCache.set(id, data.audio_url, data.file_size || 0);
+      btn.disabled = false;
+      playNewAudio(btn, data.audio_url, fill, dur, playSvg, pauseSvg, id);
+      preloadNextVoice(id);
     })
     .catch(function() {
       btn.disabled = false;
@@ -2730,53 +2595,29 @@ var voiceConvPreviewAudio = null;
 
 function startVoiceConvRec() {
   if (!myId) return;
-  var constraints = voiceIsVideo ? { audio: true, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } } : { audio: true };
-  navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
     voiceRecChunks = [];
     voiceRecStartTime = Date.now();
-    var opts;
-    if (voiceIsVideo) {
-      opts = { mimeType: 'video/webm' };
-      if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) opts.mimeType = 'video/webm;codecs=vp9,opus';
-      else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) opts.mimeType = 'video/webm;codecs=vp8,opus';
-      else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus')) opts.mimeType = 'video/webm;codecs=h264,opus';
-    } else {
-      opts = { mimeType: 'audio/webm' };
-      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) opts.mimeType = 'audio/webm;codecs=opus';
-      opts.audioBitsPerSecond = 24000;
-    }
+    var opts = { mimeType: 'audio/webm' };
+    if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) opts.mimeType = 'audio/webm;codecs=opus';
+    opts.audioBitsPerSecond = 24000;
     voiceRecMediaRecorder = new MediaRecorder(stream, opts);
     voiceRecMediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) voiceRecChunks.push(e.data); };
     voiceRecMediaRecorder.onstop = function() {
       stream.getTracks().forEach(function(t) { t.stop(); });
-      var camPreview = document.getElementById('voiceRecCamPreview');
-      if (camPreview) { camPreview.src = ''; camPreview.style.display = 'none'; }
       setRecordingStatus(false, voiceConvPartnerId);
       voiceConvPreviewDur = Math.floor((Date.now() - voiceRecStartTime) / 1000);
-      var mimeType = voiceIsVideo ? 'video/webm' : 'audio/webm';
-      voiceConvPreviewBlob = new Blob(voiceRecChunks, { type: mimeType });
+      voiceConvPreviewBlob = new Blob(voiceRecChunks, { type: 'audio/webm' });
       document.getElementById('voiceMicBtn').style.display = 'none';
-      document.getElementById('voiceGalleryBtn').style.display = 'none';
       document.getElementById('voiceConvRec').style.display = 'none';
-      document.getElementById('voiceModeToggle').style.display = 'flex';
       showVoiceConvPreview();
     };
     voiceRecMediaRecorder.start();
     setRecordingStatus(true, voiceConvPartnerId);
     document.getElementById('voiceMicBtn').style.display = 'none';
-    document.getElementById('voiceModeToggle').style.display = 'none';
-    document.getElementById('voiceGalleryBtn').style.display = 'none';
     document.getElementById('voiceConvRec').style.display = 'flex';
     document.getElementById('voiceConvTimer').textContent = '0:00';
-    document.getElementById('voiceRecLabel').textContent = voiceIsVideo ? 'Recording Video' : 'Recording';
-    // Show camera preview for video recording
-    var camPreview = document.getElementById('voiceRecCamPreview');
-    if (voiceIsVideo && camPreview) {
-      camPreview.srcObject = stream;
-      camPreview.style.display = 'block';
-    } else if (camPreview) {
-      camPreview.style.display = 'none';
-    }
+    document.getElementById('voiceRecLabel').textContent = 'Recording';
     if (voiceRecTimer) clearInterval(voiceRecTimer);
     voiceRecTimer = setInterval(function() {
       var sec = Math.floor((Date.now() - voiceRecStartTime) / 1000);
@@ -2784,13 +2625,7 @@ function startVoiceConvRec() {
       document.getElementById('voiceConvTimer').textContent = formatDuration(sec);
     }, 200);
   }).catch(function(err) {
-    if (voiceIsVideo && err.name === 'NotAllowedError') {
-      alert('Camera and microphone access is required to record video.');
-    } else if (voiceIsVideo) {
-      alert('Camera access is required to record video. ' + err.message);
-    } else {
-      alert('Microphone access is required to record voice packs.');
-    }
+    alert('Microphone access is required to record voice packs.');
   });
 }
 
@@ -2799,22 +2634,10 @@ function showVoiceConvPreview() {
   document.getElementById('voiceConvPreviewDur').textContent = formatDuration(voiceConvPreviewDur);
   document.getElementById('voiceConvUploadProgress').style.display = 'none';
   document.getElementById('voiceConvSendBtn').disabled = false;
-  var audioPlayer = document.getElementById('voicePreviewPlayer');
-  var videoContainer = document.getElementById('voiceConvPreviewVideo');
-  var isVideoPreview = voiceIsVideo || (voiceConvPreviewBlob && voiceConvPreviewBlob.type.startsWith('video/'));
-  if (isVideoPreview) {
-    audioPlayer.style.display = 'none';
-    videoContainer.style.display = 'flex';
-    var videoEl = document.getElementById('voicePreviewVideoEl');
-    videoEl.src = URL.createObjectURL(voiceConvPreviewBlob);
-    videoEl.load();
-  } else {
-    audioPlayer.style.display = 'flex';
-    videoContainer.style.display = 'none';
-    var playBtn = document.getElementById('voiceConvPreviewPlay');
-    playBtn.classList.remove('playing');
-    playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
-  }
+  document.getElementById('voicePreviewPlayer').style.display = 'flex';
+  var playBtn = document.getElementById('voiceConvPreviewPlay');
+  playBtn.classList.remove('playing');
+  playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>';
 }
 
 function toggleVoiceConvPreview() {
@@ -2841,14 +2664,10 @@ function toggleVoiceConvPreview() {
 
 function cancelVoiceConvPreview() {
   if (voiceConvPreviewAudio) { voiceConvPreviewAudio.pause(); voiceConvPreviewAudio = null; }
-  var videoEl = document.getElementById('voicePreviewVideoEl');
-  if (videoEl) { videoEl.pause(); videoEl.src = ''; }
   voiceConvPreviewBlob = null;
   voiceConvPreviewDur = 0;
   document.getElementById('voiceConvPreview').style.display = 'none';
   document.getElementById('voiceMicBtn').style.display = 'flex';
-  document.getElementById('voiceModeToggle').style.display = 'flex';
-  document.getElementById('voiceGalleryBtn').style.display = 'flex';
   document.getElementById('voiceConvPreviewPlay').classList.remove('playing');
 }
 
@@ -2864,10 +2683,8 @@ function sendVoiceConvPreview() {
   fill.style.width = '0%';
   label.textContent = 'Uploading...';
 
-  var isVideo = voiceConvPreviewBlob.type.startsWith('video/');
-  var fileName = isVideo ? 'video.webm' : 'voice.webm';
   var formData = new FormData();
-  formData.append('audio', voiceConvPreviewBlob, fileName);
+  formData.append('audio', voiceConvPreviewBlob, 'voice.webm');
   formData.append('userId', myId);
   formData.append('duration', voiceConvPreviewDur);
   if (voiceReplyToId) {
@@ -2894,8 +2711,6 @@ function sendVoiceConvPreview() {
       voiceConvPreviewDur = 0;
       document.getElementById('voiceConvPreview').style.display = 'none';
       document.getElementById('voiceMicBtn').style.display = 'flex';
-      document.getElementById('voiceModeToggle').style.display = 'flex';
-      document.getElementById('voiceGalleryBtn').style.display = 'flex';
       fetch(VOICE_API + '/api/voices/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2925,61 +2740,11 @@ function cancelVoiceConvRec() {
     voiceRecMediaRecorder.stream.getTracks().forEach(function(t) { t.stop(); });
     voiceRecMediaRecorder = null;
   }
-  var camPreview = document.getElementById('voiceRecCamPreview');
-  if (camPreview) { camPreview.src = ''; camPreview.srcObject = null; camPreview.style.display = 'none'; }
   if (voiceRecTimer) clearInterval(voiceRecTimer);
   setRecordingStatus(false, voiceConvPartnerId);
   voiceRecChunks = [];
   document.getElementById('voiceMicBtn').style.display = 'flex';
-  document.getElementById('voiceModeToggle').style.display = 'flex';
-  document.getElementById('voiceGalleryBtn').style.display = 'flex';
   document.getElementById('voiceConvRec').style.display = 'none';
-}
-
-function triggerVoiceVideoPicker() {
-  document.getElementById('voiceVideoPicker').click();
-}
-
-function onVoiceVideoPicked(event) {
-  var file = event.target.files && event.target.files[0];
-  if (!file) return;
-  if (!file.type.startsWith('video/')) {
-    alert('Please select a video file.');
-    return;
-  }
-  if (file.size > 200 * 1024 * 1024) {
-    alert('Video is too large. Maximum size is 200MB.');
-    return;
-  }
-  // Get video duration
-  var tempVideo = document.createElement('video');
-  tempVideo.preload = 'metadata';
-  tempVideo.onloadedmetadata = function() {
-    var dur = Math.floor(tempVideo.duration);
-    if (dur > 300) {
-      alert('Video is longer than 5 minutes. Please select a shorter video.');
-      URL.revokeObjectURL(tempVideo.src);
-      event.target.value = '';
-      return;
-    }
-    voiceConvPreviewDur = dur;
-    voiceConvPreviewBlob = file;
-    document.getElementById('voiceMicBtn').style.display = 'none';
-    document.getElementById('voiceModeToggle').style.display = 'none';
-    document.getElementById('voiceGalleryBtn').style.display = 'none';
-    showVoiceConvPreview();
-    URL.revokeObjectURL(tempVideo.src);
-  };
-  tempVideo.onerror = function() {
-    voiceConvPreviewDur = 0;
-    voiceConvPreviewBlob = file;
-    document.getElementById('voiceMicBtn').style.display = 'none';
-    document.getElementById('voiceModeToggle').style.display = 'none';
-    document.getElementById('voiceGalleryBtn').style.display = 'none';
-    showVoiceConvPreview();
-  };
-  tempVideo.src = URL.createObjectURL(file);
-  event.target.value = '';
 }
 
 function uploadVoicePack(blob, duration) {

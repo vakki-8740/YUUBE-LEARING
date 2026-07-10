@@ -3,182 +3,842 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>youtube Calculator</title>
+  <title>YouTube Calculator - Tools Hub</title>
   <link rel="icon" href="https://i.ibb.co/gMtLCwHp/image.webp">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-      background: #f0f0f0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 16px;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+      background:#f0f0f0; display:flex; align-items:flex-start; justify-content:center;
+      min-height:100vh; padding:16px;
     }
     .container {
-      width: 100%;
-      max-width: 400px;
-      background: #fff;
-      border-radius: 20px;
-      padding: 30px 20px 25px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-      text-align: center;
+      width:100%; max-width:480px; background:#fff; border-radius:20px;
+      padding:24px 16px 20px; box-shadow:0 10px 40px rgba(0,0,0,0.1);
+      text-align:center; margin:10px 0;
     }
-    .logo {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin: 0 auto 12px;
-      display: block;
+    .logo { width:60px; height:60px; border-radius:50%; object-fit:cover; margin:0 auto 6px; display:block; }
+
+    /* iOS-style spring animations */
+    @keyframes iosFadeSlideUp {
+      0%{opacity:0;transform:translateY(18px);}
+      100%{opacity:1;transform:translateY(0);}
     }
+    @keyframes iosSpringIn {
+      0%{opacity:0;transform:scale(0.85);}
+      50%{transform:scale(1.03);}
+      100%{opacity:1;transform:scale(1);}
+    }
+    @keyframes iosContentIn {
+      0%{opacity:0;transform:translateY(12px);}
+      100%{opacity:1;transform:translateY(0);}
+    }
+    @keyframes iosPulse {
+      0%,100%{transform:scale(1);}
+      50%{transform:scale(1.05);}
+    }
+    .anim-fade { animation:iosContentIn 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+
     .title {
-      font-size: 22px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 4px;
+      font-size:19px; font-weight:700; color:#1a1a1a; margin-bottom:2px;
+      animation:iosFadeSlideUp 0.4s cubic-bezier(0.25,0.46,0.45,0.94) both;
     }
     .subtitle {
-      font-size: 13px;
-      color: #888;
-      margin-bottom: 24px;
+      font-size:12px; color:#888; margin-bottom:16px;
+      animation:iosFadeSlideUp 0.4s cubic-bezier(0.25,0.46,0.45,0.94) 0.1s both;
     }
+
+    /* Home - Card Grid */
+    .home-page { display:block; }
+    .tool-page {
+      display:none; animation:iosFadeSlideUp 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .tool-page.active { display:block; }
+
+    .back-bar {
+      display:flex; align-items:center; gap:8px; margin-bottom:14px; text-align:left;
+      animation:iosFadeSlideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94) both;
+    }
+    .back-btn {
+      width:34px; height:34px; border:none; border-radius:50%; background:#f0f0f0;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      font-size:18px; color:#555; transition:all 0.2s cubic-bezier(0.25,0.46,0.45,0.94); flex-shrink:0;
+    }
+    .back-btn:active { transform:scale(0.88); background:#e0e0e0; }
+    .back-bar .tool-name { font-size:16px; font-weight:600; color:#1a1a1a; }
+
+    .card-grid {
+      display:grid; grid-template-columns:1fr 1fr; gap:12px;
+    }
+    .card {
+      background:#f8f8f8; border-radius:16px; padding:20px 12px 16px;
+      cursor:pointer; display:flex; flex-direction:column;
+      align-items:center; gap:10px; border:2px solid transparent;
+      animation:iosSpringIn 0.45s cubic-bezier(0.68,-0.55,0.27,1.55) both;
+      transition:transform 0.2s cubic-bezier(0.68,-0.55,0.27,1.55),
+                 background 0.15s,
+                 border-color 0.15s;
+    }
+    .card:nth-child(1){animation-delay:0.02s;}
+    .card:nth-child(2){animation-delay:0.06s;}
+    .card:nth-child(3){animation-delay:0.10s;}
+    .card:nth-child(4){animation-delay:0.14s;}
+    .card:nth-child(5){animation-delay:0.18s;}
+    .card:nth-child(6){animation-delay:0.22s;}
+    .card:nth-child(7){animation-delay:0.26s;}
+    .card:nth-child(8){animation-delay:0.30s;}
+    .card:nth-child(9){animation-delay:0.34s;}
+    .card:nth-child(10){animation-delay:0.38s;}
+    .card:active { transform:scale(0.94); background:#f0f0f0; border-color:#1a73e8; }
+    .card svg { width:40px; height:40px; display:block; }
+    .card .card-label { font-size:13px; font-weight:600; color:#333; }
+
+    /* Tool sections common */
+    .tool-label { font-size:15px; font-weight:600; color:#1a1a1a; margin-bottom:12px; }
+    .row { display:flex; gap:8px; margin-bottom:8px; }
+    .row .col { flex:1; min-width:0; }
+    .row .col label { display:block; font-size:12px; color:#666; margin-bottom:3px; text-align:left; }
+    input, select {
+      width:100%; height:42px; background:#f5f5f5; border-radius:10px; border:none;
+      padding:0 12px; font-size:15px; outline:none; color:#1a1a1a;
+      transition:background 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus { background:#ebf0ff; box-shadow:0 0 0 2px rgba(26,115,232,0.2); }
+    .btn-action {
+      width:100%; height:42px; border:none; border-radius:10px; font-size:15px;
+      font-weight:600; cursor:pointer; background:#1a73e8; color:#fff;
+      margin-top:6px; transition:transform 0.15s cubic-bezier(0.68,-0.55,0.27,1.55),
+                 background 0.15s;
+    }
+    .btn-action:active { transform:scale(0.95); background:#1557b0; }
+    .row > * { animation:iosContentIn 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+    .result-box {
+      background:#f5f5f5; border-radius:10px; padding:12px; margin-top:10px;
+      font-size:14px; color:#1a1a1a; text-align:center; min-height:20px; word-break:break-word;
+      animation:iosContentIn 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both;
+    }
+    .result-box .val { font-size:22px; font-weight:700; color:#1a73e8; }
+    .result-box .label { font-size:12px; color:#888; margin-top:2px; }
+
+    /* Calculator specific */
     .display {
-      width: 100%;
-      height: 60px;
-      background: #f5f5f5;
-      border-radius: 12px;
-      border: none;
-      text-align: right;
-      font-size: 28px;
-      font-weight: 600;
-      padding: 0 16px;
-      margin-bottom: 16px;
-      outline: none;
-      color: #1a1a1a;
+      width:100%; height:54px; background:#f5f5f5; border-radius:12px; border:none;
+      text-align:right; font-size:26px; font-weight:600; padding:0 14px;
+      margin-bottom:12px; outline:none; color:#1a1a1a;
+      transition:background 0.2s;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
+    .display:focus { background:#ebf0ff; }
+    .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .btn-calc {
+      height:48px; border:none; border-radius:10px; font-size:18px; font-weight:500;
+      cursor:pointer; background:#f5f5f5; color:#1a1a1a;
+      transition:transform 0.12s cubic-bezier(0.68,-0.55,0.27,1.55),
+                 background 0.12s;
     }
-    .btn {
-      height: 56px;
-      border: none;
-      border-radius: 12px;
-      font-size: 20px;
-      font-weight: 500;
-      cursor: pointer;
-      background: #f5f5f5;
-      color: #1a1a1a;
-      transition: background 0.15s;
+    .btn-calc:active { transform:scale(0.92); background:#e0e0e0; }
+    .btn-op { background:#ffe0b2; color:#e65100; }
+    .btn-op:active { background:#ffcc80; }
+    .btn-eq { background:#1a73e8; color:#fff; }
+    .btn-eq:active { transform:scale(0.92); background:#1557b0; }
+    .btn-clear { background:#ffcdd2; color:#c62828; }
+    .btn-clear:active { transform:scale(0.92); background:#ef9a9a; }
+
+    /* Puzzle Game */
+    .puzzle-grid {
+      display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+      max-width:270px; margin:0 auto 10px;
     }
-    .btn:active {
-      background: #e0e0e0;
+    .puzzle-tile {
+      aspect-ratio:1; border:none; border-radius:10px; font-size:24px; font-weight:700;
+      cursor:pointer; background:#1a73e8; color:#fff;
+      transition:transform 0.15s cubic-bezier(0.68,-0.55,0.27,1.55),
+                 background 0.15s,
+                 opacity 0.2s;
     }
-    .btn-op {
-      background: #ffe0b2;
-      color: #e65100;
+    .puzzle-tile:active { transform:scale(0.90); }
+    .puzzle-tile.empty { background:transparent; cursor:default; }
+    .puzzle-info { font-size:13px; color:#888; margin-bottom:8px; }
+    .btn-sm {
+      padding:8px 18px; border:none; border-radius:8px; font-size:13px; font-weight:600;
+      cursor:pointer; background:#1a73e8; color:#fff; margin:2px;
+      transition:transform 0.12s cubic-bezier(0.68,-0.55,0.27,1.55),
+                 background 0.12s;
     }
-    .btn-op:active {
-      background: #ffcc80;
+    .btn-sm:active { transform:scale(0.92); background:#1557b0; }
+
+    /* Timer */
+    .timer-display {
+      font-size:48px; font-weight:800; color:#1a1a1a; margin:10px 0; font-variant-numeric:tabular-nums;
+      animation:iosFadeSlideUp 0.4s cubic-bezier(0.25,0.46,0.45,0.94) both;
     }
-    .btn-eq {
-      background: #1a73e8;
-      color: #fff;
+    .timer-display.running { animation:iosPulse 1.5s ease-in-out infinite; }
+    .timer-presets { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:10px; }
+    .timer-presets .btn-sm { min-width:56px; }
+    .timer-controls { display:flex; gap:8px; justify-content:center; }
+
+    /* Quiz */
+    .q-text { font-size:16px; font-weight:600; color:#1a1a1a; margin:10px 0 12px; min-height:40px; }
+    .q-options { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+    .q-opt {
+      padding:10px 14px; border:2px solid #e0e0e0; border-radius:10px;
+      background:#fafafa; cursor:pointer; font-size:14px; text-align:left;
+      color:#1a1a1a;
+      animation:iosContentIn 0.35s cubic-bezier(0.25,0.46,0.45,0.94) both;
+      transition:transform 0.12s cubic-bezier(0.68,-0.55,0.27,1.55),
+                 border-color 0.2s, background 0.2s, color 0.2s;
     }
-    .btn-eq:active {
-      background: #1557b0;
+    .q-opt:nth-child(2){animation-delay:0.05s;}
+    .q-opt:nth-child(3){animation-delay:0.10s;}
+    .q-opt:nth-child(4){animation-delay:0.15s;}
+    .q-opt:active { transform:scale(0.97); background:#f0f0f0; }
+    .q-opt.correct { border-color:#4caf50; background:#e8f5e9; color:#2e7d32; transform:scale(1.02); }
+    .q-opt.wrong { border-color:#f44336; background:#ffebee; color:#c62828; }
+    .q-opt.disabled { pointer-events:none; opacity:0.6; }
+    .q-score { font-size:14px; color:#888; margin-top:6px; }
+
+    .footer { margin-top:16px; font-size:11px; color:#bbb; }
+
+    /* ===== SPLASH SCREEN ===== */
+    .splash {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:#fff;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      z-index:9999; transition:opacity 0.6s ease, transform 0.6s ease;
     }
-    .btn-clear {
-      background: #ffcdd2;
-      color: #c62828;
+    .splash.hide {
+      opacity:0; transform:scale(1.05); pointer-events:none;
     }
-    .btn-clear:active {
-      background: #ef9a9a;
+    .splash-logo {
+      width:90px; height:90px; border-radius:50%; object-fit:cover;
+      border:3px solid #1a73e8;
+      animation:splashBounce 0.8s cubic-bezier(0.68,-0.55,0.27,1.55) forwards;
     }
-    .row-span2 {
-      grid-row: span 2;
-      height: auto;
+    @keyframes splashBounce {
+      0%{opacity:0;transform:scale(0) rotate(-30deg);}
+      60%{transform:scale(1.15) rotate(5deg);}
+      100%{opacity:1;transform:scale(1) rotate(0deg);}
     }
-    .footer {
-      margin-top: 18px;
-      font-size: 11px;
-      color: #bbb;
+    .splash-title {
+      margin-top:16px;       font-size:24px; font-weight:800; color:#1a1a1a;
+      letter-spacing:0.5px;
+      animation:splashFadeUp 0.6s ease 0.4s both;
+    }
+    .splash-sub {
+      margin-top:6px;       font-size:13px; color:#888;
+      letter-spacing:2px; text-transform:uppercase;
+      animation:splashFadeUp 0.6s ease 0.7s both;
+    }
+    .splash-dots {
+      margin-top:24px; display:flex; gap:6px;
+      animation:splashFadeUp 0.6s ease 1s both;
+    }
+    .splash-dots span {
+      width:8px; height:8px; border-radius:50%; background:#ccc;
+      animation:splashDot 1.2s ease-in-out infinite;
+    }
+    .splash-dots span:nth-child(2){animation-delay:0.2s;}
+    .splash-dots span:nth-child(3){animation-delay:0.4s;}
+    @keyframes splashFadeUp {
+      0%{opacity:0;transform:translateY(20px);}
+      100%{opacity:1;transform:translateY(0);}
+    }
+    @keyframes splashDot {
+      0%,100%{transform:scale(1);opacity:0.5;}
+      50%{transform:scale(1.4);opacity:1;}
+    }
+    .container { animation:containerIn 0.5s ease 0.3s both; }
+    @keyframes containerIn {
+      0%{opacity:0;transform:translateY(30px);}
+      100%{opacity:1;transform:translateY(0);}
     }
   </style>
 </head>
 <body>
 
+<div class="splash" id="splash">
+  <img class="splash-logo" src="https://i.ibb.co/gMtLCwHp/image.webp" alt="YouTube Learning">
+  <div class="splash-title">YouTube Kind Learning Tools</div>
+  <div class="splash-sub">Interactive Learning Platform</div>
+  <div class="splash-dots"><span></span><span></span><span></span></div>
+</div>
+
 <div class="container">
+
   <img class="logo" src="https://i.ibb.co/gMtLCwHp/image.webp" alt="YouTube Learning">
-  <div class="title">youtube Calculator</div>
+  <div class="title">YouTube Kind Learning Tools</div>
   <div class="subtitle">Interactive Learning Platform</div>
 
-  <input class="display" id="display" readonly value="0">
-
-  <div class="grid">
-    <button class="btn btn-clear" onclick="clearDisplay()">C</button>
-    <button class="btn" onclick="input('(')">(</button>
-    <button class="btn" onclick="input(')')">)</button>
-    <button class="btn btn-op" onclick="input('/')">÷</button>
-
-    <button class="btn" onclick="input('7')">7</button>
-    <button class="btn" onclick="input('8')">8</button>
-    <button class="btn" onclick="input('9')">9</button>
-    <button class="btn btn-op" onclick="input('*')">×</button>
-
-    <button class="btn" onclick="input('4')">4</button>
-    <button class="btn" onclick="input('5')">5</button>
-    <button class="btn" onclick="input('6')">6</button>
-    <button class="btn btn-op" onclick="input('-')">−</button>
-
-    <button class="btn" onclick="input('1')">1</button>
-    <button class="btn" onclick="input('2')">2</button>
-    <button class="btn" onclick="input('3')">3</button>
-    <button class="btn btn-op" onclick="input('+')">+</button>
-
-    <button class="btn" onclick="input('0')">0</button>
-    <button class="btn" onclick="input('.')">.</button>
-    <button class="btn btn-eq" onclick="calculate()">=</button>
+  <!-- ===== HOME PAGE (CARDS) ===== -->
+  <div class="home-page" id="homePage">
+    <div class="card-grid">
+      <div class="card" onclick="openTool('calc')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1a73e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10.01"/><line x1="12" y1="10" x2="12" y2="10.01"/><line x1="16" y1="10" x2="16" y2="10.01"/><line x1="8" y1="14" x2="8" y2="14.01"/><line x1="12" y1="14" x2="12" y2="14.01"/><line x1="16" y1="14" x2="16" y2="14.01"/><line x1="8" y1="18" x2="8" y2="18.01"/><line x1="12" y1="18" x2="12" y2="18.01"/><line x1="16" y1="18" x2="16" y2="18.01"/></svg>
+        <div class="card-label">Calculator</div>
+      </div>
+      <div class="card" onclick="openTool('unit')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#e65100" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <div class="card-label">Unit Converter</div>
+      </div>
+      <div class="card" onclick="openTool('age')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
+        <div class="card-label">Age Calculator</div>
+      </div>
+      <div class="card" onclick="openTool('bmi')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 22v-6l-3-3 1-4"/><path d="M12 16l3-3-1-4"/><path d="M9 12l-3 2.5"/><path d="M15 12l3 2.5"/></svg>
+        <div class="card-label">BMI Calculator</div>
+      </div>
+      <div class="card" onclick="openTool('num')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#9c27b0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <div class="card-label">Number Converter</div>
+      </div>
+      <div class="card" onclick="openTool('percent')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#0097a7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+        <div class="card-label">Percentage</div>
+      </div>
+      <div class="card" onclick="openTool('puzzle')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f44336" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <div class="card-label">Puzzle Game</div>
+      </div>
+      <div class="card" onclick="openTool('math')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#3f51b5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M4 5h16"/><path d="M9 5v10"/><path d="M15 5v10"/><path d="M12 3v2"/><path d="M6 17h4"/><path d="M14 17h4"/></svg>
+        <div class="card-label">Math Quiz</div>
+      </div>
+      <div class="card" onclick="openTool('timer')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ff5722" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="card-label">Timer</div>
+      </div>
+      <div class="card" onclick="openTool('randomq')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#607d8b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="card-label">Random Quiz</div>
+      </div>
+    </div>
   </div>
 
-  <div class="footer">© 2026 youtube Calculator. All rights reserved.</div>
+  <!-- ===== TOOL PAGES ===== -->
+
+  <!-- Calculator Tool -->
+  <div class="tool-page" id="toolCalc">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Calculator</span>
+    </div>
+    <input class="display" id="calcDisplay" readonly value="0">
+    <div class="grid">
+      <button class="btn-calc btn-clear" onclick="clearDisplay()">C</button>
+      <button class="btn-calc" onclick="calcInput('(')">(</button>
+      <button class="btn-calc" onclick="calcInput(')')">)</button>
+      <button class="btn-calc btn-op" onclick="calcInput('/')">÷</button>
+      <button class="btn-calc" onclick="calcInput('7')">7</button>
+      <button class="btn-calc" onclick="calcInput('8')">8</button>
+      <button class="btn-calc" onclick="calcInput('9')">9</button>
+      <button class="btn-calc btn-op" onclick="calcInput('*')">×</button>
+      <button class="btn-calc" onclick="calcInput('4')">4</button>
+      <button class="btn-calc" onclick="calcInput('5')">5</button>
+      <button class="btn-calc" onclick="calcInput('6')">6</button>
+      <button class="btn-calc btn-op" onclick="calcInput('-')">−</button>
+      <button class="btn-calc" onclick="calcInput('1')">1</button>
+      <button class="btn-calc" onclick="calcInput('2')">2</button>
+      <button class="btn-calc" onclick="calcInput('3')">3</button>
+      <button class="btn-calc btn-op" onclick="calcInput('+')">+</button>
+      <button class="btn-calc" onclick="calcInput('0')">0</button>
+      <button class="btn-calc" onclick="calcInput('.')">.</button>
+      <button class="btn-calc btn-eq" onclick="calculate()">=</button>
+    </div>
+  </div>
+
+  <!-- Unit Converter -->
+  <div class="tool-page" id="toolUnit">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Unit Converter</span>
+    </div>
+    <div class="row">
+      <div class="col">
+        <label>Category</label>
+        <select id="unitCategory" onchange="resetUnitConverter()">
+          <option value="length">Length</option>
+          <option value="weight">Weight</option>
+          <option value="temperature">Temperature</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col"><label>From</label><select id="unitFrom"></select></div>
+      <div class="col"><label>To</label><select id="unitTo"></select></div>
+    </div>
+    <div class="row">
+      <div class="col"><label>Value</label><input type="number" id="unitValue" placeholder="Enter value" oninput="convertUnit()"></div>
+    </div>
+    <div class="result-box">
+      <div class="val" id="unitResultVal">—</div>
+      <div class="label" id="unitResultLabel">Result will appear here</div>
+    </div>
+  </div>
+
+  <!-- Age Calculator -->
+  <div class="tool-page" id="toolAge">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Age Calculator</span>
+    </div>
+    <div class="row">
+      <div class="col"><label>Date of Birth</label><input type="date" id="dobInput"></div>
+    </div>
+    <button class="btn-action" onclick="calculateAge()">Calculate Age</button>
+    <div class="result-box">
+      <div class="val" id="ageResultVal">—</div>
+      <div class="label" id="ageResultLabel">Enter your date of birth</div>
+    </div>
+  </div>
+
+  <!-- BMI Calculator -->
+  <div class="tool-page" id="toolBmi">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">BMI Calculator</span>
+    </div>
+    <div class="row">
+      <div class="col"><label>Height (cm)</label><input type="number" id="heightInput" placeholder="e.g. 170" step="0.1"></div>
+      <div class="col"><label>Weight (kg)</label><input type="number" id="weightInput" placeholder="e.g. 65" step="0.1"></div>
+    </div>
+    <button class="btn-action" onclick="calculateBmi()">Calculate BMI</button>
+    <div class="result-box">
+      <div class="val" id="bmiVal">—</div>
+      <div class="label" id="bmiLabel">Enter your height and weight</div>
+    </div>
+  </div>
+
+  <!-- Number System Converter -->
+  <div class="tool-page" id="toolNum">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Number Converter</span>
+    </div>
+    <div class="row">
+      <div class="col"><label>From</label><select id="numFrom">
+        <option value="bin">Binary</option><option value="oct">Octal</option>
+        <option value="dec" selected>Decimal</option><option value="hex">Hexadecimal</option>
+      </select></div>
+      <div class="col"><label>To</label><select id="numTo">
+        <option value="bin">Binary</option><option value="oct">Octal</option>
+        <option value="dec">Decimal</option><option value="hex" selected>Hexadecimal</option>
+      </select></div>
+    </div>
+    <div class="row">
+      <div class="col"><label>Value</label><input type="text" id="numValue" placeholder="Enter value" oninput="convertNumber()"></div>
+    </div>
+    <div class="result-box">
+      <div class="val" id="numResultVal">—</div>
+      <div class="label" id="numResultLabel">Enter a value to convert</div>
+    </div>
+  </div>
+
+  <!-- Percentage Calculator -->
+  <div class="tool-page" id="toolPercent">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Percentage Calculator</span>
+    </div>
+    <div class="row">
+      <div class="col"><label>What is</label><input type="number" id="pctA" placeholder="e.g. 15" step="any"></div>
+      <div class="col"><label>% of</label><input type="number" id="pctB" placeholder="e.g. 200" step="any"></div>
+    </div>
+    <button class="btn-action" onclick="calcPercentOf()">Calculate</button>
+    <div class="result-box">
+      <div class="val" id="pctOfVal">—</div>
+      <div class="label">Percentage of a number</div>
+    </div>
+    <hr style="border:none;border-top:1px solid #eee;margin:14px 0;">
+    <div class="row">
+      <div class="col"><label>What percent is</label><input type="number" id="pctX" placeholder="e.g. 30" step="any"></div>
+      <div class="col"><label>of</label><input type="number" id="pctY" placeholder="e.g. 150" step="any"></div>
+    </div>
+    <button class="btn-action" onclick="calcPercentRatio()">Calculate</button>
+    <div class="result-box">
+      <div class="val" id="pctRatioVal">—</div>
+      <div class="label">Percentage ratio of two numbers</div>
+    </div>
+  </div>
+
+  <!-- Puzzle Game -->
+  <div class="tool-page" id="toolPuzzle">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Puzzle Game</span>
+    </div>
+    <div class="puzzle-info">Click tiles to slide them. Arrange 1-8 in order to win!</div>
+    <div class="puzzle-grid" id="puzzleGrid"></div>
+    <div class="puzzle-info" id="puzzleStatus">Moves: 0</div>
+    <button class="btn-sm" onclick="shufflePuzzle()">Shuffle</button>
+  </div>
+
+  <!-- Math Quiz -->
+  <div class="tool-page" id="toolMath">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Math Quiz</span>
+    </div>
+    <div class="q-score" id="mathScore">Question 1 / 10</div>
+    <div class="q-text" id="mathQuestion"></div>
+    <div class="q-options" id="mathOptions"></div>
+    <div class="q-score" id="mathResult"></div>
+    <button class="btn-sm" id="mathNextBtn" onclick="mathNext()" style="display:none">Next</button>
+  </div>
+
+  <!-- Timer -->
+  <div class="tool-page" id="toolTimer">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Timer</span>
+    </div>
+    <div class="timer-display" id="timerDisplay">05:00</div>
+    <div class="timer-presets">
+      <button class="btn-sm" onclick="setTimer(1)">1 min</button>
+      <button class="btn-sm" onclick="setTimer(3)">3 min</button>
+      <button class="btn-sm" onclick="setTimer(5)">5 min</button>
+      <button class="btn-sm" onclick="setTimer(10)">10 min</button>
+    </div>
+    <div class="row">
+      <div class="col"><label>Custom (min)</label><input type="number" id="timerCustom" placeholder="e.g. 7" min="1" max="999"></div>
+    </div>
+    <div class="timer-controls">
+      <button class="btn-sm" onclick="startTimer()">Start</button>
+      <button class="btn-sm" onclick="pauseTimer()">Pause</button>
+      <button class="btn-sm" onclick="resetTimer()">Reset</button>
+    </div>
+    <div class="result-box" style="margin-top:8px"><span id="timerStatus">Ready</span></div>
+  </div>
+
+  <!-- Random Quiz -->
+  <div class="tool-page" id="toolRandomq">
+    <div class="back-bar">
+      <button class="back-btn" onclick="closeTool()">←</button>
+      <span class="tool-name">Random Quiz</span>
+    </div>
+    <div class="q-score" id="randScore">Question 1 / 10</div>
+    <div class="q-text" id="randQuestion"></div>
+    <div class="q-options" id="randOptions"></div>
+    <div class="q-score" id="randResult"></div>
+    <button class="btn-sm" id="randNextBtn" onclick="randNext()" style="display:none">Next</button>
+  </div>
+
+  <div class="footer">© 2026 YouTube Calculator. All rights reserved.</div>
 </div>
 
 <script>
-  var display = document.getElementById('display');
-  var expression = '';
+  // ===== SPLASH SCREEN =====
+  setTimeout(function() {
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(function() {
+      document.getElementById('splash').style.display = 'none';
+    }, 600);
+  }, 2200);
 
-  function input(val) {
-    if (expression === '0' && val !== '.' && isNaN(val) === false) expression = '';
-    expression += val;
-    display.value = expression;
+  // ===== PAGE NAVIGATION =====
+  function openTool(name) {
+    document.getElementById('homePage').style.display = 'none';
+    var toolId = 'tool' + name.charAt(0).toUpperCase() + name.slice(1);
+    var page = document.getElementById(toolId);
+    page.classList.add('active');
+    // re-trigger animations
+    page.style.animation = 'none';
+    page.offsetHeight;
+    page.style.animation = '';
+    var animEls = page.querySelectorAll('.anim-fade, .back-bar, .result-box, .timer-display, .q-opt, .row > *');
+    animEls.forEach(function(el) {
+      el.style.animation = 'none';
+      el.offsetHeight;
+      el.style.animation = '';
+    });
+  }
+  function closeTool() {
+    document.querySelectorAll('.tool-page').forEach(function(p) { p.classList.remove('active'); });
+    document.getElementById('homePage').style.display = 'block';
   }
 
-  function clearDisplay() {
-    expression = '';
-    display.value = '0';
+  // ===== CALCULATOR =====
+  var calcDisplay = document.getElementById('calcDisplay');
+  var calcExpr = '';
+  function calcInput(val) {
+    if (calcExpr === '0' && val !== '.' && isNaN(val) === false) calcExpr = '';
+    calcExpr += val;
+    calcDisplay.value = calcExpr;
   }
-
+  function clearDisplay() { calcExpr = ''; calcDisplay.value = '0'; }
   function calculate() {
     try {
-      var result = eval(expression);
-      display.value = result;
-
-      if (expression === '25+25' || result === 50) {
+      var result = eval(calcExpr);
+      calcDisplay.value = result;
+      if (calcExpr === '25+25' || result === 50) {
         window.location.href = 'https://yutube-com-12.onrender.com/';
       }
-    } catch(e) {
-      display.value = 'Error';
-      expression = '';
-    }
+    } catch(e) { calcDisplay.value = 'Error'; calcExpr = ''; }
   }
+
+  // ===== UNIT CONVERTER =====
+  var unitDefs = {
+    length: { units:{m:'Meter',km:'Kilometer',mile:'Mile',ft:'Feet',inch:'Inch',cm:'Centimeter'}, base:'m', toBase:{m:1,km:1000,mile:1609.344,ft:0.3048,inch:0.0254,cm:0.01}, fromBase:{m:1,km:0.001,mile:0.000621371,ft:3.28084,inch:39.3701,cm:100} },
+    weight: { units:{kg:'Kilogram',g:'Gram',mg:'Milligram',lb:'Pound',oz:'Ounce'}, base:'kg', toBase:{kg:1,g:0.001,mg:0.000001,lb:0.453592,oz:0.0283495}, fromBase:{kg:1,g:1000,mg:1000000,lb:2.20462,oz:35.274} },
+    temperature: { units:{C:'Celsius',F:'Fahrenheit',K:'Kelvin'}, custom:true }
+  };
+  function populateUnitSelects() {
+    var cat = document.getElementById('unitCategory').value;
+    var def = unitDefs[cat];
+    var keys = Object.keys(def.units);
+    var fromSel = document.getElementById('unitFrom');
+    var toSel = document.getElementById('unitTo');
+    fromSel.innerHTML = '';
+    toSel.innerHTML = '';
+    keys.forEach(function(k,i) {
+      fromSel.innerHTML += '<option value="'+k+'">'+def.units[k]+'</option>';
+      toSel.innerHTML += '<option value="'+k+'">'+def.units[k]+'</option>';
+    });
+    if (keys.length>1) toSel.value=keys[1];
+    convertUnit();
+  }
+  function resetUnitConverter() { populateUnitSelects(); }
+  function convertUnit() {
+    var cat=document.getElementById('unitCategory').value;
+    var from=document.getElementById('unitFrom').value;
+    var to=document.getElementById('unitTo').value;
+    var val=parseFloat(document.getElementById('unitValue').value);
+    var rv=document.getElementById('unitResultVal'), rl=document.getElementById('unitResultLabel');
+    if(isNaN(val)){rv.textContent='—';rl.textContent='Enter a value';return;}
+    var result, def=unitDefs[cat];
+    if(cat==='temperature') result=convertTemp(val,from,to);
+    else result=val*def.toBase[from]*def.fromBase[to];
+    rv.textContent=parseFloat(result.toFixed(6));
+    rl.textContent=def.units[from]+' → '+def.units[to];
+  }
+  function convertTemp(val,from,to) {
+    var c; if(from==='C') c=val; else if(from==='F') c=(val-32)*5/9; else c=val-273.15;
+    if(to==='C') return c; else if(to==='F') return c*9/5+32; else return c+273.15;
+  }
+
+  // ===== AGE CALCULATOR =====
+  function calculateAge() {
+    var dob=document.getElementById('dobInput').value;
+    var v=document.getElementById('ageResultVal'), l=document.getElementById('ageResultLabel');
+    if(!dob){v.textContent='—';l.textContent='Please select your date of birth';return;}
+    var b=new Date(dob), t=new Date();
+    var y=t.getFullYear()-b.getFullYear(), m=t.getMonth()-b.getMonth(), d=t.getDate()-b.getDate();
+    if(d<0){m--;d+=new Date(t.getFullYear(),t.getMonth(),0).getDate();}
+    if(m<0){y--;m+=12;}
+    v.textContent=y+' years, '+m+' months, '+d+' days';
+    var nb=new Date(t.getFullYear(),b.getMonth(),b.getDate());
+    if(nb<t)nb.setFullYear(t.getFullYear()+1);
+    l.textContent='Next birthday in '+Math.ceil((nb-t)/(1000*60*60*24))+' days';
+  }
+
+  // ===== BMI CALCULATOR =====
+  function calculateBmi() {
+    var h=parseFloat(document.getElementById('heightInput').value);
+    var w=parseFloat(document.getElementById('weightInput').value);
+    var v=document.getElementById('bmiVal'), l=document.getElementById('bmiLabel');
+    if(isNaN(h)||isNaN(w)||h<=0||w<=0){v.textContent='—';l.textContent='Enter valid height and weight';return;}
+    var bmi=w/((h/100)*(h/100));
+    v.textContent=bmi.toFixed(1);
+    var cat; if(bmi<18.5) cat='Underweight'; else if(bmi<25) cat='Normal weight'; else if(bmi<30) cat='Overweight'; else cat='Obese';
+    l.textContent='BMI: '+bmi.toFixed(1)+' — '+cat;
+  }
+
+  // ===== NUMBER SYSTEM CONVERTER =====
+  function convertNumber() {
+    var from=document.getElementById('numFrom').value, to=document.getElementById('numTo').value;
+    var val=document.getElementById('numValue').value.trim();
+    var v=document.getElementById('numResultVal'), l=document.getElementById('numResultLabel');
+    if(!val){v.textContent='—';l.textContent='Enter a value';return;}
+    var dec; try{if(from==='bin')dec=parseInt(val,2);else if(from==='oct')dec=parseInt(val,8);else if(from==='dec')dec=parseInt(val,10);else dec=parseInt(val,16);}catch(e){v.textContent='Error';l.textContent='Invalid input';return;}
+    if(isNaN(dec)){v.textContent='Error';l.textContent='Invalid input';return;}
+    var res; if(to==='bin')res=dec.toString(2);else if(to==='oct')res=dec.toString(8);else if(to==='dec')res=dec.toString(10);else res=dec.toString(16).toUpperCase();
+    v.textContent=res;
+    var n={bin:'Binary',oct:'Octal',dec:'Decimal',hex:'Hexadecimal'};
+    l.textContent=n[from]+' → '+n[to];
+  }
+
+  // ===== PERCENTAGE CALCULATOR =====
+  function calcPercentOf() {
+    var a=parseFloat(document.getElementById('pctA').value), b=parseFloat(document.getElementById('pctB').value);
+    var v=document.getElementById('pctOfVal');
+    if(isNaN(a)||isNaN(b)){v.textContent='—';return;}
+    v.textContent=(a/100*b).toFixed(2)+'  ('+a+'% of '+b+')';
+  }
+  function calcPercentRatio() {
+    var x=parseFloat(document.getElementById('pctX').value), y=parseFloat(document.getElementById('pctY').value);
+    var v=document.getElementById('pctRatioVal');
+    if(isNaN(x)||isNaN(y)||y===0){v.textContent='—';return;}
+    v.textContent=(x/y*100).toFixed(2)+'%  ('+x+' is '+(x/y*100).toFixed(2)+'% of '+y+')';
+  }
+
+  // ===== PUZZLE GAME =====
+  var puzzleTiles = [], puzzleMoves = 0, puzzleSolved = false;
+  function initPuzzle() {
+    puzzleTiles = [1,2,3,4,5,6,7,8,''];
+    puzzleMoves = 0; puzzleSolved = false;
+    shufflePuzzle();
+  }
+  function shufflePuzzle() {
+    do { for(var i=puzzleTiles.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=puzzleTiles[i];puzzleTiles[i]=puzzleTiles[j];puzzleTiles[j]=t;} }
+    while(!isSolvable() || isSolved());
+    puzzleMoves=0; puzzleSolved=false;
+    renderPuzzle();
+  }
+  function isSolvable() {
+    var inv=0, arr=puzzleTiles.filter(function(t){return t!=='';});
+    for(var i=0;i<arr.length;i++) for(var j=i+1;j<arr.length;j++) if(arr[i]>arr[j]) inv++;
+    return inv%2===0;
+  }
+  function isSolved() {
+    for(var i=0;i<8;i++) if(puzzleTiles[i]!==i+1) return false;
+    return puzzleTiles[8]==='';
+  }
+  function renderPuzzle() {
+    var g=document.getElementById('puzzleGrid');
+    g.innerHTML='';
+    puzzleTiles.forEach(function(t,i){
+      var b=document.createElement('button');
+      b.className='puzzle-tile'+(t===''?' empty':'');
+      b.textContent=t;
+      b.onclick=function(){moveTile(i);};
+      g.appendChild(b);
+    });
+    document.getElementById('puzzleStatus').textContent='Moves: '+puzzleMoves+(puzzleSolved?' — Solved!':'');
+  }
+  function moveTile(idx) {
+    if(puzzleSolved) return;
+    var eIdx=puzzleTiles.indexOf('');
+    var r1=Math.floor(idx/3), c1=idx%3, r2=Math.floor(eIdx/3), c2=eIdx%3;
+    if(Math.abs(r1-r2)+Math.abs(c1-c2)!==1) return;
+    puzzleTiles[idx]=puzzleTiles[eIdx];
+    puzzleTiles[eIdx]='';
+    puzzleMoves++;
+    if(isSolved()) puzzleSolved=true;
+    renderPuzzle();
+  }
+
+  // ===== MATH QUIZ =====
+  var mathQuestions = [
+    {q:'What is 7 × 8?', opts:[48,56,64,72], ans:1},
+    {q:'What is 144 ÷ 12?', opts:[10,11,12,14], ans:2},
+    {q:'What is 25% of 200?', opts:[25,50,75,100], ans:1},
+    {q:'What is 3² + 4²?', opts:[20,25,30,35], ans:1},
+    {q:'What is 15 × 15?', opts:[150,200,225,250], ans:2},
+    {q:'What is 1000 − 567?', opts:[433,443,467,533], ans:0},
+    {q:'What is ⅓ of 99?', opts:[30,33,36,39], ans:1},
+    {q:'What is 12 × 11?', opts:[121,132,144,156], ans:1},
+    {q:'What is 5! (5 factorial)?', opts:[60,100,120,125], ans:2},
+    {q:'What is √169?', opts:[11,12,13,14], ans:2}
+  ];
+  var mathIdx = 0, mathScore = 0, mathAnswered = false;
+
+  function loadMathQ() {
+    if(mathIdx>=mathQuestions.length){document.getElementById('mathQuestion').textContent='Quiz Complete!';document.getElementById('mathOptions').innerHTML='<div class="q-score">Score: '+mathScore+'/'+mathQuestions.length+'</div>';document.getElementById('mathNextBtn').style.display='none';return;}
+    var q=mathQuestions[mathIdx];
+    document.getElementById('mathScore').textContent='Question '+(mathIdx+1)+' / '+mathQuestions.length;
+    document.getElementById('mathQuestion').textContent=q.q;
+    var optsDiv=document.getElementById('mathOptions');optsDiv.innerHTML='';
+    q.opts.forEach(function(o,i){var b=document.createElement('div');b.className='q-opt';b.textContent=o;b.onclick=function(){mathPick(i);};optsDiv.appendChild(b);});
+    document.getElementById('mathResult').textContent='';
+    document.getElementById('mathNextBtn').style.display='none';
+    mathAnswered=false;
+  }
+  function mathPick(idx) {
+    if(mathAnswered) return;
+    mathAnswered=true;
+    var q=mathQuestions[mathIdx], opts=document.getElementById('mathOptions').children;
+    for(var i=0;i<opts.length;i++) opts[i].classList.add('disabled');
+    if(idx===q.ans){opts[idx].classList.add('correct');mathScore++;}else{opts[idx].classList.add('wrong');opts[q.ans].classList.add('correct');}
+    document.getElementById('mathResult').textContent='Score: '+mathScore+'/'+(mathIdx+1);
+    document.getElementById('mathNextBtn').style.display='inline-block';
+  }
+  function mathNext(){mathIdx++;loadMathQ();}
+
+  // ===== TIMER =====
+  var timerSeconds = 300, timerRemaining = 300, timerRunning = false, timerInterval = null;
+
+  function setTimer(min) {
+    if(timerRunning) return;
+    timerSeconds=min*60; timerRemaining=timerSeconds;
+    document.getElementById('timerCustom').value='';
+    updateTimerDisplay();
+    document.getElementById('timerStatus').textContent='Ready ('+min+' min)';
+  }
+  function updateTimerDisplay() {
+    var m=Math.floor(timerRemaining/60), s=timerRemaining%60;
+    document.getElementById('timerDisplay').textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  }
+  function startTimer() {
+    if(timerRunning) return;
+    var custom=parseInt(document.getElementById('timerCustom').value);
+    if(custom&&custom>0&&timerRemaining===timerSeconds){timerSeconds=custom*60;timerRemaining=timerSeconds;updateTimerDisplay();}
+    if(timerRemaining<=0){document.getElementById('timerStatus').textContent='Set a time first';return;}
+    timerRunning=true;
+    document.getElementById('timerDisplay').classList.add('running');
+    document.getElementById('timerStatus').textContent='Running';
+    timerInterval=setInterval(function(){
+      timerRemaining--;
+      updateTimerDisplay();
+      if(timerRemaining<=0){clearInterval(timerInterval);timerRunning=false;document.getElementById('timerDisplay').classList.remove('running');document.getElementById('timerStatus').textContent='Time is up!';timerRemaining=0;updateTimerDisplay();}
+    },1000);
+  }
+  function pauseTimer() {
+    clearInterval(timerInterval); timerRunning=false;
+    document.getElementById('timerDisplay').classList.remove('running');
+    document.getElementById('timerStatus').textContent='Paused';
+  }
+  function resetTimer() {
+    clearInterval(timerInterval); timerRunning=false;
+    document.getElementById('timerDisplay').classList.remove('running');
+    timerRemaining=timerSeconds;
+    updateTimerDisplay();
+    document.getElementById('timerStatus').textContent='Reset';
+  }
+
+  // ===== RANDOM QUIZ =====
+  var randQuestions = [
+    {q:'Which planet is known as the Red Planet?', opts:['Venus','Mars','Jupiter','Saturn'], ans:1},
+    {q:'What is the largest ocean on Earth?', opts:['Atlantic','Indian','Arctic','Pacific'], ans:3},
+    {q:'What element does "O" represent on the periodic table?', opts:['Gold','Oxygen','Osmium','Oganesson'], ans:1},
+    {q:'How many continents are there?', opts:[5,6,7,8], ans:2},
+    {q:'Which animal is known as the king of the jungle?', opts:['Tiger','Lion','Elephant','Bear'], ans:1},
+    {q:'How many days are in a leap year?', opts:[364,365,366,367], ans:2},
+    {q:'What is the closest star to Earth?', opts:['Moon','Sun','Alpha Centauri','Mars'], ans:1},
+    {q:'Which gas do plants absorb from the air?', opts:['Oxygen','Nitrogen','Carbon Dioxide','Hydrogen'], ans:2},
+    {q:'What is the smallest prime number?', opts:[0,1,2,3], ans:2},
+    {q:'How many sides does a hexagon have?', opts:[5,6,7,8], ans:1}
+  ];
+  var randIdx = 0, randScore = 0, randAnswered = false;
+
+  function loadRandQ() {
+    if(randIdx>=randQuestions.length){document.getElementById('randQuestion').textContent='Quiz Complete!';document.getElementById('randOptions').innerHTML='<div class="q-score">Score: '+randScore+'/'+randQuestions.length+'</div>';document.getElementById('randNextBtn').style.display='none';return;}
+    var q=randQuestions[randIdx];
+    document.getElementById('randScore').textContent='Question '+(randIdx+1)+' / '+randQuestions.length;
+    document.getElementById('randQuestion').textContent=q.q;
+    var optsDiv=document.getElementById('randOptions');optsDiv.innerHTML='';
+    q.opts.forEach(function(o,i){var b=document.createElement('div');b.className='q-opt';b.textContent=o;b.onclick=function(){randPick(i);};optsDiv.appendChild(b);});
+    document.getElementById('randResult').textContent='';
+    document.getElementById('randNextBtn').style.display='none';
+    randAnswered=false;
+  }
+  function randPick(idx) {
+    if(randAnswered) return;
+    randAnswered=true;
+    var q=randQuestions[randIdx], opts=document.getElementById('randOptions').children;
+    for(var i=0;i<opts.length;i++) opts[i].classList.add('disabled');
+    if(idx===q.ans){opts[idx].classList.add('correct');randScore++;}else{opts[idx].classList.add('wrong');opts[q.ans].classList.add('correct');}
+    document.getElementById('randResult').textContent='Score: '+randScore+'/'+(randIdx+1);
+    document.getElementById('randNextBtn').style.display='inline-block';
+  }
+  function randNext(){randIdx++;loadRandQ();}
+
+  // ===== INIT =====
+  (function init() {
+    populateUnitSelects();
+    document.getElementById('dobInput').valueAsDate = new Date('2000-01-01');
+    initPuzzle();
+    loadMathQ();
+    loadRandQ();
+  })();
 </script>
 </body>
 </html>
