@@ -68,3 +68,11 @@ DO $$ BEGIN
   ALTER TABLE voice_recordings ADD COLUMN media_type VARCHAR(50) DEFAULT 'audio/webm';
 EXCEPTION WHEN duplicate_column THEN NULL;
 END $$;
+
+CREATE TABLE IF NOT EXISTS app_config (
+  key VARCHAR(100) PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO app_config (key, value) VALUES ('app_enabled', 'true') ON CONFLICT (key) DO NOTHING;
