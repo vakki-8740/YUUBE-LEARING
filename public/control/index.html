@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#1C1C1E">
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme:light)">
+  <meta name="theme-color" content="#1C1C1E" media="(prefers-color-scheme:dark)">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="App Control">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="App Control">
@@ -17,199 +18,295 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     :root {
-      --bg: #1C1C1E;
-      --card: #2C2C2E;
-      --card2: #3A3A3C;
-      --text: #FFFFFF;
+      --bg: #F2F2F7;
+      --group: #FFFFFF;
+      --group2: #F2F2F7;
+      --text: #1C1C1E;
       --text2: #8E8E93;
+      --text3: #C7C7CC;
+      --link: #007AFF;
       --green: #34C759;
       --red: #FF3B30;
       --gray: #8E8E93;
-      --blue: #007AFF;
-      --radius: 16px;
+      --orange: #FF9500;
+      --separator: rgba(60,60,67,0.08);
+      --radius: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1C1C1E;
+        --group: #2C2C2E;
+        --group2: #1C1C1E;
+        --text: #FFFFFF;
+        --text2: #8E8E93;
+        --text3: #48484A;
+        --separator: rgba(255,255,255,0.08);
+      }
     }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+      min-height: 100vh;
       -webkit-font-smoothing: antialiased;
+      padding-bottom: 40px;
     }
-    .header {
-      padding: 56px 20px 16px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .header h1 {
-      font-size: 28px;
+    .large-title {
+      padding: 60px 20px 8px;
+      font-size: 34px;
       font-weight: 700;
       letter-spacing: -0.5px;
     }
-    .header p {
-      font-size: 14px;
+    .large-title small {
+      display: block;
+      font-size: 15px;
+      font-weight: 400;
       color: var(--text2);
-      margin-top: 4px;
+      letter-spacing: 0;
+      margin-top: 2px;
     }
-    .content {
+    .group {
+      background: var(--group);
+      border-radius: var(--radius);
+      margin: 16px 16px 0;
+      overflow: hidden;
+    }
+    .group-header {
+      padding: 0 16px 6px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 20px;
+    }
+    .group:first-of-type { margin-top: 8px; }
+    .row {
+      display: flex;
+      align-items: center;
+      padding: 13px 16px;
+      min-height: 48px;
+      gap: 14px;
+      border-bottom: 0.5px solid var(--separator);
+    }
+    .row:last-child { border-bottom: none; }
+    .row-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .row-icon svg { width: 18px; height: 18px; }
+    .row-label {
       flex: 1;
+      font-size: 16px;
+      line-height: 1.4;
+    }
+    .row-value {
+      font-size: 16px;
+      color: var(--text2);
+      text-align: right;
+    }
+    .row-desc {
+      font-size: 13px;
+      color: var(--text2);
+      margin-top: 1px;
+    }
+    .chevron { color: var(--text3); margin-left: 4px; font-size: 14px; }
+    .pill {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .pill.on { background: rgba(52,199,89,0.15); color: var(--green); }
+    .pill.off { background: rgba(255,59,48,0.15); color: var(--red); }
+    .pill.unknown { background: rgba(142,142,147,0.15); color: var(--gray); }
+
+    .status-banner {
       display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 20px;
-      gap: 32px;
+      gap: 16px;
+      padding: 18px 16px;
     }
-    .status-section {
-      text-align: center;
-    }
-    .status-circle {
-      width: 100px;
-      height: 100px;
+    .status-icon {
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
-      margin: 0 auto 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 44px;
+      flex-shrink: 0;
       transition: background 0.4s, box-shadow 0.4s;
       background: var(--gray);
-      box-shadow: 0 0 40px rgba(142, 142, 147, 0.3);
     }
-    .status-circle.on {
-      background: var(--green);
-      box-shadow: 0 0 60px rgba(52, 199, 89, 0.4);
-    }
-    .status-circle.off {
-      background: var(--red);
-      box-shadow: 0 0 60px rgba(255, 59, 48, 0.4);
-    }
-    .status-circle.unknown {
-      background: var(--gray);
-      box-shadow: 0 0 40px rgba(142, 142, 147, 0.3);
-    }
-    .status-label {
-      font-size: 32px;
+    .status-icon.on { background: var(--green); }
+    .status-icon.off { background: var(--red); }
+    .status-icon svg { width: 28px; height: 28px; }
+    .status-info { flex: 1; }
+    .status-title {
+      font-size: 20px;
       font-weight: 700;
-      letter-spacing: -0.5px;
-      transition: color 0.3s;
     }
-    .status-label.on { color: var(--green); }
-    .status-label.off { color: var(--red); }
-    .status-label.unknown { color: var(--gray); }
-    .status-desc {
-      font-size: 15px;
+    .status-sub {
+      font-size: 14px;
       color: var(--text2);
-      margin-top: 8px;
+      margin-top: 2px;
     }
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      width: 100%;
-      max-width: 320px;
-    }
-    .btn {
-      padding: 16px 24px;
-      border: none;
-      border-radius: 14px;
-      font-size: 17px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: opacity 0.2s, transform 0.1s;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .btn:active { transform: scale(0.97); opacity: 0.8; }
-    .btn:disabled { opacity: 0.4; pointer-events: none; }
-    .btn-on { background: var(--green); color: #fff; }
-    .btn-off { background: var(--red); color: #fff; }
-    .btn-refresh {
-      background: var(--card);
-      color: var(--blue);
-      font-size: 15px;
-      padding: 12px 20px;
-    }
-    .btn-install {
-      background: var(--blue);
-      color: #fff;
-      font-size: 15px;
-      padding: 12px 20px;
-      display: none;
-    }
-    .btn-install.show { display: flex; }
-    .footer {
-      padding: 16px 20px 32px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .last-checked {
-      font-size: 12px;
-      color: var(--text2);
-    }
+
+    .action-row { cursor: pointer; transition: opacity 0.15s; }
+    .action-row:active { opacity: 0.5; }
+    .action-row:disabled { opacity: 0.3; pointer-events: none; }
+
     .toast {
       position: fixed;
       bottom: 40px;
       left: 50%;
-      transform: translateX(-50%) translateY(100px);
-      background: var(--card2);
-      color: var(--text);
-      padding: 12px 24px;
-      border-radius: 12px;
-      font-size: 14px;
+      transform: translateX(-50%) translateY(120px);
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 14px;
+      font-size: 15px;
       font-weight: 500;
       opacity: 0;
-      transition: transform 0.3s, opacity 0.3s;
+      transition: transform 0.4s cubic-bezier(0.32,0.72,0,1), opacity 0.3s;
       z-index: 100;
       pointer-events: none;
       white-space: nowrap;
-      max-width: 90%;
+      max-width: 85%;
+      text-align: center;
     }
     .toast.show {
       transform: translateX(-50%) translateY(0);
       opacity: 1;
     }
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #F2F2F7;
-        --card: #FFFFFF;
-        --card2: #E5E5EA;
-        --text: #000000;
-        --text2: #8E8E93;
-      }
-      .btn-refresh { background: var(--card); border: 0.5px solid rgba(60,60,67,0.12); }
+    @supports not (backdrop-filter: blur(20px)) {
+      .toast { background: rgba(30,30,30,0.96); }
     }
+
+    .log-empty {
+      padding: 20px 16px;
+      text-align: center;
+      color: var(--text2);
+      font-size: 14px;
+    }
+    .log-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 16px;
+      border-bottom: 0.5px solid var(--separator);
+      font-size: 14px;
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-time {
+      color: var(--text2);
+      font-size: 13px;
+      min-width: 52px;
+      font-variant-numeric: tabular-nums;
+    }
+    .log-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .log-dot.on { background: var(--green); }
+    .log-dot.off { background: var(--red); }
+    .log-text { flex: 1; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>⚙️ App Control</h1>
-    <p>Telegram bot replacement</p>
+  <div class="large-title">
+    App Control
+    <small>Manage app availability</small>
   </div>
 
-  <div class="content">
-    <div class="status-section">
-      <div class="status-circle unknown" id="statusCircle">⏳</div>
-      <div class="status-label unknown" id="statusLabel">Checking...</div>
-      <div class="status-desc" id="statusDesc">Connecting to server</div>
-    </div>
-
-    <div class="actions">
-      <button class="btn btn-on" id="btnOn" onclick="toggleApp(true)">✅ Turn ON</button>
-      <button class="btn btn-off" id="btnOff" onclick="toggleApp(false)">❌ Turn OFF</button>
-      <button class="btn btn-refresh" id="btnRefresh" onclick="refreshStatus()">🔄 Refresh</button>
-      <button class="btn btn-install" id="btnInstall" onclick="installPWA()">📲 Install App</button>
+  <!-- STATUS SECTION -->
+  <div class="group">
+    <div class="row" style="padding:0">
+      <div class="status-banner">
+        <div class="status-icon unknown" id="statusIcon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+            <line x1="12" y1="2" x2="12" y2="12"/>
+          </svg>
+        </div>
+        <div class="status-info">
+          <div class="status-title" id="statusTitle">Checking...</div>
+          <div class="status-sub" id="statusSub">Connecting to server</div>
+        </div>
+        <span class="pill unknown" id="statusPill">—</span>
+      </div>
     </div>
   </div>
 
-  <div class="footer">
-    <div class="last-checked" id="lastChecked">—</div>
+  <!-- ACTIONS -->
+  <div class="group-header">Actions</div>
+  <div class="group">
+    <div class="row action-row" id="rowOn" onclick="toggleApp(true)">
+      <div class="row-icon" style="background:var(--green)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+          <line x1="12" y1="2" x2="12" y2="12"/>
+        </svg>
+      </div>
+      <span class="row-label">Turn ON</span>
+      <span class="chevron">›</span>
+    </div>
+    <div class="row action-row" id="rowOff" onclick="toggleApp(false)">
+      <div class="row-icon" style="background:var(--red)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="1" y1="1" x2="23" y2="23"/>
+          <path d="M16.72 7.28a9 9 0 0 1 2.09 9.65"/>
+          <path d="M5.19 5.19A9 9 0 0 0 16.72 7.28"/>
+          <line x1="12" y1="2" x2="12" y2="12"/>
+        </svg>
+      </div>
+      <span class="row-label">Turn OFF</span>
+      <span class="chevron">›</span>
+    </div>
+  </div>
+
+  <!-- INFO -->
+  <div class="group-header">Info</div>
+  <div class="group">
+    <div class="row" id="rowRefresh" onclick="refreshStatus()" style="cursor:pointer">
+      <div class="row-icon" style="background:var(--link)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </div>
+      <span class="row-label">Refresh Status</span>
+      <span class="row-value" id="lastChecked">—</span>
+    </div>
+    <div class="row" id="rowInstall" onclick="installPWA()" style="display:none;cursor:pointer">
+      <div class="row-icon" style="background:var(--orange)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </div>
+      <span class="row-label">Install App</span>
+      <span class="chevron">›</span>
+    </div>
+  </div>
+
+  <!-- ACTIVITY LOG -->
+  <div class="group-header">Activity Log</div>
+  <div class="group" id="logGroup">
+    <div class="log-empty" id="logEmpty">No activity yet</div>
+    <div id="logList"></div>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -217,26 +314,70 @@
   <script>
     const API = 'https://yutube-com-pcu9.onrender.com';
     let deferredPrompt = null;
+    var log = [];
+
+    try {
+      var saved = localStorage.getItem('appControlLog');
+      if (saved) log = JSON.parse(saved);
+    } catch(e) {}
+
+    function saveLog() {
+      try { localStorage.setItem('appControlLog', JSON.stringify(log)); } catch(e) {}
+    }
+
+    function addLog(enabled) {
+      var now = new Date();
+      log.unshift({ t: now.getTime(), s: enabled ? 'on' : 'off' });
+      if (log.length > 50) log.length = 50;
+      saveLog();
+      renderLog();
+    }
+
+    function renderLog() {
+      var list = document.getElementById('logList');
+      var empty = document.getElementById('logEmpty');
+      if (!log.length) {
+        list.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+      var html = '';
+      var today = new Date().toDateString();
+      for (var i = 0; i < log.length; i++) {
+        var e = log[i];
+        var d = new Date(e.t);
+        var action = e.s === 'on' ? 'App turned ON' : 'App turned OFF';
+        var timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var dateStr = d.toDateString() === today ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ';
+        html += '<div class="log-item">' +
+          '<span class="log-time">' + dateStr + timeStr + '</span>' +
+          '<span class="log-dot ' + e.s + '"></span>' +
+          '<span class="log-text">' + action + '</span>' +
+        '</div>';
+      }
+      list.innerHTML = html;
+    }
 
     // ---- PWA Install ----
     window.addEventListener('beforeinstallprompt', function(e) {
       e.preventDefault();
       deferredPrompt = e;
-      document.getElementById('btnInstall').classList.add('show');
+      document.getElementById('rowInstall').style.display = 'flex';
     });
     window.addEventListener('appinstalled', function() {
       deferredPrompt = null;
-      document.getElementById('btnInstall').classList.remove('show');
-      showToast('✅ App installed!');
+      document.getElementById('rowInstall').style.display = 'none';
     });
 
     function installPWA() {
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
       deferredPrompt.userChoice.then(function(choice) {
-        if (choice.outcome === 'accepted') showToast('✅ Installing...');
-        deferredPrompt = null;
-        document.getElementById('btnInstall').classList.remove('show');
+        if (choice.outcome === 'accepted') {
+          document.getElementById('rowInstall').style.display = 'none';
+          deferredPrompt = null;
+        }
       });
     }
 
@@ -249,7 +390,7 @@
       t._hide = setTimeout(function() { t.classList.remove('show'); }, 2500);
     }
 
-    // ---- Get Status ----
+    // ---- API ----
     function getStatus(cb) {
       fetch(API + '/api/admin/status?t=' + Date.now(), { cache: 'no-store' })
         .then(function(r) { return r.json(); })
@@ -257,11 +398,23 @@
         .catch(function() { cb(null); });
     }
 
-    // ---- Toggle ----
+    var loadingTimeouts = {};
+    function setLoading(id, loading) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      clearTimeout(loadingTimeouts[id]);
+      if (loading) {
+        el.style.opacity = '0.4';
+        el.style.pointerEvents = 'none';
+      } else {
+        el.style.opacity = '1';
+        el.style.pointerEvents = 'auto';
+      }
+    }
+
     function toggleApp(enabled) {
-      var btn = enabled ? 'btnOn' : 'btnOff';
-      document.getElementById(btn).disabled = true;
-      document.getElementById(btn).textContent = '⏳ Please wait...';
+      var rowId = enabled ? 'rowOn' : 'rowOff';
+      setLoading(rowId, true);
 
       fetch(API + '/api/admin/toggle', {
         method: 'POST',
@@ -270,74 +423,68 @@
       })
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        showToast(enabled ? '✅ App turned ON' : '❌ App turned OFF');
+        addLog(d.enabled);
         updateUI(d.enabled);
+        showToast(d.enabled ? 'App turned ON' : 'App turned OFF');
       })
       .catch(function() {
-        showToast('⚠️ Failed to connect to server');
-        getStatus(function(enabled) { updateUI(enabled); });
+        showToast('Failed to reach server');
+        getStatus(function(e) { if (e !== null) updateUI(e); });
       })
-      .finally(function() {
-        document.getElementById(btn).disabled = false;
-        document.getElementById(btn).textContent = enabled ? '✅ Turn ON' : '❌ Turn OFF';
-      });
+      .finally(function() { setLoading(rowId, false); });
     }
 
-    // ---- Refresh ----
     function refreshStatus() {
-      var btn = document.getElementById('btnRefresh');
-      btn.disabled = true;
-      btn.textContent = '⏳ Refreshing...';
+      var row = document.getElementById('rowRefresh');
+      row.style.opacity = '0.4';
+      row.style.pointerEvents = 'none';
       getStatus(function(enabled) {
         updateUI(enabled);
-        showToast(enabled === null ? '⚠️ Unknown' : (enabled ? '🟢 App is ON' : '🔴 App is OFF'));
-        btn.disabled = false;
-        btn.textContent = '🔄 Refresh';
+        showToast(enabled === null ? 'Status unknown' : (enabled ? 'App is ON' : 'App is OFF'));
+        row.style.opacity = '1';
+        row.style.pointerEvents = 'auto';
       });
     }
 
-    // ---- Update UI ----
+    // ---- UI ----
     function updateUI(enabled) {
-      var circle = document.getElementById('statusCircle');
-      var label = document.getElementById('statusLabel');
-      var desc = document.getElementById('statusDesc');
+      var icon = document.getElementById('statusIcon');
+      var title = document.getElementById('statusTitle');
+      var sub = document.getElementById('statusSub');
+      var pill = document.getElementById('statusPill');
       var now = new Date();
-      var timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      document.getElementById('lastChecked').textContent = 'Last checked: ' + timeStr;
+      var timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('lastChecked').textContent = timeStr;
 
-      circle.className = 'status-circle';
-      label.className = 'status-label';
+      icon.className = 'status-icon';
+      pill.className = 'pill';
 
       if (enabled === null) {
-        circle.classList.add('unknown');
-        circle.textContent = '⚠️';
-        label.classList.add('unknown');
-        label.textContent = 'Unknown';
-        desc.textContent = 'Could not reach server';
+        icon.classList.add('unknown');
+        title.textContent = 'Unknown';
+        sub.textContent = 'Could not reach server. Check connection.';
+        pill.classList.add('unknown');
+        pill.textContent = '?';
       } else if (enabled) {
-        circle.classList.add('on');
-        circle.textContent = '✅';
-        label.classList.add('on');
-        label.textContent = 'ON';
-        desc.textContent = 'All users can access the app';
+        icon.classList.add('on');
+        title.textContent = 'ON';
+        sub.textContent = 'All users can access the app';
+        pill.classList.add('on');
+        pill.textContent = 'Live';
       } else {
-        circle.classList.add('off');
-        circle.textContent = '❌';
-        label.classList.add('off');
-        label.textContent = 'OFF';
-        desc.textContent = 'Users see maintenance page';
+        icon.classList.add('off');
+        title.textContent = 'OFF';
+        sub.textContent = 'Users see maintenance page';
+        pill.classList.add('off');
+        pill.textContent = 'Disabled';
       }
     }
 
     // ---- Init ----
+    renderLog();
     getStatus(function(enabled) { updateUI(enabled); });
+    setInterval(function() { getStatus(function(enabled) { updateUI(enabled); }); }, 30000);
 
-    // Auto-refresh every 30s
-    setInterval(function() {
-      getStatus(function(enabled) { updateUI(enabled); });
-    }, 30000);
-
-    // Register service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(function() {});
     }
