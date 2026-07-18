@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-title" content="App Control">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="application-name" content="App Control">
-  <meta name="description" content="Control your chat app — turn ON/OFF">
+  <meta name="description" content="Control your chat app — turn ON/OFF with timer">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="apple-touch-icon" href="icons/icon.svg">
@@ -20,7 +20,6 @@
     :root {
       --bg: #F2F2F7;
       --group: #FFFFFF;
-      --group2: #F2F2F7;
       --text: #1C1C1E;
       --text2: #8E8E93;
       --text3: #C7C7CC;
@@ -36,13 +35,52 @@
       :root {
         --bg: #1C1C1E;
         --group: #2C2C2E;
-        --group2: #1C1C1E;
         --text: #FFFFFF;
         --text2: #8E8E93;
         --text3: #48484A;
         --separator: rgba(255,255,255,0.08);
       }
     }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 20px rgba(52,199,89,0.3); }
+      50% { box-shadow: 0 0 40px rgba(52,199,89,0.5); }
+    }
+    @keyframes pulseGlowRed {
+      0%, 100% { box-shadow: 0 0 20px rgba(255,59,48,0.3); }
+      50% { box-shadow: 0 0 40px rgba(255,59,48,0.5); }
+    }
+    @keyframes springPop {
+      0% { transform: scale(1); }
+      40% { transform: scale(0.96); }
+      70% { transform: scale(1.02); }
+      100% { transform: scale(1); }
+    }
+    @keyframes toastIn {
+      0% { transform: translateX(-50%) translateY(120px) scale(0.9); opacity: 0; }
+      60% { transform: translateX(-50%) translateY(-8px) scale(1.02); opacity: 1; }
+      100% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+    }
+    @keyframes toastOut {
+      0% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateX(-50%) translateY(120px) scale(0.9); opacity: 0; }
+    }
+    @keyframes ripple {
+      to { transform: scale(4); opacity: 0; }
+    }
+    @keyframes countdownPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-12px); max-height: 0; }
+      to { opacity: 1; transform: translateY(0); max-height: 200px; }
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
       background: var(--bg);
@@ -56,6 +94,7 @@
       font-size: 34px;
       font-weight: 700;
       letter-spacing: -0.5px;
+      animation: fadeSlideIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
     }
     .large-title small {
       display: block;
@@ -70,7 +109,13 @@
       border-radius: var(--radius);
       margin: 16px 16px 0;
       overflow: hidden;
+      animation: fadeSlideIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
     }
+    .group:nth-of-type(1) { animation-delay: 0.05s; }
+    .group:nth-of-type(2) { animation-delay: 0.1s; }
+    .group:nth-of-type(3) { animation-delay: 0.15s; }
+    .group:nth-of-type(4) { animation-delay: 0.2s; }
+    .group:nth-of-type(5) { animation-delay: 0.25s; }
     .group-header {
       padding: 0 16px 6px;
       font-size: 13px;
@@ -79,7 +124,12 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-top: 20px;
+      animation: fadeSlideIn 0.4s cubic-bezier(0.16,1,0.3,1) both;
     }
+    .group-header:nth-of-type(1) { animation-delay: 0.08s; }
+    .group-header:nth-of-type(2) { animation-delay: 0.12s; }
+    .group-header:nth-of-type(3) { animation-delay: 0.18s; }
+    .group-header:nth-of-type(4) { animation-delay: 0.22s; }
     .group:first-of-type { margin-top: 8px; }
     .row {
       display: flex;
@@ -88,6 +138,7 @@
       min-height: 48px;
       gap: 14px;
       border-bottom: 0.5px solid var(--separator);
+      transition: background 0.2s;
     }
     .row:last-child { border-bottom: none; }
     .row-icon {
@@ -98,24 +149,12 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
     }
-    .row-icon svg { width: 18px; height: 18px; }
-    .row-label {
-      flex: 1;
-      font-size: 16px;
-      line-height: 1.4;
-    }
-    .row-value {
-      font-size: 16px;
-      color: var(--text2);
-      text-align: right;
-    }
-    .row-desc {
-      font-size: 13px;
-      color: var(--text2);
-      margin-top: 1px;
-    }
-    .chevron { color: var(--text3); margin-left: 4px; font-size: 14px; }
+    .row-icon svg { width: 18px; height: 18px; display: block; }
+    .row-label { flex: 1; font-size: 16px; line-height: 1.4; }
+    .row-value { font-size: 16px; color: var(--text2); text-align: right; }
+    .chevron { color: var(--text3); margin-left: 4px; font-size: 14px; transition: transform 0.2s; }
     .pill {
       display: inline-block;
       padding: 3px 12px;
@@ -123,6 +162,7 @@
       font-size: 13px;
       font-weight: 600;
       letter-spacing: 0.3px;
+      transition: all 0.3s;
     }
     .pill.on { background: rgba(52,199,89,0.15); color: var(--green); }
     .pill.off { background: rgba(255,59,48,0.15); color: var(--red); }
@@ -142,32 +182,49 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      transition: background 0.4s, box-shadow 0.4s;
+      transition: background 0.5s cubic-bezier(0.16,1,0.3,1), box-shadow 0.5s cubic-bezier(0.16,1,0.3,1);
       background: var(--gray);
     }
-    .status-icon.on { background: var(--green); }
-    .status-icon.off { background: var(--red); }
-    .status-icon svg { width: 28px; height: 28px; }
+    .status-icon.on {
+      background: var(--green);
+      animation: pulseGlow 2s ease-in-out infinite;
+    }
+    .status-icon.off {
+      background: var(--red);
+      animation: pulseGlowRed 2s ease-in-out infinite;
+    }
+    .status-icon svg { width: 28px; height: 28px; display: block; }
     .status-info { flex: 1; }
-    .status-title {
-      font-size: 20px;
-      font-weight: 700;
-    }
-    .status-sub {
-      font-size: 14px;
-      color: var(--text2);
-      margin-top: 2px;
-    }
+    .status-title { font-size: 20px; font-weight: 700; transition: color 0.3s; }
+    .status-sub { font-size: 14px; color: var(--text2); margin-top: 2px; }
 
-    .action-row { cursor: pointer; transition: opacity 0.15s; }
-    .action-row:active { opacity: 0.5; }
+    .action-row {
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.2s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .action-row:active .row-icon { transform: scale(0.85); }
+    .action-row:active .chevron { transform: translateX(4px); }
     .action-row:disabled { opacity: 0.3; pointer-events: none; }
+
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(0,122,255,0.1);
+      transform: scale(0);
+      pointer-events: none;
+    }
+    .ripple.animate {
+      animation: ripple 0.6s ease-out forwards;
+    }
 
     .toast {
       position: fixed;
       bottom: 40px;
       left: 50%;
-      transform: translateX(-50%) translateY(120px);
       background: rgba(0,0,0,0.85);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -176,17 +233,19 @@
       border-radius: 14px;
       font-size: 15px;
       font-weight: 500;
-      opacity: 0;
-      transition: transform 0.4s cubic-bezier(0.32,0.72,0,1), opacity 0.3s;
       z-index: 100;
       pointer-events: none;
       white-space: nowrap;
       max-width: 85%;
       text-align: center;
+      transform: translateX(-50%) translateY(120px) scale(0.9);
+      opacity: 0;
     }
     .toast.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
+      animation: toastIn 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+    }
+    .toast.hide {
+      animation: toastOut 0.35s cubic-bezier(0.55,0,1,0.45) forwards;
     }
     @supports not (backdrop-filter: blur(20px)) {
       .toast { background: rgba(30,30,30,0.96); }
@@ -205,6 +264,7 @@
       padding: 11px 16px;
       border-bottom: 0.5px solid var(--separator);
       font-size: 14px;
+      animation: fadeSlideIn 0.3s cubic-bezier(0.16,1,0.3,1) both;
     }
     .log-item:last-child { border-bottom: none; }
     .log-time {
@@ -218,10 +278,140 @@
       height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
+      transition: background 0.3s;
     }
     .log-dot.on { background: var(--green); }
     .log-dot.off { background: var(--red); }
     .log-text { flex: 1; }
+
+    /* Schedule */
+    .sched-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 0.5px solid var(--separator);
+    }
+    .sched-row:last-child { border-bottom: none; }
+    .sched-label {
+      font-size: 15px;
+      color: var(--text2);
+      min-width: 72px;
+    }
+    .sched-input {
+      flex: 1;
+      border: none;
+      background: var(--bg);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .sched-input::-webkit-calendar-picker-indicator {
+      filter: invert(0.5);
+      cursor: pointer;
+    }
+    .sched-toggle {
+      display: flex;
+      gap: 0;
+      background: var(--bg);
+      border-radius: 10px;
+      overflow: hidden;
+      flex: 1;
+    }
+    .sched-toggle button {
+      flex: 1;
+      border: none;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+      background: transparent;
+      color: var(--text2);
+    }
+    .sched-toggle button.active-on {
+      background: var(--green);
+      color: #fff;
+    }
+    .sched-toggle button.active-off {
+      background: var(--red);
+      color: #fff;
+    }
+    .sched-btn {
+      width: 100%;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      color: #fff;
+      background: var(--link);
+      transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+    }
+    .sched-btn:active { transform: scale(0.97); opacity: 0.8; }
+    .sched-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+    .upcoming-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 0.5px solid var(--separator);
+      animation: slideDown 0.4s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    .upcoming-item:last-child { border-bottom: none; }
+    .upcoming-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .upcoming-icon svg { width: 16px; height: 16px; display: block; }
+    .upcoming-info { flex: 1; }
+    .upcoming-title { font-size: 15px; font-weight: 500; }
+    .upcoming-sub {
+      font-size: 13px;
+      color: var(--text2);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .upcoming-sub .countdown {
+      font-variant-numeric: tabular-nums;
+      animation: countdownPulse 2s ease-in-out infinite;
+    }
+    .upcoming-del {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: rgba(255,59,48,0.1);
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      color: var(--red);
+      font-size: 14px;
+    }
+    .upcoming-del:active { transform: scale(0.85); background: rgba(255,59,48,0.2); }
+    .sched-empty {
+      padding: 20px 16px;
+      text-align: center;
+      color: var(--text2);
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -230,7 +420,7 @@
     <small>Manage app availability</small>
   </div>
 
-  <!-- STATUS SECTION -->
+  <!-- STATUS -->
   <div class="group">
     <div class="row" style="padding:0">
       <div class="status-banner">
@@ -252,7 +442,7 @@
   <!-- ACTIONS -->
   <div class="group-header">Actions</div>
   <div class="group">
-    <div class="row action-row" id="rowOn" onclick="toggleApp(true)">
+    <div class="row action-row" id="rowOn" onclick="toggleApp(true, event)">
       <div class="row-icon" style="background:var(--green)">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
@@ -262,7 +452,7 @@
       <span class="row-label">Turn ON</span>
       <span class="chevron">›</span>
     </div>
-    <div class="row action-row" id="rowOff" onclick="toggleApp(false)">
+    <div class="row action-row" id="rowOff" onclick="toggleApp(false, event)">
       <div class="row-icon" style="background:var(--red)">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="1" y1="1" x2="23" y2="23"/>
@@ -276,10 +466,40 @@
     </div>
   </div>
 
+  <!-- SCHEDULE -->
+  <div class="group-header">Schedule</div>
+  <div class="group">
+    <div class="sched-row">
+      <span class="sched-label">Date</span>
+      <input class="sched-input" type="date" id="schedDate">
+    </div>
+    <div class="sched-row">
+      <span class="sched-label">Time</span>
+      <input class="sched-input" type="time" id="schedTime">
+    </div>
+    <div class="sched-row">
+      <span class="sched-label">Action</span>
+      <div class="sched-toggle" id="schedToggle">
+        <button data-value="on" class="active-on" onclick="setSchedAction('on')">ON</button>
+        <button data-value="off" onclick="setSchedAction('off')">OFF</button>
+      </div>
+    </div>
+    <button class="sched-btn" id="schedBtn" onclick="scheduleToggle()">
+      <span id="schedBtnText">Schedule Toggle</span>
+    </button>
+  </div>
+
+  <!-- UPCOMING -->
+  <div class="group-header">Upcoming</div>
+  <div class="group" id="upcomingGroup">
+    <div class="sched-empty" id="schedEmpty">No scheduled toggles</div>
+    <div id="upcomingList"></div>
+  </div>
+
   <!-- INFO -->
   <div class="group-header">Info</div>
   <div class="group">
-    <div class="row" id="rowRefresh" onclick="refreshStatus()" style="cursor:pointer">
+    <div class="row action-row" id="rowRefresh" onclick="refreshStatus(event)">
       <div class="row-icon" style="background:var(--link)">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="23 4 23 10 17 10"/>
@@ -289,7 +509,7 @@
       <span class="row-label">Refresh Status</span>
       <span class="row-value" id="lastChecked">—</span>
     </div>
-    <div class="row" id="rowInstall" onclick="installPWA()" style="display:none;cursor:pointer">
+    <div class="row action-row" id="rowInstall" onclick="installPWA()" style="display:none">
       <div class="row-icon" style="background:var(--orange)">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -304,7 +524,7 @@
 
   <!-- ACTIVITY LOG -->
   <div class="group-header">Activity Log</div>
-  <div class="group" id="logGroup">
+  <div class="group">
     <div class="log-empty" id="logEmpty">No activity yet</div>
     <div id="logList"></div>
   </div>
@@ -315,32 +535,35 @@
     const API = 'https://yutube-com-pcu9.onrender.com';
     let deferredPrompt = null;
     var log = [];
+    var schedules = [];
+    var schedAction = 'on';
+    var countdownTimer = null;
+    var schedCheckTimer = null;
 
-    try {
-      var saved = localStorage.getItem('appControlLog');
-      if (saved) log = JSON.parse(saved);
-    } catch(e) {}
-
-    function saveLog() {
-      try { localStorage.setItem('appControlLog', JSON.stringify(log)); } catch(e) {}
+    // ---- Persist ----
+    function loadData() {
+      try {
+        var l = localStorage.getItem('appControlLog');
+        if (l) log = JSON.parse(l);
+        var s = localStorage.getItem('appControlSchedules');
+        if (s) schedules = JSON.parse(s);
+      } catch(e) {}
     }
+    function saveLog() { try { localStorage.setItem('appControlLog', JSON.stringify(log)); } catch(e) {} }
+    function saveSchedules() { try { localStorage.setItem('appControlSchedules', JSON.stringify(schedules)); } catch(e) {} }
 
-    function addLog(enabled) {
+    // ---- Log ----
+    function addLog(enabled, source) {
       var now = new Date();
-      log.unshift({ t: now.getTime(), s: enabled ? 'on' : 'off' });
+      log.unshift({ t: now.getTime(), s: enabled ? 'on' : 'off', src: source || 'manual' });
       if (log.length > 50) log.length = 50;
       saveLog();
       renderLog();
     }
-
     function renderLog() {
       var list = document.getElementById('logList');
       var empty = document.getElementById('logEmpty');
-      if (!log.length) {
-        list.innerHTML = '';
-        empty.style.display = 'block';
-        return;
-      }
+      if (!log.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
       var html = '';
       var today = new Date().toDateString();
@@ -350,7 +573,7 @@
         var action = e.s === 'on' ? 'App turned ON' : 'App turned OFF';
         var timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         var dateStr = d.toDateString() === today ? '' : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ';
-        html += '<div class="log-item">' +
+        html += '<div class="log-item" style="animation-delay:' + (i*0.03) + 's">' +
           '<span class="log-time">' + dateStr + timeStr + '</span>' +
           '<span class="log-dot ' + e.s + '"></span>' +
           '<span class="log-text">' + action + '</span>' +
@@ -359,7 +582,7 @@
       list.innerHTML = html;
     }
 
-    // ---- PWA Install ----
+    // ---- PWA ----
     window.addEventListener('beforeinstallprompt', function(e) {
       e.preventDefault();
       deferredPrompt = e;
@@ -369,25 +592,28 @@
       deferredPrompt = null;
       document.getElementById('rowInstall').style.display = 'none';
     });
-
     function installPWA() {
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(function(choice) {
-        if (choice.outcome === 'accepted') {
-          document.getElementById('rowInstall').style.display = 'none';
-          deferredPrompt = null;
-        }
+      deferredPrompt.userChoice.then(function(c) {
+        if (c.outcome === 'accepted') { document.getElementById('rowInstall').style.display = 'none'; deferredPrompt = null; }
       });
     }
 
     // ---- Toast ----
+    var toastTimer = null;
     function showToast(msg) {
       var t = document.getElementById('toast');
+      clearTimeout(toastTimer);
+      t.classList.remove('show', 'hide');
       t.textContent = msg;
+      void t.offsetWidth;
       t.classList.add('show');
-      clearTimeout(t._hide);
-      t._hide = setTimeout(function() { t.classList.remove('show'); }, 2500);
+      toastTimer = setTimeout(function() {
+        t.classList.remove('show');
+        t.classList.add('hide');
+        setTimeout(function() { t.classList.remove('hide'); }, 400);
+      }, 2800);
     }
 
     // ---- API ----
@@ -398,24 +624,7 @@
         .catch(function() { cb(null); });
     }
 
-    var loadingTimeouts = {};
-    function setLoading(id, loading) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      clearTimeout(loadingTimeouts[id]);
-      if (loading) {
-        el.style.opacity = '0.4';
-        el.style.pointerEvents = 'none';
-      } else {
-        el.style.opacity = '1';
-        el.style.pointerEvents = 'auto';
-      }
-    }
-
-    function toggleApp(enabled) {
-      var rowId = enabled ? 'rowOn' : 'rowOff';
-      setLoading(rowId, true);
-
+    function doToggle(enabled, source) {
       fetch(API + '/api/admin/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -423,26 +632,33 @@
       })
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        addLog(d.enabled);
+        addLog(d.enabled, source || 'manual');
         updateUI(d.enabled);
         showToast(d.enabled ? 'App turned ON' : 'App turned OFF');
       })
       .catch(function() {
         showToast('Failed to reach server');
         getStatus(function(e) { if (e !== null) updateUI(e); });
-      })
-      .finally(function() { setLoading(rowId, false); });
+      });
     }
 
-    function refreshStatus() {
+    function toggleApp(enabled, event) {
+      var rowId = enabled ? 'rowOn' : 'rowOff';
+      var el = document.getElementById(rowId);
+      el.style.pointerEvents = 'none';
+      el.style.animation = 'springPop 0.4s cubic-bezier(0.16,1,0.3,1)';
+      setTimeout(function() { el.style.animation = ''; }, 400);
+      doToggle(enabled, 'manual');
+      setTimeout(function() { el.style.pointerEvents = 'auto'; }, 600);
+    }
+
+    function refreshStatus(event) {
       var row = document.getElementById('rowRefresh');
-      row.style.opacity = '0.4';
-      row.style.pointerEvents = 'none';
+      row.style.animation = 'springPop 0.4s cubic-bezier(0.16,1,0.3,1)';
+      setTimeout(function() { row.style.animation = ''; }, 400);
       getStatus(function(enabled) {
         updateUI(enabled);
         showToast(enabled === null ? 'Status unknown' : (enabled ? 'App is ON' : 'App is OFF'));
-        row.style.opacity = '1';
-        row.style.pointerEvents = 'auto';
       });
     }
 
@@ -458,11 +674,12 @@
 
       icon.className = 'status-icon';
       pill.className = 'pill';
+      icon.style.animation = 'none';
 
       if (enabled === null) {
         icon.classList.add('unknown');
         title.textContent = 'Unknown';
-        sub.textContent = 'Could not reach server. Check connection.';
+        sub.textContent = 'Could not reach server';
         pill.classList.add('unknown');
         pill.textContent = '?';
       } else if (enabled) {
@@ -480,8 +697,132 @@
       }
     }
 
+    // ---- Schedule ----
+    function setSchedAction(val) {
+      schedAction = val;
+      var btns = document.getElementById('schedToggle').querySelectorAll('button');
+      btns[0].className = val === 'on' ? 'active-on' : '';
+      btns[1].className = val === 'off' ? 'active-off' : '';
+    }
+
+    function scheduleToggle() {
+      var dateVal = document.getElementById('schedDate').value;
+      var timeVal = document.getElementById('schedTime').value;
+      if (!dateVal || !timeVal) { showToast('Select date and time'); return; }
+      var target = new Date(dateVal + 'T' + timeVal);
+      if (target.getTime() <= Date.now()) { showToast('Time must be in the future'); return; }
+
+      var s = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), t: target.getTime(), action: schedAction, createdAt: Date.now() };
+      schedules.push(s);
+      saveSchedules();
+      renderUpcoming();
+      startSchedChecker();
+      document.getElementById('schedDate').value = '';
+      document.getElementById('schedTime').value = '';
+      showToast('Scheduled: ' + (schedAction === 'on' ? 'ON' : 'OFF') + ' at ' + target.toLocaleString());
+    }
+
+    function removeSchedule(id) {
+      schedules = schedules.filter(function(s) { return s.id !== id; });
+      saveSchedules();
+      renderUpcoming();
+      if (!schedules.length) stopSchedChecker();
+    }
+
+    function renderUpcoming() {
+      var list = document.getElementById('upcomingList');
+      var empty = document.getElementById('schedEmpty');
+      if (!schedules.length) { list.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      var html = '';
+      var now = Date.now();
+      schedules.sort(function(a,b) { return a.t - b.t; });
+      for (var i = 0; i < schedules.length; i++) {
+        var s = schedules[i];
+        var d = new Date(s.t);
+        var action = s.action === 'on' ? 'ON' : 'OFF';
+        var iconBg = s.action === 'on' ? 'var(--green)' : 'var(--red)';
+        var remain = s.t - now;
+        var remainStr = remain > 0 ? formatRemain(remain) : 'Due';
+        var dateStr = d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+        var timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        html += '<div class="upcoming-item" data-id="' + s.id + '">' +
+          '<div class="upcoming-icon" style="background:' + iconBg + '">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>' +
+          '</div>' +
+          '<div class="upcoming-info">' +
+          '<div class="upcoming-title">' + dateStr + ' ' + timeStr + ' → ' + action + '</div>' +
+          '<div class="upcoming-sub"><span class="countdown" data-target="' + s.t + '">⏳ ' + remainStr + '</span></div>' +
+          '</div>' +
+          '<button class="upcoming-del" onclick="removeSchedule(\'' + s.id + '\')">✕</button>' +
+        '</div>';
+      }
+      list.innerHTML = html;
+      updateCountdowns();
+    }
+
+    function formatRemain(ms) {
+      var s = Math.floor(ms / 1000);
+      var m = Math.floor(s / 60);
+      var h = Math.floor(m / 60);
+      var d = Math.floor(h / 24);
+      s %= 60; m %= 60; h %= 24;
+      if (d > 0) return d + 'd ' + h + 'h ' + m + 'm';
+      if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+      if (m > 0) return m + 'm ' + s + 's';
+      return s + 's';
+    }
+
+    function updateCountdowns() {
+      var now = Date.now();
+      document.querySelectorAll('.upcoming-item').forEach(function(el) {
+        var target = parseInt(el.querySelector('.countdown').getAttribute('data-target'));
+        var remain = target - now;
+        if (remain <= 0) {
+          el.querySelector('.countdown').textContent = '⏳ Due now';
+        } else {
+          el.querySelector('.countdown').textContent = '⏳ ' + formatRemain(remain);
+        }
+      });
+    }
+
+    function startSchedChecker() {
+      if (schedCheckTimer) return;
+      schedCheckTimer = setInterval(function() {
+        var now = Date.now();
+        var due = [];
+        for (var i = 0; i < schedules.length; i++) {
+          if (schedules[i].t <= now) due.push(schedules[i]);
+        }
+        if (due.length) {
+          schedules = schedules.filter(function(s) { return s.t > now; });
+          saveSchedules();
+          renderUpcoming();
+          due.forEach(function(s) {
+            doToggle(s.action === 'on', 'scheduled');
+          });
+          if (!schedules.length) stopSchedChecker();
+        }
+        updateCountdowns();
+      }, 5000);
+    }
+
+    function stopSchedChecker() {
+      if (schedCheckTimer) { clearInterval(schedCheckTimer); schedCheckTimer = null; }
+    }
+
     // ---- Init ----
+    loadData();
     renderLog();
+    renderUpcoming();
+    if (schedules.length) startSchedChecker();
+
+    // Set default date+time to tomorrow 9am
+    var tomorrow = new Date(Date.now() + 86400000);
+    document.getElementById('schedDate').value = tomorrow.toISOString().slice(0,10);
+    var defTime = '09:00';
+    document.getElementById('schedTime').value = defTime;
+
     getStatus(function(enabled) { updateUI(enabled); });
     setInterval(function() { getStatus(function(enabled) { updateUI(enabled); }); }, 30000);
 
