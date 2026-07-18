@@ -21,6 +21,8 @@ app.use('/uploads', (req, res, next) => {
 });
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
 app.use('/api/voice-packs', voicePacksRouter);
 app.use('/api/images', imagesRouter);
 app.use('/api/voices', voicesRouter);

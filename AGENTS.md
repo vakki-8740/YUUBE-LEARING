@@ -32,6 +32,8 @@
 - **Input Bar Cleanup**: Consolidated duplicate `.send-btn` rules, removed `overflow: hidden` from `.input-bar`
 - **Voice Persistence Fix**: Migrated voice recordings from SQLite (sql.js) to PostgreSQL + base64 audio storage. Fix for Render ephemeral filesystem wiping SQLite data on dyno restart. Removed sql.js dependency, used multer.memoryStorage(), audio stored as base64 TEXT in PostgreSQL.
 - **Online/Offline Fix**: Added error handler to Firestore onSnapshot listener in listenUsers(). Re-subscribe listenUsers() on visibilitychange (tab visible) to fix mobile browsers pausing/throttling the snapshot listener in background.
+- **Telegram Bot Removed**: Deleted telegram-bot/ directory. Replaced with PWA control page at `public/control/`.
+- **App Control PWA Page**: New standalone page at `public/control/index.html` with ON/OFF toggle, status display, auto-refresh. PWA enabled (manifest.json + sw.js) — installable on mobile via "Add to Home Screen".
 
 ### In Progress
 - (none)
@@ -65,3 +67,5 @@
 - `backend/routes/images.js`: Image upload routes — untouched
 - `backend/db.js`: PostgreSQL pool — untouched
 - `backend/schema.sql`: DB schema — untouched
+- `public/control/`: App Control PWA page (index.html, manifest.json, sw.js, icons/)
+- `backend/routes/appControl.js`: Admin app enable/disable toggle

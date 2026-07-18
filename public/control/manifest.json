@@ -1,0 +1,19 @@
+{
+  "name": "App Control",
+  "short_name": "Control",
+  "description": "Control your chat app — turn ON/OFF",
+  "start_url": "index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1C1C1E",
+  "theme_color": "#1C1C1E",
+  "categories": ["utilities"],
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
