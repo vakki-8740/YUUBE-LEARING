@@ -47,7 +47,12 @@ const STUN = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:turn.anyfirewall.com:443?transport=tcp', username: 'webrtc', credential: 'webrtc' }
   ]
 };
 
@@ -709,6 +714,7 @@ function goBack() {
   selectedUserId = null;
   document.getElementById('emptyState').style.display = 'flex';
   document.getElementById('chatView').classList.remove('show');
+  updCallBtn();
 
   // Mobile: show user list, hide chat
   if (window.innerWidth <= 768) {
@@ -1725,6 +1731,8 @@ function listenForIncomingCalls() {
           }
         }
       });
+    }, (error) => {
+      console.error('Incoming calls listener error:', error);
     });
 }
 
@@ -1971,7 +1979,17 @@ function setupPeerConn(isCaller) {
   const remoteStream = new MediaStream();
 
   callPeerConn.ontrack = (event) => {
-    event.streams[0].getTracks().forEach(t => remoteStream.addTrack(t));
+    if (event.streams && event.streams[0]) {
+      event.streams[0].getTracks().forEach(t => {
+        if (!remoteStream.getTracks().find(rt => rt.id === t.id)) {
+          remoteStream.addTrack(t);
+        }
+      });
+    } else if (event.track) {
+      if (!remoteStream.getTracks().find(rt => rt.id === event.track.id)) {
+        remoteStream.addTrack(event.track);
+      }
+    }
     const rv = document.getElementById('remoteVideo');
     const nv = document.getElementById('noVideo');
     if (remoteStream.getVideoTracks().length > 0) {
@@ -1993,6 +2011,12 @@ function setupPeerConn(isCaller) {
       callsDb.doc(currentCallData.callId).update({
         [f]: firebase.firestore.FieldValue.arrayUnion(JSON.stringify(event.candidate))
       }).catch(() => {});
+    }
+  };
+
+  callPeerConn.oniceconnectionstatechange = () => {
+    if (callPeerConn.iceConnectionState === 'failed' || callPeerConn.iceConnectionState === 'disconnected') {
+      console.warn('ICE connection state:', callPeerConn.iceConnectionState);
     }
   };
 
@@ -2035,18 +2059,20 @@ function listenCallUpdates(callId) {
         const name = getUserName(currentCallData.userId);
         showActiveCallUI(name, currentCallData.type);
         startCallTimer();
-      } catch (e) {}
+      } catch (e) {
+        console.error('Set remote description error:', e);
+      }
     }
 
-    if (currentCallData.role === 'caller' && d.ice_to && callPeerConn) {
+    if (currentCallData.role === 'caller' && d.ice_to && callPeerConn && callPeerConn.currentRemoteDescription) {
       while (iceToCount < d.ice_to.length) {
-        try { callPeerConn.addIceCandidate(JSON.parse(d.ice_to[iceToCount])); } catch (e) {}
+        try { callPeerConn.addIceCandidate(JSON.parse(d.ice_to[iceToCount])); } catch (e) { console.error('ICE add error (caller):', e); }
         iceToCount++;
       }
     }
-    if (currentCallData.role === 'callee' && d.ice_from && callPeerConn) {
+    if (currentCallData.role === 'callee' && d.ice_from && callPeerConn && callPeerConn.currentRemoteDescription) {
       while (iceFromCount < d.ice_from.length) {
-        try { callPeerConn.addIceCandidate(JSON.parse(d.ice_from[iceFromCount])); } catch (e) {}
+        try { callPeerConn.addIceCandidate(JSON.parse(d.ice_from[iceFromCount])); } catch (e) { console.error('ICE add error (callee):', e); }
         iceFromCount++;
       }
     }
