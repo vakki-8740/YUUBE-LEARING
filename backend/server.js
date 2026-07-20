@@ -8,6 +8,8 @@ const imagesRouter = require('./routes/images');
 const voicesRouter = require('./routes/voices');
 const appControlRouter = require('./routes/appControl');
 
+const { setupRelay } = require('./relay');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -35,9 +37,10 @@ app.get('/api/health', (req, res) => {
 async function start() {
   try {
     await initDb();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log('Voice pack server running on port ' + PORT);
     });
+    setupRelay(server);
   } catch (err) {
     console.error('Failed to start server:', err);
     process.exit(1);
