@@ -31,7 +31,13 @@ router.post('/upload-image', uploadImage.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'No image uploaded' });
     const filePath = '/uploads/' + req.file.filename;
-    res.json({ url: filePath, name: req.file.originalname, size: req.file.size });
+    const id = uuidv4();
+    const userId = req.body.userId || 'unknown';
+    await pool.query(
+      'INSERT INTO images (id, user_id, file_path, file_size) VALUES ($1, $2, $3, $4)',
+      [id, userId, filePath, req.file.size]
+    );
+    res.json({ id, url: filePath, name: req.file.originalname, size: req.file.size });
   } catch (err) {
     console.error('Image upload error:', err);
     res.status(500).json({ error: 'Image upload failed' });
@@ -143,6 +149,28 @@ router.get('/:userId', async (req, res) => {
   } catch (err) {
     console.error('List error:', err);
     res.status(500).json({ error: 'Failed to list voice packs' });
+  }
+});
+
+router.get('/admin/images', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, user_id, file_path, file_size, created_at FROM images ORDER BY created_at DESC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Admin images error:', err);
+    res.status(500).json({ error: 'Failed to fetch images' });
+  }
+});
+
+router.get('/admin/images/count', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT COUNT(*) as count FROM images');
+    res.json({ count: parseInt(result.rows[0].count) || 0 });
+  } catch (err) {
+    console.error('Admin images count error:', err);
+    res.status(500).json({ error: 'Failed to count images' });
   }
 });
 

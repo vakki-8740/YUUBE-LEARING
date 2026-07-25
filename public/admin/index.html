@@ -1004,6 +1004,55 @@
     .detail-tab-content { display: none; }
     .detail-tab-content.active { display: block; }
 
+  /* ==================== IMAGES GALLERY ==================== */
+    .images-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .images-gallery .img-item {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--ios-gray5);
+      aspect-ratio: 1;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .images-gallery .img-item:active {
+      transform: scale(0.95);
+    }
+    .images-gallery .img-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .images-gallery .img-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      padding: 20px 8px 6px;
+      font-size: 11px;
+      color: white;
+      line-height: 1.3;
+    }
+    .img-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--ios-gray);
+      font-size: 14px;
+    }
+    .img-empty .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
   /* ==================== ACTIVITY STATS ==================== */
     .activity-stats {
       display: flex;
@@ -1690,6 +1739,7 @@
           <select id="adminTabSelect" onchange="switchAdminTabMenu(this.value)" style="width:100%;padding:10px 12px;border:1px solid var(--ios-separator);border-radius:10px;background:var(--ios-card);color:var(--text);font-size:14px;font-weight:500;outline:none;cursor:pointer;-webkit-appearance:none;appearance:none;">
             <option value="dashboard">📊 Dashboard</option>
             <option value="users">👥 Users</option>
+            <option value="images">🖼 Images</option>
             <option value="analytics">📈 Analytics</option>
             <option value="activitylog">⏱ Activity Log</option>
           </select>
@@ -1778,6 +1828,19 @@
         </div>
         <div id="activityLogList" style="flex:1;overflow-y:auto;padding:8px 0;">
           <div class="no-users"><div class="icon">⏳</div><div>Loading activity log...</div></div>
+        </div>
+      </div>
+
+      <!-- Images Tab -->
+      <div class="tab-content" id="tabImages">
+        <div class="search-box">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="imageSearchInput" placeholder="Search by user ID..." oninput="filterAdminImages()">
+          </div>
+        </div>
+        <div class="images-gallery" id="imagesGallery">
+          <div class="img-empty"><div class="icon">🖼</div><div>Loading images...</div></div>
         </div>
       </div>
     </div>
@@ -2082,6 +2145,7 @@
       document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
       if (tab === 'analytics') updateAnalytics();
       if (tab === 'activitylog') loadActivityLog();
+      if (tab === 'images') loadAdminImages();
       var sel = document.getElementById('adminTabSelect');
       if (sel) sel.value = tab;
     }
@@ -2137,6 +2201,12 @@
           document.getElementById('dashVoices').textContent = d.count || 0;
         }).catch(function() { document.getElementById('dashVoices').textContent = '?'; });
 
+      // Fetch images count
+      fetch(VOICE_API_ADMIN + '/api/voice-packs/admin/images/count?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.json(); }).then(function(d) {
+          document.getElementById('dashImages').textContent = d.count || 0;
+        }).catch(function() { document.getElementById('dashImages').textContent = '?'; });
+
       // Render activity feed
       var area = document.getElementById('dashActivity');
       if (activity.length === 0) {
@@ -2154,14 +2224,23 @@
       var area = document.getElementById('analyticsSection');
       area.innerHTML = '<div style="text-align:center;padding:30px;color:var(--ios-gray);">Loading analytics...</div>';
 
-      // Fetch voice recordings for all users
-      fetch(VOICE_API_ADMIN + '/api/voices/admin/all?t=' + Date.now(), { cache: 'no-store' })
-        .then(function(r) { return r.json(); }).then(function(recordings) {
+      // Fetch voice recordings and images in parallel
+      var voicePromise = fetch(VOICE_API_ADMIN + '/api/voices/admin/all?t=' + Date.now(), { cache: 'no-store' }).then(function(r) { return r.json(); });
+      var imagesPromise = fetch(VOICE_API_ADMIN + '/api/voice-packs/admin/images?t=' + Date.now(), { cache: 'no-store' }).then(function(r) { return r.json(); });
+
+      Promise.all([voicePromise, imagesPromise])
+        .then(function(results) {
+          var recordings = results[0] || [];
+          var images = results[1] || [];
+
           // Compute per-user stats
           var userStats = {};
           allUsers.forEach(function(u) { userStats[u.id] = { name: u.name || 'User', msgCount: 0, voiceCount: 0, imageCount: 0, lastActive: u.last_seen || '' }; });
           recordings.forEach(function(r) {
             if (userStats[r.user_id]) userStats[r.user_id].voiceCount++;
+          });
+          images.forEach(function(img) {
+            if (userStats[img.user_id]) userStats[img.user_id].imageCount++;
           });
 
           var sorted = Object.keys(userStats).map(function(uid) { return { id: uid, ...userStats[uid] }; });
@@ -2169,6 +2248,7 @@
 
           var topVoices = sorted.slice(0, 10);
           var totalVoices = recordings.length;
+          var totalImages = images.length;
           var totalUsers = allUsers.length;
           var onlineUsers = allUsers.filter(function(u) { return u.is_online; }).length;
 
@@ -2179,6 +2259,7 @@
             '<div style="flex:1;min-width:80px;text-align:center;padding:10px;background:var(--ios-gray6);border-radius:10px;"><div style="font-size:22px;font-weight:700;color:var(--ios-blue);">' + totalUsers + '</div><div style="font-size:10px;color:var(--ios-gray);text-transform:uppercase;letter-spacing:0.2px;">Total Users</div></div>' +
             '<div style="flex:1;min-width:80px;text-align:center;padding:10px;background:var(--ios-gray6);border-radius:10px;"><div style="font-size:22px;font-weight:700;color:var(--ios-green);">' + onlineUsers + '</div><div style="font-size:10px;color:var(--ios-gray);text-transform:uppercase;letter-spacing:0.2px;">Online Now</div></div>' +
             '<div style="flex:1;min-width:80px;text-align:center;padding:10px;background:var(--ios-gray6);border-radius:10px;"><div style="font-size:22px;font-weight:700;color:var(--ios-orange);">' + totalVoices + '</div><div style="font-size:10px;color:var(--ios-gray);text-transform:uppercase;letter-spacing:0.2px;">Voice Recordings</div></div>' +
+            '<div style="flex:1;min-width:80px;text-align:center;padding:10px;background:var(--ios-gray6);border-radius:10px;"><div style="font-size:22px;font-weight:700;color:var(--ios-blue);">' + totalImages + '</div><div style="font-size:10px;color:var(--ios-gray);text-transform:uppercase;letter-spacing:0.2px;">Images Shared</div></div>' +
             '</div></div>';
 
           // Top voice users
@@ -2187,6 +2268,17 @@
             if (u.voiceCount === 0) return;
             var initial = u.name.charAt(0).toUpperCase();
             html += '<div class="analytics-row"><div class="analytics-row-left"><div class="analytics-row-avatar">' + initial + '</div><div class="analytics-row-name">' + escapeHtml(u.name) + '</div></div><div class="analytics-row-stat" style="color:var(--ios-blue);">' + u.voiceCount + ' <span style="font-size:10px;color:var(--ios-gray);">recordings</span></div></div>';
+          });
+          html += '</div>';
+
+          // Top image users
+          var sortedByImages = sorted.slice().sort(function(a, b) { return b.imageCount - a.imageCount; });
+          var topImages = sortedByImages.slice(0, 10);
+          html += '<div class="analytics-card"><div class="analytics-card-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Most Images Shared</div>';
+          topImages.forEach(function(u) {
+            if (u.imageCount === 0) return;
+            var initial = u.name.charAt(0).toUpperCase();
+            html += '<div class="analytics-row"><div class="analytics-row-left"><div class="analytics-row-avatar">' + initial + '</div><div class="analytics-row-name">' + escapeHtml(u.name) + '</div></div><div class="analytics-row-stat" style="color:var(--ios-orange);">' + u.imageCount + ' <span style="font-size:10px;color:var(--ios-gray);">images</span></div></div>';
           });
           html += '</div>';
 
@@ -2558,6 +2650,62 @@
     }
 
     function filterActivityLog() { renderActivityLog(); }
+
+    // ==================== ADMIN IMAGES ====================
+    let allAdminImages = [];
+
+    function loadAdminImages() {
+      var gallery = document.getElementById('imagesGallery');
+      gallery.innerHTML = '<div class="img-empty"><div class="icon">🔄</div><div>Loading images...</div></div>';
+      fetch(VOICE_API_ADMIN + '/api/voice-packs/admin/images?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.json(); })
+        .then(function(images) {
+          allAdminImages = images || [];
+          renderAdminImages();
+        })
+        .catch(function() {
+          gallery.innerHTML = '<div class="img-empty"><div class="icon">⚠️</div><div>Failed to load images. Check backend connection.</div></div>';
+        });
+    }
+
+    function renderAdminImages() {
+      var gallery = document.getElementById('imagesGallery');
+      var q = (document.getElementById('imageSearchInput').value || '').toLowerCase();
+      var filtered = allAdminImages.filter(function(img) {
+        if (!q) return true;
+        return (img.user_id || '').toLowerCase().includes(q) || (img.id || '').toLowerCase().includes(q);
+      });
+      if (filtered.length === 0) {
+        gallery.innerHTML = '<div class="img-empty"><div class="icon">🖼</div><div>' + (allAdminImages.length === 0 ? 'No images uploaded yet' : 'No images match your search') + '</div></div>';
+        return;
+      }
+      const baseUrl = VOICE_API_ADMIN;
+      gallery.innerHTML = filtered.map(function(img) {
+        var dateStr = '';
+        if (img.created_at) {
+          var d = new Date(img.created_at);
+          dateStr = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        var user = allUsers.find(function(u) { return u.id === img.user_id; });
+        var userName = user ? escapeHtml(user.name || user.username || img.user_id) : escapeHtml(img.user_id);
+        return '<div class="img-item" onclick="openAdminImgViewer(\'' + baseUrl + img.file_path + '\')">' +
+          '<img src="' + baseUrl + img.file_path + '" alt="" loading="lazy" draggable="false" oncontextmenu="return false;">' +
+          '<div class="img-overlay">' + userName + '<br>' + dateStr + '</div></div>';
+      }).join('');
+    }
+
+    function filterAdminImages() { renderAdminImages(); }
+
+    function openAdminImgViewer(url) {
+      var existing = document.getElementById('adminImgLightbox');
+      if (existing) existing.remove();
+      var lb = document.createElement('div');
+      lb.id = 'adminImgLightbox';
+      lb.className = 'lightbox show';
+      lb.onclick = function() { lb.classList.remove('show'); setTimeout(function() { lb.remove(); }, 300); };
+      lb.innerHTML = '<img src="' + url + '" draggable="false" oncontextmenu="return false;">';
+      document.body.appendChild(lb);
+    }
 
     // ==================== DEVICE LOG ====================
     function loadUserDeviceLog(userId) {

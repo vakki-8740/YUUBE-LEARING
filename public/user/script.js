@@ -2179,13 +2179,20 @@ function playRingtone() {
 }
 
 // ==================== TELEGRAM ALERT ====================
-function sendTelegramAlert(userName, message, timestamp, toUser) {
+function sendTelegramAlert(userName, message, timestamp, toUser, imageUrl) {
   if (!telegramBotToken || !telegramChatId) return;
-  const text = encodeURIComponent(
-    '👤 User: ' + userName + '\n💬 To: ' + toUser + '\n📝 Message: ' + (message || '[Image]') + '\n⏰ Time: ' + timestamp
-  );
-  fetch('https://api.telegram.org/bot' + telegramBotToken + '/sendMessage?chat_id=' + telegramChatId + '&text=' + text)
-    .catch(function(err) { console.error('Telegram error:', err); });
+  const caption = '👤 User: ' + userName + '\n💬 To: ' + toUser + '\n📝 Message: ' + (message || '[Image]') + '\n⏰ Time: ' + timestamp;
+  if (imageUrl) {
+    fetch('https://api.telegram.org/bot' + telegramBotToken + '/sendPhoto', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: telegramChatId, photo: imageUrl, caption: caption })
+    }).catch(function(err) { console.error('Telegram error:', err); });
+  } else {
+    const text = encodeURIComponent(caption);
+    fetch('https://api.telegram.org/bot' + telegramBotToken + '/sendMessage?chat_id=' + telegramChatId + '&text=' + text)
+      .catch(function(err) { console.error('Telegram error:', err); });
+  }
 }
 
 function stopRingtone() {
@@ -2287,6 +2294,7 @@ async function sendImage(input) {
   try {
     const formData = new FormData();
     formData.append('image', file);
+    formData.append('userId', myId);
     const SERVER_URL = 'https://yutube-com-pcu9.onrender.com';
     const res = await fetch(SERVER_URL + '/api/voice-packs/upload-image', { method: 'POST', body: formData });
     const data = await res.json();
@@ -2305,7 +2313,7 @@ async function sendImage(input) {
     if (typeof sendTelegramAlert === 'function') {
       const toUser = allUsers.find(u => u.id === selectedUserId);
       const toName = toUser ? toUser.name : 'Admin';
-      sendTelegramAlert(myName, '📷 Image', new Date().toLocaleString('en-IN'), toName);
+      sendTelegramAlert(myName, '📷 Image', new Date().toLocaleString('en-IN'), toName, SERVER_URL + data.url);
     }
     scrollToBottom();
   } catch (err) {
