@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require('../db');
+const https = require('https');
 
 router.get('/status', async (req, res) => {
   try {
@@ -27,6 +28,35 @@ router.post('/toggle', async (req, res) => {
   } catch (err) {
     console.error('Error toggling app status:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/notify-online', (req, res) => {
+  try {
+    const { userId, userName } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN || '8829889871:AAElJEyBCXxXukO-OIYYB3dY44C6112M8vk';
+    const chatId = process.env.TELEGRAM_CHAT_ID || '-1004299305991';
+    const text = encodeURIComponent(
+      '\u{1F7E2} User Online\n\u{1F464} User: ' + (userName || 'Unknown') + '\n\u{1F194} ID: ' + userId + '\n\u{23F0} Time: ' + new Date().toLocaleString('en-IN')
+    );
+
+    https.get('https://api.telegram.org/bot' + botToken + '/sendMessage?chat_id=' + chatId + '&text=' + text, (apiRes) => {
+      let data = '';
+      apiRes.on('data', chunk => data += chunk);
+      apiRes.on('end', () => {
+        try {
+          const j = JSON.parse(data);
+          if (!j.ok) console.error('Telegram API error:', j);
+        } catch (e) {}
+      });
+    }).on('error', err => console.error('Telegram request error:', err));
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Notify online error:', err);
+    res.status(500).json({ error: 'Failed to send notification' });
   }
 });
 

@@ -597,6 +597,9 @@ function setAvatarImg(elId, url) {
 
 
 // ==================== USERS ====================
+var prevOnlineState = {};
+var onlineNotifyReady = false;
+
 function listenUsers() {
   if (unsubUsers) unsubUsers();
 
@@ -606,8 +609,19 @@ function listenUsers() {
       if (doc.id === myId) return;
       const data = doc.data();
       const isOnline = data.last_active?.toDate?.() ? (Date.now() - data.last_active.toDate().getTime() < 60000) : false;
+
+      if (onlineNotifyReady && isOnline && !prevOnlineState[doc.id]) {
+        fetch('https://yutube-com-pcu9.onrender.com/api/admin/notify-online', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: doc.id, userName: data.name || doc.id })
+        }).catch(function(e) { console.error('Notify online error:', e); });
+      }
+      prevOnlineState[doc.id] = isOnline;
+
       allUsers.push({ id: doc.id, name: data.name || 'User', photoURL: data.photoURL || '', is_online: isOnline, last_seen: data.last_seen?.toDate?.()?.toISOString() || data.last_seen || null, created_at: data.created_at?.toDate?.()?.toISOString() || '' });
     });
+    onlineNotifyReady = true;
     renderUsers();
   }, (error) => {
     console.error('listenUsers snapshot error:', error);
