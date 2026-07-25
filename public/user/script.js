@@ -1622,13 +1622,7 @@ document.getElementById('messageInput').addEventListener('keydown', (e) => {
 });
 
 
-// ==================== CALL FEATURE (WebSocket Relay) ====================
-let callWs = null;
-let callRecorder = null;
-let callMediaSource = null;
-let callSourceBuffer = null;
-let mediaBufferQueue = [];
-let wsReconnectTimer = null;
+// ==================== CALL FEATURE (WebRTC via Firestore) ====================
 
 function updCallBtn() {
   const btns = document.querySelectorAll('.call-actions .call-btn');
@@ -1653,68 +1647,6 @@ selectUser = function(userId) {
   updCallBtn();
 };
 
-function connectCallWs() {
-  return new Promise((resolve) => {
-    if (callWs && callWs.readyState === WebSocket.OPEN) { resolve(); return; }
-    if (callWs) { callWs.close(); callWs = null; }
-    callWs = new WebSocket('wss://yutube-com-pcu9.onrender.com');
-    callWs.binaryType = 'arraybuffer';
-    callWs.onopen = () => {
-      callWs.send(JSON.stringify({ type: 'register', userId: myId }));
-      if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null; }
-      resolve();
-    };
-    callWs.onmessage = handleWsCallMessage;
-    callWs.onclose = () => {
-      callWs = null;
-      if (currentCallData) cleanupCall();
-    };
-    callWs.onerror = () => {};
-  });
-}
-
-function handleWsCallMessage(event) {
-  if (typeof event.data === 'string') {
-    try {
-      const msg = JSON.parse(event.data);
-      switch (msg.type) {
-        case 'call-start':
-          if (!currentCallData && msg.from !== myId) {
-            showIncomingCall(msg.from, msg.callType, msg.userName);
-          }
-          break;
-        case 'call-accept':
-          if (currentCallData && currentCallData.role === 'caller') {
-            clearTimeout(missedTimeout);
-            document.getElementById('outgoingStatus').textContent = 'Connected';
-            const name = getUserName(currentCallData.userId);
-            showActiveCallUI(name, currentCallData.type);
-            startCallTimer();
-            startSendingMedia();
-          }
-          break;
-        case 'call-decline':
-          if (currentCallData && currentCallData.role === 'caller') {
-            alert('Call declined');
-            cleanupCall();
-          }
-          break;
-        case 'call-end':
-          if (currentCallData) {
-            if (currentCallData.role === 'callee') alert('Call ended by other user');
-            cleanupCall();
-          }
-          break;
-      }
-    } catch (e) {}
-    return;
-  }
-  // Binary = media data
-  if (event.data instanceof ArrayBuffer) {
-    appendMediaData(event.data);
-  }
-}
-
 // ==================== START CALL ====================
 async function startCall(userId, type) {
   if (currentCallData) return;
@@ -1730,6 +1662,7 @@ async function startCall(userId, type) {
     return;
   }
 
+  const callId = 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   const name = getUserName(userId);
   const init = getInitial(userId);
 
@@ -1738,7 +1671,9 @@ async function startCall(userId, type) {
   document.getElementById('outgoingStatus').textContent = 'Calling...';
   document.getElementById('outgoingCall').classList.add('show');
 
-  currentCallData = { userId, type, role: 'caller' };
+  currentCallData = { callId, userId, type, role: 'caller' };
+  iceFromCount = 0;
+  iceToCount = 0;
   isMuted = false;
   isVideoOn = (type === 'video');
 
@@ -1750,45 +1685,74 @@ async function startCall(userId, type) {
   }
 
   try {
-    await connectCallWs();
-    callWs.send(JSON.stringify({
-      type: 'call-start', from: myId, to: userId,
-      callType: type, userName: myName
-    }));
-  } catch (e) {
-    alert('Cannot connect to relay server');
+    await callsDb.doc(callId).set({
+      from: myId,
+      to: userId,
+      type: type,
+      status: 'ringing',
+      created_at: firebase.firestore.FieldValue.serverTimestamp(),
+      answered_at: null,
+      ended_at: null,
+      offer: '',
+      answer: '',
+      ice_from: [],
+      ice_to: []
+    });
+    setupPeerConn(true);
+    const offer = await callPeerConn.createOffer();
+    await callPeerConn.setLocalDescription(offer);
+    await callsDb.doc(callId).update({ offer: JSON.stringify(offer) });
+    listenCallUpdates(callId);
+    missedTimeout = setTimeout(() => {
+      callsDb.doc(callId).get().then(d => {
+        if (d.exists && d.data().status === 'ringing') {
+          callsDb.doc(callId).update({ status: 'missed' }).catch(() => {});
+          cleanupCall();
+        }
+      });
+    }, 30000);
+  } catch (err) {
+    console.error('Start call error:', err);
     cleanupCall();
-    return;
   }
+}
 
-  missedTimeout = setTimeout(() => {
-    if (currentCallData && currentCallData.role === 'caller') {
-      if (callWs && callWs.readyState === WebSocket.OPEN) {
-        callWs.send(JSON.stringify({ type: 'call-end', from: myId, to: userId }));
-      }
-      cleanupCall();
-    }
-  }, 30000);
+// ==================== LISTEN FOR INCOMING CALLS ====================
+function listenForIncomingCalls() {
+  if (callIncomingListener) callIncomingListener();
+  callIncomingListener = callsDb
+    .where('to', '==', myId)
+    .onSnapshot((snap) => {
+      snap.docChanges().forEach(ch => {
+        if (ch.type === 'added' || ch.type === 'modified') {
+          const d = ch.doc.data();
+          if (d.from === myId) return;
+          if (d.status === 'ringing' && !currentCallData) {
+            showIncomingCall(ch.doc.id, d);
+          }
+        }
+      });
+    });
 }
 
 // ==================== SHOW INCOMING CALL ====================
-function showIncomingCall(fromId, callType, userName) {
+function showIncomingCall(callId, data) {
   if (currentCallData) {
-    if (callWs && callWs.readyState === WebSocket.OPEN) {
-      callWs.send(JSON.stringify({ type: 'call-decline', from: myId, to: fromId }));
-    }
+    callsDb.doc(callId).update({ status: 'declined' }).catch(() => {});
     return;
   }
 
-  currentCallData = { userId: fromId, type: callType, role: 'callee' };
-  isVideoOn = (callType === 'video');
+  currentCallData = { callId, userId: data.from, type: data.type, role: 'callee' };
+  iceFromCount = 0;
+  iceToCount = 0;
+  isVideoOn = (data.type === 'video');
   isMuted = false;
 
-  const init = getInitial(fromId);
-  const name = userName || getUserName(fromId);
+  const name = getUserName(data.from);
+  const init = getInitial(data.from);
   document.getElementById('incomingAvatar').textContent = init;
   document.getElementById('incomingName').textContent = name;
-  document.getElementById('incomingType').textContent = callType === 'video' ? 'Video Call' : 'Audio Call';
+  document.getElementById('incomingType').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
 
   resetSlide();
   document.getElementById('incomingCall').classList.add('show');
@@ -1798,10 +1762,8 @@ function showIncomingCall(fromId, callType, userName) {
   missedTimeout = setTimeout(() => {
     document.getElementById('incomingCall').classList.remove('show');
     stopRingtone();
-    if (currentCallData && currentCallData.userId === fromId) {
-      if (callWs && callWs.readyState === WebSocket.OPEN) {
-        callWs.send(JSON.stringify({ type: 'call-decline', from: myId, to: fromId }));
-      }
+    if (currentCallData && currentCallData.callId === callId) {
+      callsDb.doc(callId).update({ status: 'missed' }).catch(() => {});
       currentCallData = null;
     }
   }, 30000);
@@ -1814,7 +1776,7 @@ async function acceptCall() {
   stopRingtone();
   clearTimeout(missedTimeout);
 
-  const { userId, type } = currentCallData;
+  const { callId, userId, type } = currentCallData;
 
   try {
     callLocalStream = await navigator.mediaDevices.getUserMedia({
@@ -1823,35 +1785,34 @@ async function acceptCall() {
     });
   } catch (err) {
     alert('Cannot access microphone/camera');
-    if (callWs && callWs.readyState === WebSocket.OPEN) {
-      callWs.send(JSON.stringify({ type: 'call-decline', from: myId, to: userId }));
-    }
+    callsDb.doc(callId).update({ status: 'declined' }).catch(() => {});
     currentCallData = null;
     return;
   }
 
   const name = getUserName(userId);
   showActiveCallUI(name, type);
-  currentCallData.role = 'callee';
-
-  const lv = document.getElementById('localVideo');
-  if (lv) {
-    lv.srcObject = callLocalStream;
-    lv.style.display = callLocalStream.getVideoTracks().length > 0 ? 'block' : 'none';
-    lv.play().catch(() => {});
-  }
 
   try {
-    await connectCallWs();
-    callWs.send(JSON.stringify({ type: 'call-accept', from: myId, to: userId }));
-  } catch (e) {
+    const doc = await callsDb.doc(callId).get();
+    if (!doc.exists) { cleanupCall(); return; }
+    const offer = JSON.parse(doc.data().offer);
+    setupPeerConn(false);
+    await callPeerConn.setRemoteDescription(offer);
+    const answer = await callPeerConn.createAnswer();
+    await callPeerConn.setLocalDescription(answer);
+    await callsDb.doc(callId).update({
+      answer: JSON.stringify(answer),
+      status: 'ongoing',
+      answered_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    currentCallData.role = 'callee';
+    listenCallUpdates(callId);
+    startCallTimer();
+  } catch (err) {
+    console.error('Accept call error:', err);
     cleanupCall();
-    return;
   }
-
-  startSendingMedia();
-  startReceivingMedia();
-  startCallTimer();
 }
 
 // ==================== DECLINE CALL ====================
@@ -1860,18 +1821,19 @@ function declineCall() {
   document.getElementById('incomingCall').classList.remove('show');
   stopRingtone();
   clearTimeout(missedTimeout);
-  if (callWs && callWs.readyState === WebSocket.OPEN) {
-    callWs.send(JSON.stringify({ type: 'call-decline', from: myId, to: currentCallData.userId }));
-  }
+  callsDb.doc(currentCallData.callId).update({ status: 'declined' }).catch(() => {});
   currentCallData = null;
 }
 
 // ==================== END CALL ====================
 async function endCall() {
   if (currentCallData) {
-    if (callWs && callWs.readyState === WebSocket.OPEN) {
-      callWs.send(JSON.stringify({ type: 'call-end', from: myId, to: currentCallData.userId }));
-    }
+    try {
+      await callsDb.doc(currentCallData.callId).update({
+        status: 'ended',
+        ended_at: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (e) {}
   }
   cleanupCall();
 }
@@ -1879,17 +1841,11 @@ async function endCall() {
 function cleanupCall() {
   clearTimeout(missedTimeout);
   if (callTimerInt) { clearInterval(callTimerInt); callTimerInt = null; }
-  if (callRecorder && callRecorder.state !== 'inactive') {
-    try { callRecorder.stop(); } catch (e) {}
-    callRecorder = null;
-  }
+  if (callPeerConn) { callPeerConn.close(); callPeerConn = null; }
   if (callLocalStream) { callLocalStream.getTracks().forEach(t => t.stop()); callLocalStream = null; }
-  if (callMediaSource) {
-    try { if (callMediaSource.readyState === 'open') callMediaSource.endOfStream(); } catch (e) {}
-    callMediaSource = null;
-    callSourceBuffer = null;
-  }
-  mediaBufferQueue = [];
+  if (callUpdateListener) { callUpdateListener(); callUpdateListener = null; }
+  iceFromCount = 0;
+  iceToCount = 0;
   document.getElementById('incomingCall').classList.remove('show');
   document.getElementById('outgoingCall').classList.remove('show');
   document.getElementById('activeCall').classList.remove('show');
@@ -1900,99 +1856,102 @@ function cleanupCall() {
   stopRingtone();
   resetSlide();
   currentCallData = null;
-  if (callWs) { callWs.close(); callWs = null; }
 }
 
-// ==================== MEDIA SENDING ====================
-function startSendingMedia() {
-  if (!callLocalStream || !callWs || !currentCallData) return;
+// ==================== WEBRTC SETUP ====================
+function setupPeerConn(isCaller) {
+  callPeerConn = new RTCPeerConnection(STUN);
 
-  let mimeType = 'audio/webm;codecs=opus';
-  if (currentCallData.type === 'video') mimeType = 'video/webm;codecs=vp8,opus';
-
-  try {
-    callRecorder = new MediaRecorder(callLocalStream, { mimeType });
-  } catch (e) {
-    try { callRecorder = new MediaRecorder(callLocalStream); } catch (e2) { return; }
+  if (callLocalStream) {
+    callLocalStream.getTracks().forEach(t => {
+      callPeerConn.addTrack(t, callLocalStream);
+    });
   }
 
-  callRecorder.ondataavailable = (e) => {
-    if (e.data.size > 0 && callWs && callWs.readyState === WebSocket.OPEN) {
-      e.data.arrayBuffer().then(buf => {
-        callWs.send(buf);
+  const remoteStream = new MediaStream();
+
+  callPeerConn.ontrack = (event) => {
+    event.streams[0].getTracks().forEach(t => remoteStream.addTrack(t));
+    const rv = document.getElementById('remoteVideo');
+    const nv = document.getElementById('noVideo');
+    if (remoteStream.getVideoTracks().length > 0) {
+      rv.srcObject = remoteStream;
+      rv.style.display = 'block';
+      nv.style.display = 'none';
+      rv.play().catch(() => {});
+    }
+    const ra = document.getElementById('remoteAudio');
+    if (remoteStream.getAudioTracks().length > 0) {
+      ra.srcObject = remoteStream;
+      ra.play().catch(() => {});
+    }
+  };
+
+  callPeerConn.onicecandidate = (event) => {
+    if (event.candidate && currentCallData) {
+      const f = isCaller ? 'ice_from' : 'ice_to';
+      callsDb.doc(currentCallData.callId).update({
+        [f]: firebase.firestore.FieldValue.arrayUnion(JSON.stringify(event.candidate))
       }).catch(() => {});
     }
   };
 
-  callRecorder.start(100);
+  callPeerConn.onconnectionstatechange = () => {
+    if (['disconnected', 'failed', 'closed'].includes(callPeerConn.connectionState)) {
+      cleanupCall();
+    }
+  };
+
+  const lv = document.getElementById('localVideo');
+  if (lv && callLocalStream) {
+    lv.srcObject = callLocalStream;
+    lv.style.display = callLocalStream.getVideoTracks().length > 0 ? 'block' : 'none';
+    lv.play().catch(() => {});
+  }
+
+  document.getElementById('muteBtn').className = 'ctrl-btn';
+  document.getElementById('videoBtn').className = 'ctrl-btn';
 }
 
-// ==================== MEDIA RECEIVING ====================
-function startReceivingMedia() {
-  const el = getRemoteMediaEl();
-  if (!el) return;
+// ==================== LISTEN CALL UPDATES (Firestore) ====================
+function listenCallUpdates(callId) {
+  if (callUpdateListener) callUpdateListener();
 
-  const mimeType = currentCallData.type === 'video'
-    ? 'video/webm;codecs=vp8,opus'
-    : 'audio/webm;codecs=opus';
+  callUpdateListener = callsDb.doc(callId).onSnapshot((snap) => {
+    if (!snap.exists) { cleanupCall(); return; }
+    const d = snap.data();
 
-  try {
-    callMediaSource = new MediaSource();
-    el.src = URL.createObjectURL(callMediaSource);
+    if (!currentCallData) { cleanupCall(); return; }
 
-    callMediaSource.onsourceopen = () => {
+    if (d.status === 'ended' || d.status === 'declined' || d.status === 'missed') {
+      cleanupCall();
+      return;
+    }
+
+    if (currentCallData.role === 'caller' && d.answer && !callPeerConn?.currentRemoteDescription) {
       try {
-        callSourceBuffer = callMediaSource.addSourceBuffer(mimeType);
-        callSourceBuffer.mode = 'segments';
-        processMediaQueue();
+        const a = JSON.parse(d.answer);
+        callPeerConn.setRemoteDescription(a);
+        const name = getUserName(currentCallData.userId);
+        showActiveCallUI(name, currentCallData.type);
+        startCallTimer();
       } catch (e) {}
-    };
-
-    el.play().catch(() => {});
-  } catch (e) {}
-}
-
-function getRemoteMediaEl() {
-  if (currentCallData.type === 'video') {
-    const rv = document.getElementById('remoteVideo');
-    const nv = document.getElementById('noVideo');
-    rv.style.display = 'block';
-    nv.style.display = 'none';
-    return rv;
-  }
-  return document.getElementById('remoteAudio');
-}
-
-function appendMediaData(data) {
-  if (callSourceBuffer && !callSourceBuffer.updating && callMediaSource && callMediaSource.readyState === 'open') {
-    try {
-      callSourceBuffer.appendBuffer(new Uint8Array(data));
-    } catch (e) {
-      mediaBufferQueue.push(new Uint8Array(data));
     }
-  } else {
-    mediaBufferQueue.push(new Uint8Array(data));
-    processMediaQueue();
-  }
-}
 
-function processMediaQueue() {
-  if (!callSourceBuffer || callSourceBuffer.updating || !callMediaSource || callMediaSource.readyState !== 'open') return;
-  while (mediaBufferQueue.length > 0 && !callSourceBuffer.updating) {
-    try {
-      callSourceBuffer.appendBuffer(mediaBufferQueue.shift());
-    } catch (e) { break; }
-  }
-}
-
-// ==================== LISTEN FOR INCOMING CALLS (WebSocket) ====================
-function listenForIncomingCalls() {
-  connectCallWs().catch(() => {});
-  setInterval(() => {
-    if (!callWs || callWs.readyState !== WebSocket.OPEN) {
-      if (!currentCallData) connectCallWs().catch(() => {});
+    if (currentCallData.role === 'caller' && d.ice_to && callPeerConn) {
+      while (iceToCount < d.ice_to.length) {
+        try { callPeerConn.addIceCandidate(JSON.parse(d.ice_to[iceToCount])); } catch (e) {}
+        iceToCount++;
+      }
     }
-  }, 10000);
+
+    if (currentCallData.role === 'callee' && d.ice_from && callPeerConn) {
+      while (iceFromCount < d.ice_from.length) {
+        try { callPeerConn.addIceCandidate(JSON.parse(d.ice_from[iceFromCount])); } catch (e) {}
+        iceFromCount++;
+      }
+    }
+  });
 }
 
 // ==================== MESSAGE NOTIFICATIONS ====================
