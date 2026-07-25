@@ -98,6 +98,18 @@ router.get('/admin/count', async (req, res) => {
   }
 });
 
+router.get('/admin/list-light', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, user_id, duration, file_size, receiver_id, reply_to, created_at, media_type FROM voice_recordings ORDER BY created_at DESC'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Admin list light error:', err);
+    res.status(500).json({ error: 'Failed to list recordings' });
+  }
+});
+
 router.get('/user/:userId', async (req, res) => {
   try {
     const result = await pool.query(

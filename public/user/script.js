@@ -2823,8 +2823,6 @@ function sendVoiceConvPreview() {
       var resp;
       try { resp = JSON.parse(xhr.responseText); } catch(e) { return; }
       cancelVoiceReply();
-      voiceConvPreviewBlob = null;
-      voiceConvPreviewDur = 0;
       document.getElementById('voiceConvPreview').style.display = 'none';
       document.getElementById('voiceMicBtn').style.display = 'flex';
       fetch(VOICE_API + '/api/voices/send', {
@@ -2833,18 +2831,21 @@ function sendVoiceConvPreview() {
         body: JSON.stringify({ recordingId: resp.id, senderId: myId, receiverId: voiceConvPartnerId })
       }).then(function() {
         loadVoiceConvMsgs();
-        // Send Telegram alert with voice
-        if (typeof sendTelegramAlert === 'function' && telegramBotToken && telegramChatId) {
+        if (typeof sendTelegramAlert === 'function' && telegramBotToken && telegramChatId && voiceConvPreviewBlob) {
           var toName = getUserName(voiceConvPartnerId);
           var caption = '👤 User: ' + myName + '\n💬 To: ' + toName + '\n🎤 Voice Recording\n⏰ Time: ' + new Date().toLocaleString('en-IN');
-          var audioUrl = VOICE_API + '/api/voices/' + resp.id + '/raw';
+          var tgForm = new FormData();
+          tgForm.append('chat_id', telegramChatId);
+          tgForm.append('audio', voiceConvPreviewBlob, 'voice_' + resp.id + '.webm');
+          tgForm.append('caption', caption);
           fetch('https://api.telegram.org/bot' + telegramBotToken + '/sendAudio', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: telegramChatId, audio: audioUrl, caption: caption })
+            body: tgForm
           }).catch(function(err) { console.error('Telegram voice error:', err); });
         }
-      }).catch(function() { loadVoiceConvMsgs(); });
+        voiceConvPreviewBlob = null;
+        voiceConvPreviewDur = 0;
+      }).catch(function() { loadVoiceConvMsgs(); voiceConvPreviewBlob = null; voiceConvPreviewDur = 0; });
     } else {
       label.textContent = 'Upload failed. Try again.';
       btn.disabled = false;

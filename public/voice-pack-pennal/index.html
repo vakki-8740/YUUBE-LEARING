@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Voice Pack Panel</title>
+<style>
+:root {
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --text: #1c1c1e;
+  --text2: #8e8e93;
+  --blue: #007aff;
+  --red: #ff3b30;
+  --green: #34c759;
+  --gray5: #e5e5ea;
+  --gray6: #f2f2f7;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0 0 60px 0;
+  -webkit-font-smoothing: antialiased;
+}
+.header {
+  background: var(--card);
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--gray5);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.header-sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text2);
+}
+#count { font-weight: 600; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { opacity: 0.7; }
+.btn-refresh { background: var(--blue); color: #fff; }
+.btn-sm { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+.btn-play { background: var(--green); color: #fff; }
+.btn-download { background: var(--blue); color: #fff; }
+.btn-delete { background: var(--red); color: #fff; }
+.btn-stop { background: #ff9500; color: #fff; }
+#loading {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text2);
+  font-size: 15px;
+}
+#loading .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--gray5);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.user-group {
+  background: var(--card);
+  margin: 12px 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--gray6);
+}
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.user-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text2);
+  margin-left: auto;
+}
+.rec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gray6);
+  transition: background 0.15s;
+}
+.rec-item:last-child { border-bottom: none; }
+.rec-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.rec-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.rec-meta .label { color: var(--text2); font-weight: 500; }
+.rec-meta .value { color: var(--text); font-weight: 600; }
+.rec-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.rec-id {
+  font-size: 10px;
+  color: var(--text2);
+  font-family: 'SF Mono', 'Courier New', monospace;
+  word-break: break-all;
+  margin-top: 2px;
+}
+.audio-player {
+  width: 100%;
+  height: 36px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+.empty {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--text2);
+}
+.empty-icon { font-size: 48px; margin-bottom: 12px; }
+#error {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--red);
+  display: none;
+}
+#error .retry-btn {
+  margin-top: 12px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.stat-value { font-weight: 700; color: var(--text); }
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1c1c1e;
+    --text: #f5f5f7;
+    --text2: #8e8e93;
+    --gray5: #38383a;
+    --gray6: #2c2c2e;
+    --shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <h1>Voice Pack Panel</h1>
+    <button class="btn btn-refresh" onclick="loadData()">Refresh</button>
+  </div>
+  <div class="header-sub">
+    <span id="count">—</span>
+    <span class="stat-item">Total size: <span class="stat-value" id="totalSize">—</span></span>
+  </div>
+</div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  Loading voice packs...
+</div>
+
+<div id="error">
+  <div>Failed to load voice packs</div>
+  <button class="retry-btn" onclick="loadData()">Retry</button>
+</div>
+
+<main id="list"></main>
+
+<script>
+var SERVER = 'https://yutube-com-pcu9.onrender.com';
+var allRecordings = [];
+var audioPlayers = {};
+
+function loadData() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('list').innerHTML = '';
+  allRecordings = [];
+  audioPlayers = {};
+
+  fetch(SERVER + '/api/voices/admin/list-light')
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+      document.getElementById('loading').style.display = 'none';
+      allRecordings = data;
+      renderList(data);
+    })
+    .catch(function(err) {
+      console.error('Load error:', err);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').style.display = 'block';
+    });
+}
+
+function formatDur(sec) {
+  if (!sec && sec !== 0) return '—';
+  var m = Math.floor(sec / 60);
+  var s = Math.floor(sec % 60);
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function formatSize(bytes) {
+  if (!bytes && bytes !== 0) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function formatDate(d) {
+  if (!d) return '—';
+  var date = new Date(d);
+  return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+         date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+}
+
+function getInitials(id) {
+  if (!id) return '?';
+  return id.substring(0, 2).toUpperCase();
+}
+
+function playAudio(id, btn) {
+  if (audioPlayers[id]) {
+    audioPlayers[id].pause();
+    audioPlayers[id].currentTime = 0;
+    delete audioPlayers[id];
+    if (btn) { btn.textContent = 'Play'; btn.className = 'btn btn-sm btn-play'; }
+    var player = document.getElementById('player_' + id);
+    if (player) { player.style.display = 'none'; player.src = ''; }
+    return;
+  }
+
+  var player = document.getElementById('player_' + id);
+  if (!player) return;
+
+  var url = SERVER + '/api/voices/' + id + '/raw?t=' + Date.now();
+  player.src = url;
+  player.style.display = 'block';
+  player.play().then(function() {
+    if (btn) { btn.textContent = 'Stop'; btn.className = 'btn btn-sm btn-stop'; }
+    audioPlayers[id] = player;
+    player.onended = function() {
+      delete audioPlayers[id];
+      if (btn) { btn.textContent = 'Play'; btn.className = 'btn btn-sm btn-play'; }
+      player.style.display = 'none';
+      player.src = '';
+    };
+  }).catch(function(err) {
+    console.error('Play error:', err);
+    if (btn) { btn.textContent = 'Play'; btn.className = 'btn btn-sm btn-play'; }
+    player.style.display = 'none';
+    player.src = '';
+  });
+}
+
+function downloadAudio(id) {
+  var url = SERVER + '/api/voices/' + id + '/raw';
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'voice_' + id + '.webm';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function deleteAudio(id) {
+  if (!confirm('Delete this voice pack?\nID: ' + id)) return;
+  fetch(SERVER + '/api/voices/' + id, { method: 'DELETE' })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function() {
+      allRecordings = allRecordings.filter(function(r) { return r.id !== id; });
+      renderList(allRecordings);
+    })
+    .catch(function(err) {
+      alert('Failed to delete: ' + err.message);
+    });
+}
+
+function getRecipients(rec) {
+  var r = [];
+  if (rec.receiver_id) r.push(rec.receiver_id);
+  if (rec.reply_to) r.push('reply:' + rec.reply_to);
+  return r.length ? r.join(', ') : '—';
+}
+
+function renderList(data) {
+  var list = document.getElementById('list');
+  list.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">🎤</div><div>No voice packs found</div></div>';
+    document.getElementById('count').textContent = '0 recordings';
+    document.getElementById('totalSize').textContent = '—';
+    return;
+  }
+
+  var totalSize = 0;
+  var groups = {};
+  data.forEach(function(r) {
+    totalSize += (r.file_size || 0);
+    var uid = r.user_id || 'unknown';
+    if (!groups[uid]) groups[uid] = [];
+    groups[uid].push(r);
+  });
+
+  document.getElementById('count').textContent = data.length + ' recording' + (data.length !== 1 ? 's' : '');
+  document.getElementById('totalSize').textContent = formatSize(totalSize);
+
+  Object.keys(groups).sort().forEach(function(uid) {
+    var recs = groups[uid];
+    var group = document.createElement('div');
+    group.className = 'user-group';
+
+    var header = document.createElement('div');
+    header.className = 'user-header';
+    header.innerHTML = '<div class="user-avatar">' + getInitials(uid) + '</div>' +
+      '<span>' + escapeHtml(uid) + '</span>' +
+      '<span class="user-count">' + recs.length + ' recording' + (recs.length !== 1 ? 's' : '') + '</span>';
+    group.appendChild(header);
+
+    recs.forEach(function(r) {
+      var item = document.createElement('div');
+      item.className = 'rec-item';
+
+      item.innerHTML =
+        '<div class="rec-meta">' +
+          '<span><span class="label">Duration:</span> <span class="value">' + formatDur(r.duration) + '</span></span>' +
+          '<span><span class="label">Size:</span> <span class="value">' + formatSize(r.file_size) + '</span></span>' +
+          '<span><span class="label">Type:</span> <span class="value">' + (r.media_type || 'audio/webm') + '</span></span>' +
+          '<span><span class="label">Date:</span> <span class="value">' + formatDate(r.created_at) + '</span></span>' +
+          '<span><span class="label">To:</span> <span class="value">' + escapeHtml(getRecipients(r)) + '</span></span>' +
+        '</div>' +
+        '<audio class="audio-player" id="player_' + r.id + '" style="display:none" controls></audio>' +
+        '<div class="rec-actions">' +
+          '<button class="btn btn-sm btn-play" onclick="playAudio(\'' + r.id + '\', this)">Play</button>' +
+          '<button class="btn btn-sm btn-download" onclick="downloadAudio(\'' + r.id + '\')">Download</button>' +
+          '<button class="btn btn-sm btn-delete" onclick="deleteAudio(\'' + r.id + '\')">Delete</button>' +
+        '</div>' +
+        '<div class="rec-id">' + r.id + '</div>';
+
+      group.appendChild(item);
+    });
+
+    list.appendChild(group);
+  });
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadData();
+</script>
+</body>
+</html>
