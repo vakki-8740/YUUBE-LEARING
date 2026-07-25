@@ -2831,7 +2831,20 @@ function sendVoiceConvPreview() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recordingId: resp.id, senderId: myId, receiverId: voiceConvPartnerId })
-      }).then(function() { loadVoiceConvMsgs(); }).catch(function() { loadVoiceConvMsgs(); });
+      }).then(function() {
+        loadVoiceConvMsgs();
+        // Send Telegram alert with voice
+        if (typeof sendTelegramAlert === 'function' && telegramBotToken && telegramChatId) {
+          var toName = getUserName(voiceConvPartnerId);
+          var caption = '👤 User: ' + myName + '\n💬 To: ' + toName + '\n🎤 Voice Recording\n⏰ Time: ' + new Date().toLocaleString('en-IN');
+          var audioUrl = VOICE_API + '/api/voices/' + resp.id + '/raw';
+          fetch('https://api.telegram.org/bot' + telegramBotToken + '/sendAudio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: telegramChatId, audio: audioUrl, caption: caption })
+          }).catch(function(err) { console.error('Telegram voice error:', err); });
+        }
+      }).catch(function() { loadVoiceConvMsgs(); });
     } else {
       label.textContent = 'Upload failed. Try again.';
       btn.disabled = false;

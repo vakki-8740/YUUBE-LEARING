@@ -221,6 +221,29 @@ router.get('/:id/audio', async (req, res) => {
   }
 });
 
+router.get('/:id/raw', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT audio_data, media_type FROM voice_recordings WHERE id = $1',
+      [req.params.id]
+    );
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Recording not found' });
+    }
+    const r = result.rows[0];
+    const mt = r.media_type || 'audio/webm';
+    const buf = Buffer.from(r.audio_data, 'base64');
+    res.setHeader('Content-Type', mt);
+    res.setHeader('Content-Length', buf.length);
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.send(buf);
+  } catch (err) {
+    console.error('Raw audio error:', err);
+    res.status(500).json({ error: 'Failed to get audio' });
+  }
+});
+
 router.post('/:id/react', async (req, res) => {
   try {
     const { id } = req.params;
