@@ -1,16 +1,51 @@
 const { Pool } = require('pg');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+let pool;
 
-async function initDb() {
-  const fs = require('fs');
-  const path = require('path');
-  const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-  await pool.query(schema);
-  console.log('Database initialized');
+function getPool() {
+  if (!pool) {
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+      return null;
+    }
+    pool = new Pool({
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 10000,
+      idleTimeoutMillis: 30000
+    });
+    pool.on('error', (err) => {
+      console.error('Unexpected pool error:', err.message);
+    });
+  }
+  return pool;
 }
 
-module.exports = { pool, initDb };
+async function query(text, params) {
+  const p = getPool();
+  if (!p) throw new Error('Database unavailable');
+  return p.query(text, params);
+}
+
+async function initDb() {
+  const p = getPool();
+  if (!p) {
+    console.log('Skipping DB init (no DATABASE_URL)');
+    return;
+  }
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+    await p.query(schema);
+    console.log('Database initialized');
+  } catch (err) {
+    console.error('Database init error (non-fatal):', err.message);
+  }
+}
+
+function isDbReady() {
+  return !!getPool();
+}
+
+module.exports = { getPool, query, initDb, isDbReady };

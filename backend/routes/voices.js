@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
-const { pool } = require('../db');
+const { query } = require('../db');
 
 const router = express.Router();
 
@@ -32,7 +32,7 @@ router.post('/upload', upload.single('audio'), async (req, res) => {
 
     const replyTo = req.body.reply_to || null;
 
-    await pool.query(
+    await query(
       'INSERT INTO voice_recordings (id, user_id, audio_data, duration, file_size, reply_to, media_type) VALUES ($1, $2, $3, $4, $5, $6, $7)',
       [id, req.body.userId, audioBase64, duration, req.file.size, replyTo, mediaType]
     );
@@ -50,12 +50,12 @@ router.get('/list', async (req, res) => {
     const userId = req.query.userId;
     let result;
     if (userId) {
-      result = await pool.query(
+      result = await query(
         'SELECT id, user_id, audio_data, duration, file_size, receiver_id, reply_to, reactions, seen, created_at, media_type FROM voice_recordings WHERE user_id = $1 OR receiver_id = $1 ORDER BY created_at DESC',
         [userId]
       );
     } else {
-      result = await pool.query(
+      result = await query(
       'SELECT id, user_id, audio_data, duration, file_size, receiver_id, reply_to, reactions, created_at, media_type FROM voice_recordings ORDER BY created_at DESC'
       );
     }
@@ -73,7 +73,7 @@ router.get('/list', async (req, res) => {
 
 router.get('/admin/all', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await query(
       'SELECT id, user_id, audio_data, duration, file_size, receiver_id, created_at, media_type FROM voice_recordings ORDER BY created_at DESC'
     );
     const rows = result.rows.map(r => {
@@ -90,7 +90,7 @@ router.get('/admin/all', async (req, res) => {
 
 router.get('/admin/count', async (req, res) => {
   try {
-    const result = await pool.query('SELECT COUNT(*) as count FROM voice_recordings');
+    const result = await query('SELECT COUNT(*) as count FROM voice_recordings');
     res.json({ count: parseInt(result.rows[0].count) || 0 });
   } catch (err) {
     console.error('Admin count voices error:', err);
@@ -100,7 +100,7 @@ router.get('/admin/count', async (req, res) => {
 
 router.get('/admin/list-light', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await query(
       'SELECT id, user_id, duration, file_size, receiver_id, reply_to, created_at, media_type FROM voice_recordings ORDER BY created_at DESC'
     );
     res.json(result.rows);
@@ -112,7 +112,7 @@ router.get('/admin/list-light', async (req, res) => {
 
 router.get('/user/:userId', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await query(
       'SELECT id, user_id, audio_data, duration, file_size, reply_to, reactions, created_at, media_type FROM voice_recordings WHERE user_id = $1 ORDER BY created_at DESC',
       [req.params.userId]
     );
@@ -130,7 +130,7 @@ router.get('/user/:userId', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM voice_recordings WHERE id = $1 RETURNING id', [req.params.id]);
+    const result = await query('DELETE FROM voice_recordings WHERE id = $1 RETURNING id', [req.params.id]);
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Recording not found' });
     }
@@ -147,7 +147,7 @@ router.post('/send', async (req, res) => {
     if (!recordingId || !senderId || !receiverId) {
       return res.status(400).json({ error: 'recordingId, senderId, receiverId are required' });
     }
-    const result = await pool.query(
+    const result = await query(
       'UPDATE voice_recordings SET receiver_id = $1 WHERE id = $2 AND user_id = $3 RETURNING id',
       [receiverId, recordingId, senderId]
     );
@@ -167,7 +167,7 @@ router.post('/mark-seen', async (req, res) => {
     if (!viewerId || !partnerId) {
       return res.status(400).json({ error: 'viewerId and partnerId are required' });
     }
-    const result = await pool.query(
+    const result = await query(
       'UPDATE voice_recordings SET seen = TRUE WHERE user_id = $1 AND receiver_id = $2 AND (seen IS NULL OR seen = FALSE) RETURNING id',
       [partnerId, viewerId]
     );
@@ -184,7 +184,7 @@ router.post('/send-bulk', async (req, res) => {
     if (!senderId || !receiverId) {
       return res.status(400).json({ error: 'senderId, receiverId are required' });
     }
-    const result = await pool.query(
+    const result = await query(
       'UPDATE voice_recordings SET receiver_id = $1 WHERE user_id = $2 AND receiver_id IS NULL RETURNING id',
       [receiverId, senderId]
     );
@@ -198,7 +198,7 @@ router.post('/send-bulk', async (req, res) => {
 router.get('/conversation/:user1/:user2', async (req, res) => {
   try {
     const { user1, user2 } = req.params;
-    const result = await pool.query(
+    const result = await query(
       'SELECT id, user_id, duration, file_size, receiver_id, reply_to, reactions, seen, created_at, media_type FROM voice_recordings WHERE (user_id = $1 AND receiver_id = $2) OR (user_id = $2 AND receiver_id = $1) ORDER BY created_at ASC',
       [user1, user2]
     );
@@ -211,7 +211,7 @@ router.get('/conversation/:user1/:user2', async (req, res) => {
 
 router.get('/:id/audio', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await query(
       'SELECT id, audio_data, duration, file_size, media_type FROM voice_recordings WHERE id = $1',
       [req.params.id]
     );
@@ -235,7 +235,7 @@ router.get('/:id/audio', async (req, res) => {
 
 router.get('/:id/raw', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await query(
       'SELECT audio_data, media_type FROM voice_recordings WHERE id = $1',
       [req.params.id]
     );
@@ -264,7 +264,7 @@ router.post('/:id/react', async (req, res) => {
       return res.status(400).json({ error: 'userId and emoji are required' });
     }
 
-    const existing = await pool.query('SELECT reactions FROM voice_recordings WHERE id = $1', [id]);
+    const existing = await query('SELECT reactions FROM voice_recordings WHERE id = $1', [id]);
     if (existing.rowCount === 0) {
       return res.status(404).json({ error: 'Recording not found' });
     }
@@ -282,7 +282,7 @@ router.post('/:id/react', async (req, res) => {
       reactions[emoji].push(userId);
     }
 
-    await pool.query('UPDATE voice_recordings SET reactions = $1 WHERE id = $2', [JSON.stringify(reactions), id]);
+    await query('UPDATE voice_recordings SET reactions = $1 WHERE id = $2', [JSON.stringify(reactions), id]);
     res.json({ success: true, reactions });
   } catch (err) {
     console.error('React error:', err);

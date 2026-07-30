@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { pool } = require('../db');
+const { query } = require('../db');
 
 const router = express.Router();
 
@@ -33,7 +33,7 @@ router.post('/upload-image', uploadImage.single('image'), async (req, res) => {
     const filePath = '/uploads/' + req.file.filename;
     const id = uuidv4();
     const userId = req.body.userId || 'unknown';
-    await pool.query(
+    await query(
       'INSERT INTO images (id, user_id, file_path, file_size) VALUES ($1, $2, $3, $4)',
       [id, userId, filePath, req.file.size]
     );
@@ -73,7 +73,7 @@ router.post('/upload', upload.single('audio'), async (req, res) => {
     const id = uuidv4();
     const filePath = '/uploads/' + req.file.filename;
 
-    await pool.query(
+    await query(
       'INSERT INTO voice_packs (id, user_id, title, file_path, duration, file_size) VALUES ($1, $2, $3, $4, $5, $6)',
       [id, req.body.userId, req.body.title || '', filePath, parseInt(req.body.duration) || 0, req.file.size]
     );
@@ -95,12 +95,12 @@ router.post('/send', async (req, res) => {
     const conversation = [senderId, receiverId].sort().join('_');
     const id = uuidv4();
 
-    await pool.query(
+    await query(
       'INSERT INTO voice_pack_messages (id, sender_id, receiver_id, voice_pack_id, conversation) VALUES ($1, $2, $3, $4, $5)',
       [id, senderId, receiverId, voicePackId, conversation]
     );
 
-    const pack = await pool.query('SELECT * FROM voice_packs WHERE id = $1', [voicePackId]);
+    const pack = await query('SELECT * FROM voice_packs WHERE id = $1', [voicePackId]);
     const voicePack = pack.rows[0];
 
     res.json({ id, voicePack });
@@ -112,7 +112,7 @@ router.post('/send', async (req, res) => {
 
 router.get('/messages/:userId', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await query(
       `SELECT vpm.id, vpm.sender_id, vpm.receiver_id, vpm.voice_pack_id, vpm.conversation, vpm.created_at,
               vp.file_path, vp.duration, vp.title
        FROM voice_pack_messages vpm
@@ -130,7 +130,7 @@ router.get('/messages/:userId', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const result = await pool.query('DELETE FROM voice_packs WHERE id = $1 RETURNING file_path', [req.params.id]);
+    const result = await query('DELETE FROM voice_packs WHERE id = $1 RETURNING file_path', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Voice pack not found' });
     res.json({ success: true });
   } catch (err) {
@@ -141,7 +141,7 @@ router.delete('/:id', async (req, res) => {
 
 router.get('/:userId', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await query(
       'SELECT id, user_id, title, file_path, duration, file_size, created_at FROM voice_packs WHERE user_id = $1 ORDER BY created_at DESC',
       [req.params.userId]
     );
@@ -154,7 +154,7 @@ router.get('/:userId', async (req, res) => {
 
 router.get('/admin/images', async (req, res) => {
   try {
-    const result = await pool.query(
+    const result = await query(
       'SELECT id, user_id, file_path, file_size, created_at FROM images ORDER BY created_at DESC'
     );
     res.json(result.rows);
@@ -166,7 +166,7 @@ router.get('/admin/images', async (req, res) => {
 
 router.get('/admin/images/count', async (req, res) => {
   try {
-    const result = await pool.query('SELECT COUNT(*) as count FROM images');
+    const result = await query('SELECT COUNT(*) as count FROM images');
     res.json({ count: parseInt(result.rows[0].count) || 0 });
   } catch (err) {
     console.error('Admin images count error:', err);

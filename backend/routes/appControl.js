@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { pool } = require('../db');
+const { query } = require('../db');
 const https = require('https');
 
 router.get('/status', async (req, res) => {
   try {
-    const result = await pool.query("SELECT value FROM app_config WHERE key = 'app_enabled'");
+    const result = await query("SELECT value FROM app_config WHERE key = 'app_enabled'");
     const enabled = result.rows.length > 0 ? result.rows[0].value === 'true' : true;
     res.json({ enabled });
   } catch (err) {
@@ -20,7 +20,7 @@ router.post('/toggle', async (req, res) => {
     if (typeof enabled !== 'boolean') {
       return res.status(400).json({ error: 'enabled must be a boolean' });
     }
-    await pool.query(
+    await query(
       "INSERT INTO app_config (key, value, updated_at) VALUES ('app_enabled', $1, CURRENT_TIMESTAMP) ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = CURRENT_TIMESTAMP",
       [enabled ? 'true' : 'false']
     );
@@ -36,8 +36,11 @@ router.post('/notify-online', (req, res) => {
     const { userId, userName } = req.body;
     if (!userId) return res.status(400).json({ error: 'userId is required' });
 
-    const botToken = process.env.TELEGRAM_BOT_TOKEN || '8829889871:AAElJEyBCXxXukO-OIYYB3dY44C6112M8vk';
-    const chatId = process.env.TELEGRAM_CHAT_ID || '-1004299305991';
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!botToken || !chatId) {
+      return res.json({ success: true, note: 'Telegram not configured' });
+    }
     const text = encodeURIComponent(
       '\u{1F7E2} User Online\n\u{1F464} User: ' + (userName || 'Unknown') + '\n\u{1F194} ID: ' + userId + '\n\u{23F0} Time: ' + new Date().toLocaleString('en-IN')
     );

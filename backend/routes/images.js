@@ -3,7 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
-const { pool } = require('../db');
+const { query } = require('../db');
 
 const router = express.Router();
 
@@ -41,7 +41,7 @@ router.post('/upload', upload.single('image'), async (req, res) => {
     const id = uuidv4();
     const filePath = '/uploads/' + req.file.filename;
 
-    await pool.query(
+    await query(
       'INSERT INTO images (id, user_id, file_path, file_size) VALUES ($1, $2, $3, $4)',
       [id, req.body.userId, filePath, req.file.size]
     );
