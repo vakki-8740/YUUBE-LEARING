@@ -256,12 +256,18 @@ function setMode(mode) {
 let visibilityHandler = null;
 let heartbeatInterval = null;
 
-// Auto-login if name exists (deferred so all scripts are loaded first)
-if (myName) {
-  setTimeout(function() {
-    window.addEventListener('beforeunload', handleBeforeUnload);
+// Auto-login if saved session exists (fast: wake backend first, show loading instantly)
+if (myId && myName) {
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener('pagehide', handlePageHide);
+  startAutoLogin();
+}
+
+function startAutoLogin() {
+  document.getElementById('nameScreen').classList.add('hide');
+  wakeBackend(function() {
     showMainApp();
-  }, 0);
+  });
 }
 
 // ==================== JOIN / LOGIN / SIGNUP ====================
