@@ -28,6 +28,8 @@ firebase.initializeApp({
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+const VOICE_API = 'https://yutube-com-pcu9.onrender.com';
+
 const LOGO_URLS = [
   'https://i.ibb.co/PGtpdnv1/image.webp',
   'https://i.ibb.co/yvQtTPV/image.webp',
@@ -2304,7 +2306,6 @@ async function sendImage(input) {
 
 
 // ==================== VOICE PACK CONVERSATION ====================
-const VOICE_API = 'https://yutube-com-pcu9.onrender.com';
 let voiceConvPartnerId = null;
 let voiceConvPartnerName = '';
 let voiceConvData = [];
