@@ -412,6 +412,98 @@
       color: var(--text2);
       font-size: 14px;
     }
+
+    /* ===== Server Wake ===== */
+    .server-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 13px 16px;
+      min-height: 52px;
+      border-bottom: 0.5px solid var(--separator);
+    }
+    .server-status { flex: 1; }
+    .server-status-title { font-size: 16px; font-weight: 600; }
+    .server-status-sub { font-size: 13px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+    .server-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: var(--gray);
+      transition: all 0.4s;
+    }
+    .server-dot.on {
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(52,199,89,0.7);
+      animation: dotPulseGreen 1.8s ease-in-out infinite;
+    }
+    .server-dot.waking {
+      background: var(--orange);
+      box-shadow: 0 0 14px rgba(255,149,0,0.7);
+      animation: dotPulseOrange 1s ease-in-out infinite;
+    }
+    @keyframes dotPulseGreen {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+    @keyframes dotPulseOrange {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.8); }
+    }
+    .server-btn {
+      width: 100%;
+      border: none;
+      padding: 16px;
+      font-size: 16px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      color: #fff;
+      background: var(--link);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+    }
+    .server-btn:active { transform: scale(0.97); opacity: 0.85; }
+    .server-btn:disabled { pointer-events: none; }
+    .server-btn.waking {
+      background: var(--orange);
+      box-shadow: 0 0 24px rgba(255,149,0,0.35);
+    }
+    .server-btn.on {
+      background: var(--green);
+      box-shadow: 0 0 24px rgba(52,199,89,0.4);
+    }
+    .server-btn .srv-spin {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: srvSpin 0.85s linear infinite;
+      display: none;
+    }
+    .server-btn.waking .srv-spin { display: block; }
+    .server-btn.waking .srv-icon, .server-btn.on .srv-icon { display: none; }
+    .server-btn.on .srv-check {
+      display: block;
+      animation: srvCheckPop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes srvSpin { to { transform: rotate(360deg); } }
+    @keyframes srvCheckPop {
+      0% { transform: scale(0); }
+      70% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+    .server-btn.shake { animation: srvShake 0.4s ease-in-out; }
+    @keyframes srvShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
   </style>
 </head>
 <body>
@@ -464,6 +556,26 @@
       <span class="row-label">Turn OFF</span>
       <span class="chevron">›</span>
     </div>
+  </div>
+
+  <!-- SERVER -->
+  <div class="group-header">Server</div>
+  <div class="group">
+    <div class="server-row">
+      <div class="server-status">
+        <div class="server-status-title" id="serverTitle">Server Status</div>
+        <div class="server-status-sub" id="serverSub">Checking...</div>
+      </div>
+      <span class="server-dot" id="serverDot"></span>
+    </div>
+    <button class="server-btn" id="serverBtn" onclick="wakeServer()">
+      <span class="srv-icon" id="serverBtnIcon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </span>
+      <span class="srv-spin"></span>
+      <svg class="srv-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:none"><polyline points="20 6 9 17 4 12"/></svg>
+      <span id="serverBtnText">Server ON</span>
+    </button>
   </div>
 
   <!-- SCHEDULE -->
@@ -811,6 +923,93 @@
       if (schedCheckTimer) { clearInterval(schedCheckTimer); schedCheckTimer = null; }
     }
 
+    // ---- Server Wake ----
+    var serverWaking = false;
+
+    function updateServerUI(state) {
+      var dot = document.getElementById('serverDot');
+      var title = document.getElementById('serverTitle');
+      var sub = document.getElementById('serverSub');
+      var btn = document.getElementById('serverBtn');
+      var text = document.getElementById('serverBtnText');
+      if (state === 'on') {
+        dot.className = 'server-dot on';
+        title.textContent = 'Server is ON';
+        sub.textContent = 'Backend awake — app fully working';
+        btn.classList.remove('waking', 'on');
+        btn.classList.add('on');
+        text.textContent = 'Server ON';
+        btn.disabled = false;
+      } else if (state === 'waking') {
+        dot.className = 'server-dot waking';
+        title.textContent = 'Waking server';
+        sub.textContent = 'Render ko sleep se jaagaya ja raha hai (30-60 sec lag sakte hain)';
+        btn.classList.remove('on');
+        btn.classList.add('waking');
+        text.textContent = 'Waking server...';
+        btn.disabled = true;
+      } else {
+        dot.className = 'server-dot';
+        title.textContent = 'Server is sleeping';
+        sub.textContent = 'Render sleep mode me hai — "Server ON" dabao';
+        btn.classList.remove('waking', 'on');
+        text.textContent = 'Server ON';
+        btn.disabled = false;
+      }
+    }
+
+    function checkServer(cb) {
+      fetch(API + '/api/health?t=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { cb(r.ok ? 'on' : 'off'); })
+        .catch(function() { cb('off'); });
+    }
+
+    function wakeServer() {
+      if (serverWaking) return;
+      serverWaking = true;
+      updateServerUI('waking');
+      var attempts = 0;
+      var maxWait = 180;
+
+      function ping() {
+        attempts++;
+        fetch(API + '/api/health?t=' + Date.now(), { cache: 'no-store' })
+          .then(function(r) {
+            if (r.ok) {
+              serverWaking = false;
+              updateServerUI('on');
+              showToast('Server is ON');
+              var btn = document.getElementById('serverBtn');
+              setTimeout(function() {
+                if (btn) btn.classList.remove('on');
+              }, 4000);
+              return;
+            }
+            scheduleRetry();
+          })
+          .catch(function() {
+            scheduleRetry();
+          });
+      }
+
+      function scheduleRetry() {
+        if (serverWaking) {
+          var sub = document.getElementById('serverSub');
+          if (attempts > 2 && sub) sub.textContent = 'Waking... attempt ' + attempts + ' (server ko time lagega)';
+          if (attempts >= maxWait) {
+            serverWaking = false;
+            updateServerUI('off');
+            var btn = document.getElementById('serverBtn');
+            if (btn) { btn.classList.add('shake'); setTimeout(function() { btn.classList.remove('shake'); }, 500); }
+            showToast('Server did not wake. Try again.');
+            return;
+          }
+          setTimeout(ping, 3000);
+        }
+      }
+      ping();
+    }
+
     // ---- Init ----
     loadData();
     renderLog();
@@ -824,7 +1023,11 @@
     document.getElementById('schedTime').value = defTime;
 
     getStatus(function(enabled) { updateUI(enabled); });
-    setInterval(function() { getStatus(function(enabled) { updateUI(enabled); }); }, 30000);
+    checkServer(function(state) { updateServerUI(state); });
+    setInterval(function() {
+      getStatus(function(enabled) { updateUI(enabled); });
+      if (!serverWaking) checkServer(function(state) { updateServerUI(state); });
+    }, 30000);
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(function() {});
