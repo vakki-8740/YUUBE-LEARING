@@ -267,9 +267,7 @@ if (myId && myName) {
 
 function startAutoLogin() {
   document.getElementById('nameScreen').classList.add('hide');
-  wakeBackend(function() {
-    showMainApp();
-  });
+  showMainApp();
 }
 
 // ==================== JOIN / LOGIN / SIGNUP ====================
@@ -490,7 +488,7 @@ function showMainApp() {
     document.getElementById('nameScreen').classList.add('hide');
     document.getElementById('mainApp').classList.add('show');
 
-  wakeBackend(function() {
+    startKeepAlive();
     const initial = myName.charAt(0).toUpperCase();
     if (myPhotoURL) {
       setAvatarImg('myAvatar', myPhotoURL);
@@ -536,12 +534,9 @@ function showMainApp() {
     listenBroadcast();
     startAppStatusPolling();
   });
-  });
 }
 
 // ==================== WAKE BACKEND ====================
-var wakeOverlayEl = null;
-var wakeLabelEl = null;
 var keepAliveStarted = false;
 
 function startKeepAlive() {
@@ -550,71 +545,6 @@ function startKeepAlive() {
   setInterval(function() {
     fetch(VOICE_API + '/api/health?t=' + Date.now(), { method: 'GET', mode: 'cors', cache: 'no-store' }).catch(function() {});
   }, 540000);
-}
-
-function wakeBackend(callback) {
-  if (!wakeOverlayEl) {
-    wakeOverlayEl = document.createElement('div');
-    wakeOverlayEl.id = 'wakeBackendOverlay';
-    wakeOverlayEl.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:var(--ios-bg,#F2F2F7);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
-    wakeOverlayEl.innerHTML =
-      '<div style="position:relative;width:80px;height:80px;display:flex;align-items:center;justify-content:center;">' +
-        '<img src="https://i.ibb.co/gMtLCwHp/image.webp" style="width:60px;height:60px;border-radius:50%;object-fit:cover;z-index:1;mix-blend-mode:multiply;background:transparent;">' +
-        '<div style="position:absolute;inset:0;border:4px solid var(--ios-gray4,#D1D1D6);border-top-color:var(--ios-blue,#007AFF);border-radius:50%;animation:wkSpin 0.8s linear infinite;"></div>' +
-      '</div>' +
-      '<div style="margin-top:16px;font-size:14px;color:var(--ios-gray,#8E8E93);">Waking up server...</div>' +
-      '<div id="wakeLabel" style="margin-top:6px;font-size:12px;color:var(--ios-gray3,#C7C7CC);">Please wait</div>';
-    // Add keyframe animation
-    var style = document.createElement('style');
-    style.textContent = '@keyframes wkSpin{to{transform:rotate(360deg)}}';
-    document.head.appendChild(style);
-    document.body.appendChild(wakeOverlayEl);
-    wakeLabelEl = document.getElementById('wakeLabel');
-  }
-  wakeOverlayEl.style.display = 'flex';
-  if (wakeLabelEl) wakeLabelEl.textContent = 'Please wait';
-
-  var attempts = 0;
-  var maxWait = 120;
-  var retryMs = 2500;
-  var fetchTimeoutMs = 20000;
-  var startedAt = Date.now();
-
-  function ping() {
-    attempts++;
-    var elapsed = Math.round((Date.now() - startedAt) / 1000);
-    if (wakeLabelEl) {
-      wakeLabelEl.textContent = attempts > 1
-        ? 'Attempt ' + attempts + ' (' + elapsed + 's)'
-        : 'Please wait';
-    }
-    var ac = new AbortController();
-    var to = setTimeout(function() { ac.abort(); }, fetchTimeoutMs);
-    fetch(VOICE_API + '/api/health', { method: 'GET', mode: 'cors', cache: 'no-store', signal: ac.signal })
-      .then(function(r) {
-        clearTimeout(to);
-        if (r.ok) {
-          if (wakeOverlayEl) wakeOverlayEl.style.display = 'none';
-          startKeepAlive();
-          try { if (callback) callback(); } catch (e) {}
-        } else {
-          scheduleRetry();
-        }
-      })
-      .catch(function() {
-        clearTimeout(to);
-        scheduleRetry();
-      });
-  }
-
-  function scheduleRetry() {
-    if (attempts * retryMs / 1000 >= maxWait) {
-      if (wakeLabelEl) wakeLabelEl.textContent = 'Server is taking longer than usual. Retrying...';
-    }
-    setTimeout(ping, retryMs);
-  }
-
-  ping();
 }
 
 function setAvatarImg(elId, url) {
