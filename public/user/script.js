@@ -542,6 +542,15 @@ function showMainApp() {
 // ==================== WAKE BACKEND ====================
 var wakeOverlayEl = null;
 var wakeLabelEl = null;
+var keepAliveStarted = false;
+
+function startKeepAlive() {
+  if (keepAliveStarted) return;
+  keepAliveStarted = true;
+  setInterval(function() {
+    fetch(VOICE_API + '/api/health?t=' + Date.now(), { method: 'GET', mode: 'cors', cache: 'no-store' }).catch(function() {});
+  }, 540000);
+}
 
 function wakeBackend(callback) {
   if (!wakeOverlayEl) {
@@ -568,22 +577,32 @@ function wakeBackend(callback) {
   var attempts = 0;
   var maxWait = 120;
   var retryMs = 2500;
+  var fetchTimeoutMs = 20000;
+  var startedAt = Date.now();
 
   function ping() {
     attempts++;
-    if (attempts > 1 && wakeLabelEl) {
-      wakeLabelEl.textContent = 'Attempt ' + attempts + '...';
+    var elapsed = Math.round((Date.now() - startedAt) / 1000);
+    if (wakeLabelEl) {
+      wakeLabelEl.textContent = attempts > 1
+        ? 'Attempt ' + attempts + ' (' + elapsed + 's)'
+        : 'Please wait';
     }
-    fetch(VOICE_API + '/api/health', { method: 'GET', mode: 'cors', cache: 'no-store' })
+    var ac = new AbortController();
+    var to = setTimeout(function() { ac.abort(); }, fetchTimeoutMs);
+    fetch(VOICE_API + '/api/health', { method: 'GET', mode: 'cors', cache: 'no-store', signal: ac.signal })
       .then(function(r) {
+        clearTimeout(to);
         if (r.ok) {
           if (wakeOverlayEl) wakeOverlayEl.style.display = 'none';
-          if (callback) callback();
+          startKeepAlive();
+          try { if (callback) callback(); } catch (e) {}
         } else {
           scheduleRetry();
         }
       })
       .catch(function() {
+        clearTimeout(to);
         scheduleRetry();
       });
   }
