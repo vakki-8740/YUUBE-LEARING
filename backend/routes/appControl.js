@@ -63,4 +63,36 @@ router.post('/notify-online', (req, res) => {
   }
 });
 
+router.post('/notify-offline', (req, res) => {
+  try {
+    const { userId, userName } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId is required' });
+
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!botToken || !chatId) {
+      return res.json({ success: true, note: 'Telegram not configured' });
+    }
+    const text = encodeURIComponent(
+      '\u{1F534} User Offline\n\u{1F464} User: ' + (userName || 'Unknown') + '\n\u{1F194} ID: ' + userId + '\n\u{23F0} Time: ' + new Date().toLocaleString('en-IN')
+    );
+
+    https.get('https://api.telegram.org/bot' + botToken + '/sendMessage?chat_id=' + chatId + '&text=' + text, (apiRes) => {
+      let data = '';
+      apiRes.on('data', chunk => data += chunk);
+      apiRes.on('end', () => {
+        try {
+          const j = JSON.parse(data);
+          if (!j.ok) console.error('Telegram API error:', j);
+        } catch (e) {}
+      });
+    }).on('error', err => console.error('Telegram request error:', err));
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Notify offline error:', err);
+    res.status(500).json({ error: 'Failed to send notification' });
+  }
+});
+
 module.exports = router;

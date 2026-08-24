@@ -184,13 +184,42 @@ function playVoiceMsg(el, url) {
   el.classList.add('playing');
 }
 
+// ==================== NOTIFICATION SYSTEM ====================
+var notifQueue = [];
+var notifActive = false;
+var notifIdCounter = 0;
+
+function showNotif(type, icon, title, msg) {
+  var id = ++notifIdCounter;
+  notifQueue.push({ id: id, type: type, icon: icon, title: title, msg: msg });
+  if (!notifActive) processNotifQueue();
+}
+
+function processNotifQueue() {
+  if (notifQueue.length === 0) { notifActive = false; return; }
+  notifActive = true;
+  var n = notifQueue.shift();
+  var container = document.getElementById('notifContainer');
+  var el = document.createElement('div');
+  el.className = 'notif-toast ' + n.type;
+  el.innerHTML = '<div class="notif-icon">' + n.icon + '</div><div class="notif-body"><div class="notif-title">' + escapeHtml(n.title) + '</div><div class="notif-msg">' + escapeHtml(n.msg) + '</div></div>';
+  container.appendChild(el);
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() { el.classList.add('show'); });
+  });
+  var dur = (n.type === 'typing') ? 2500 : (n.type === 'voice-rec') ? 3500 : 3500;
+  setTimeout(function() {
+    el.classList.add('hide');
+    el.classList.remove('show');
+    setTimeout(function() {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      processNotifQueue();
+    }, 400);
+  }, dur);
+}
+
 function showToast(title, msg) {
-  const t = document.getElementById('toast');
-  document.getElementById('toastAvatar').textContent = title.charAt(0).toUpperCase();
-  document.getElementById('toastTitle').textContent = title;
-  document.getElementById('toastMsg').textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  showNotif('msg', '💬', title, msg);
 }
 
 
@@ -532,6 +561,8 @@ function showMainApp() {
     listenForIncomingCalls();
     listenNewMsgNotifications();
     listenBroadcast();
+    listenGlobalTyping();
+    listenGlobalRecording();
     startAppStatusPolling();
   });
 }
@@ -573,6 +604,15 @@ function listenUsers() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: doc.id, userName: data.name || doc.id })
         }).catch(function(e) { console.error('Notify online error:', e); });
+        showNotif('online', '🟢', data.name || 'User', 'is now online');
+      }
+      if (onlineNotifyReady && !isOnline && prevOnlineState[doc.id]) {
+        fetch('https://chat-backend-e163.onrender.com/api/admin/notify-offline', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: doc.id, userName: data.name || doc.id })
+        }).catch(function(e) { console.error('Notify offline error:', e); });
+        showNotif('offline', '🔴', data.name || 'User', 'went offline');
       }
       prevOnlineState[doc.id] = isOnline;
 
@@ -1026,12 +1066,17 @@ function buildBubbleContent(msg, isOwn, time, showTime) {
   }
 
   if (msg.reactions) {
-    const emojis = Object.values(msg.reactions);
-    const uniqueEmojis = [...new Set(emojis)];
-    if (uniqueEmojis.length > 0) {
+    const allEmojis = [];
+    Object.values(msg.reactions).forEach(val => {
+      if (Array.isArray(val)) allEmojis.push(...val);
+      else allEmojis.push(val);
+    });
+    const emojiCounts = {};
+    allEmojis.forEach(e => { emojiCounts[e] = (emojiCounts[e] || 0) + 1; });
+    const entries = Object.entries(emojiCounts);
+    if (entries.length > 0) {
       html += '<div class="msg-reactions">';
-      uniqueEmojis.forEach(emoji => {
-        const count = emojis.filter(e => e === emoji).length;
+      entries.forEach(([emoji, count]) => {
         html += '<span class="msg-reaction">' + emoji + (count > 1 ? '<small>' + count + '</small>' : '') + '</span>';
       });
       html += '</div>';
@@ -1182,12 +1227,20 @@ function toggleReaction(emoji) {
     if (!doc.exists) return;
     const data = doc.data();
     const reactions = data.reactions || {};
-    if (reactions[myId] === emoji) {
-      delete reactions[myId];
-      ref.update({ reactions: reactions });
+    let userReactions = reactions[myId] || [];
+    if (typeof userReactions === 'string') userReactions = [userReactions];
+    const idx = userReactions.indexOf(emoji);
+    if (idx > -1) {
+      userReactions.splice(idx, 1);
     } else {
-      ref.update({ ['reactions.' + myId]: emoji });
+      userReactions.push(emoji);
     }
+    if (userReactions.length === 0) {
+      delete reactions[myId];
+    } else {
+      reactions[myId] = userReactions;
+    }
+    ref.update({ reactions: reactions });
   });
 }
 
@@ -1281,6 +1334,27 @@ function listenTyping() {
   });
 }
 
+// Global typing listener — shows toast when OTHER user types (not in current chat)
+var lastTypingNotif = {};
+function listenGlobalTyping() {
+  if (!myId) return;
+  db.collection('typing').onSnapshot(function(snap) {
+    snap.forEach(function(doc) {
+      var data = doc.data();
+      var parts = doc.id.split('_');
+      var otherUserId = parts.find(function(p) { return p !== myId; });
+      if (!otherUserId || !data[otherUserId]) return;
+      if (otherUserId === selectedUserId) return;
+      var now = Date.now();
+      if (lastTypingNotif[otherUserId] && (now - lastTypingNotif[otherUserId] < 5000)) return;
+      lastTypingNotif[otherUserId] = now;
+      var user = allUsers.find(function(u) { return u.id === otherUserId; });
+      var name = user ? user.name : 'Someone';
+      showNotif('typing', '⌨️', name, 'typing...');
+    });
+  });
+}
+
 // ==================== RECORDING INDICATOR ====================
 function listenRecording() {
   if (!selectedUserId) return;
@@ -1313,6 +1387,27 @@ function voiceListenRecording() {
     } else {
       el.classList.remove('show');
     }
+  });
+}
+
+// Global recording listener — shows toast when OTHER user records voice
+var lastRecNotif = {};
+function listenGlobalRecording() {
+  if (!myId) return;
+  db.collection('recording').onSnapshot(function(snap) {
+    snap.forEach(function(doc) {
+      var data = doc.data();
+      var parts = doc.id.split('_');
+      var otherUserId = parts.find(function(p) { return p !== myId; });
+      if (!otherUserId || !data[otherUserId]) return;
+      if (otherUserId === selectedUserId || otherUserId === voiceConvPartnerId) return;
+      var now = Date.now();
+      if (lastRecNotif[otherUserId] && (now - lastRecNotif[otherUserId] < 8000)) return;
+      lastRecNotif[otherUserId] = now;
+      var user = allUsers.find(function(u) { return u.id === otherUserId; });
+      var name = user ? user.name : 'Someone';
+      showNotif('voice-rec', '🔴', name, 'recording a voice message...');
+    });
   });
 }
 
@@ -1946,16 +2041,10 @@ function listenNewMsgNotifications() {
 }
 
 function showNewMsgNotif(data) {
-  const user = allUsers.find(u => u.id === data.from);
-  const name = user ? user.name : 'Unknown';
-  const initial = (user ? user.name : 'U').charAt(0).toUpperCase();
-  const text = data.message || (data.voice ? 'Voice message' : (data.image ? '🖼️ Image' : 'New message'));
-  const t = document.getElementById('toast');
-  document.getElementById('toastAvatar').textContent = initial;
-  document.getElementById('toastTitle').textContent = name;
-  document.getElementById('toastMsg').textContent = text;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 4000);
+  var user = allUsers.find(function(u) { return u.id === data.from; });
+  var name = user ? user.name : 'Unknown';
+  var text = data.message || (data.voice ? '🎤 Voice message' : (data.image ? '🖼️ Image' : 'New message'));
+  showNotif('msg', '💬', name, text);
 }
 
 // ==================== BROADCAST VOICE ====================
@@ -2801,6 +2890,8 @@ function sendVoiceConvPreview() {
         body: JSON.stringify({ recordingId: resp.id, senderId: myId, receiverId: voiceConvPartnerId })
       }).then(function() {
         loadVoiceConvMsgs();
+        var toName = getUserName(voiceConvPartnerId);
+        showNotif('voice-send', '🎤', 'Voice sent', 'to ' + toName);
         if (typeof sendTelegramAlert === 'function' && telegramBotToken && telegramChatId && voiceConvPreviewBlob) {
           var toName = getUserName(voiceConvPartnerId);
           var caption = '👤 User: ' + myName + '\n💬 To: ' + toName + '\n🎤 Voice Recording\n⏰ Time: ' + new Date().toLocaleString('en-IN');

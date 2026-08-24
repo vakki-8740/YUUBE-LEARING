@@ -294,12 +294,32 @@
             <!-- Emoji Picker Popup -->
             <div class="voice-emoji-picker" id="voiceEmojiPicker" style="display:none;">
               <div class="voice-emoji-list">
-                <span class="voice-emoji-opt" onclick="pickReaction('👍')">👍</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🤨')">🤨</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😁')">😁</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🫠')">🫠</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🥺')">🥺</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🥲')">🥲</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🙂')">🙂</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('👍🏻')">👍🏻</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😘')">😘</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😜')">😜</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😍')">😍</span>
                 <span class="voice-emoji-opt" onclick="pickReaction('❤️')">❤️</span>
-                <span class="voice-emoji-opt" onclick="pickReaction('😂')">😂</span>
-                <span class="voice-emoji-opt" onclick="pickReaction('😮')">😮</span>
-                <span class="voice-emoji-opt" onclick="pickReaction('😢')">😢</span>
-                <span class="voice-emoji-opt" onclick="pickReaction('🙏')">🙏</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😭')">😭</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😊')">😊</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😑')">😑</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🤪')">🤪</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😳')">😳</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😰')">😰</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🤗')">🤗</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🙃')">🙃</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('☹️')">☹️</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😟')">😟</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('😋')">😋</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('👄')">👄</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🫦')">🫦</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('👀')">👀</span>
+                <span class="voice-emoji-opt" onclick="pickReaction('🫂')">🫂</span>
               </div>
             </div>
 
@@ -381,11 +401,32 @@
   <div class="action-overlay" id="actionOverlay" onclick="hideActionPopup()">
     <div class="action-popup" id="actionPopup" onclick="event.stopPropagation()">
       <div class="react-row">
-        <span class="react-emoji" onclick="toggleReaction('😂')">😂</span>
-        <span class="react-emoji" onclick="toggleReaction('🤣')">🤣</span>
-        <span class="react-emoji" onclick="toggleReaction('😢')">😢</span>
-        <span class="react-emoji" onclick="toggleReaction('👍')">👍</span>
+        <span class="react-emoji" onclick="toggleReaction('🤨')">🤨</span>
+        <span class="react-emoji" onclick="toggleReaction('😁')">😁</span>
+        <span class="react-emoji" onclick="toggleReaction('🫠')">🫠</span>
+        <span class="react-emoji" onclick="toggleReaction('🥺')">🥺</span>
+        <span class="react-emoji" onclick="toggleReaction('🥲')">🥲</span>
+        <span class="react-emoji" onclick="toggleReaction('🙂')">🙂</span>
+        <span class="react-emoji" onclick="toggleReaction('👍🏻')">👍🏻</span>
+        <span class="react-emoji" onclick="toggleReaction('😘')">😘</span>
+        <span class="react-emoji" onclick="toggleReaction('😜')">😜</span>
+        <span class="react-emoji" onclick="toggleReaction('😍')">😍</span>
         <span class="react-emoji" onclick="toggleReaction('❤️')">❤️</span>
+        <span class="react-emoji" onclick="toggleReaction('😭')">😭</span>
+        <span class="react-emoji" onclick="toggleReaction('😊')">😊</span>
+        <span class="react-emoji" onclick="toggleReaction('😑')">😑</span>
+        <span class="react-emoji" onclick="toggleReaction('🤪')">🤪</span>
+        <span class="react-emoji" onclick="toggleReaction('😳')">😳</span>
+        <span class="react-emoji" onclick="toggleReaction('😰')">😰</span>
+        <span class="react-emoji" onclick="toggleReaction('🤗')">🤗</span>
+        <span class="react-emoji" onclick="toggleReaction('🙃')">🙃</span>
+        <span class="react-emoji" onclick="toggleReaction('☹️')">☹️</span>
+        <span class="react-emoji" onclick="toggleReaction('😟')">😟</span>
+        <span class="react-emoji" onclick="toggleReaction('😋')">😋</span>
+        <span class="react-emoji" onclick="toggleReaction('👄')">👄</span>
+        <span class="react-emoji" onclick="toggleReaction('🫦')">🫦</span>
+        <span class="react-emoji" onclick="toggleReaction('👀')">👀</span>
+        <span class="react-emoji" onclick="toggleReaction('🫂')">🫂</span>
       </div>
       <div class="act-sep"></div>
       <button class="act-btn" id="actEdit" onclick="doEditMsg()">
@@ -427,8 +468,11 @@
     </div>
   </div>
 
-  <!-- Toast -->
-  <div class="toast" id="toast">
+  <!-- Notifications Container -->
+  <div class="notif-container" id="notifContainer"></div>
+
+  <!-- Legacy Toast (keep for backward compat) -->
+  <div class="toast" id="toast" style="display:none;">
     <div class="toast-avatar" id="toastAvatar">U</div>
     <div class="toast-content">
       <div class="toast-title" id="toastTitle">User</div>
