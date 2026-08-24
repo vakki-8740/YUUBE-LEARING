@@ -28,6 +28,11 @@ firebase.initializeApp({
 const db = firebase.firestore();
 const storage = firebase.storage();
 
+// Register service worker for FCM
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/user/firebase-messaging-sw.js').catch(function() {});
+}
+
 const VOICE_API = 'https://chat-backend-e163.onrender.com';
 
 const LOGO_URLS = [
@@ -222,6 +227,129 @@ function showToast(title, msg) {
   showNotif('msg', '💬', title, msg);
 }
 
+// ==================== PUSH NOTIFICATIONS ====================
+var fcmMessaging = null;
+var fcmToken = null;
+
+function initPushNotifications() {
+  try {
+    if (typeof firebase === 'undefined' || !firebase.messaging) return;
+    fcmMessaging = firebase.messaging();
+    registerServiceWorker();
+    updatePushToggleUI();
+    listenForegroundMessages();
+  } catch (e) {
+    console.log('Push notifications not available:', e.message);
+  }
+}
+
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/user/firebase-messaging-sw.js')
+      .then(function(reg) { console.log('SW registered:', reg.scope); })
+      .catch(function(err) { console.log('SW registration failed:', err); });
+  }
+}
+
+function updatePushToggleUI() {
+  var input = document.getElementById('pushToggleInput');
+  var desc = document.getElementById('pushToggleDesc');
+  if (!input) return;
+  if (!fcmMessaging) {
+    input.checked = false;
+    input.disabled = true;
+    if (desc) desc.textContent = 'Not supported on this device';
+    return;
+  }
+  var savedPref = localStorage.getItem('pushEnabled');
+  if (savedPref === 'false') {
+    input.checked = false;
+    if (desc) desc.textContent = 'Notifications are off';
+  } else if (Notification && Notification.permission === 'granted') {
+    input.checked = true;
+    if (desc) desc.textContent = 'You will receive notifications';
+  } else {
+    input.checked = false;
+    if (desc) desc.textContent = 'Get notified for new messages';
+  }
+}
+
+async function togglePushNotifications(enabled) {
+  var desc = document.getElementById('pushToggleDesc');
+  if (!fcmMessaging) {
+    showNotif('msg', '⚠️', 'Not Available', 'Push notifications not supported');
+    return;
+  }
+
+  if (enabled) {
+    try {
+      var permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        await getAndSaveFCMToken();
+        localStorage.setItem('pushEnabled', 'true');
+        if (desc) desc.textContent = 'You will receive notifications';
+        showNotif('msg', '🔔', 'Notifications ON', 'You will now receive push notifications');
+      } else {
+        document.getElementById('pushToggleInput').checked = false;
+        localStorage.setItem('pushEnabled', 'false');
+        if (desc) desc.textContent = 'Permission denied';
+        showNotif('msg', '⚠️', 'Permission Denied', 'Allow notifications in browser settings');
+      }
+    } catch (e) {
+      console.error('Push permission error:', e);
+      document.getElementById('pushToggleInput').checked = false;
+    }
+  } else {
+    await deleteFCMToken();
+    localStorage.setItem('pushEnabled', 'false');
+    if (desc) desc.textContent = 'Notifications are off';
+    showNotif('msg', '🔕', 'Notifications OFF', 'Push notifications disabled');
+  }
+}
+
+async function getAndSaveFCMToken() {
+  try {
+    var token = await fcmMessaging.getToken();
+    if (token) {
+      fcmToken = token;
+      if (myId) {
+        await db.collection('users').doc(myId).set({
+          fcmTokens: firebase.firestore.FieldValue.arrayUnion(token)
+        }, { merge: true });
+        console.log('FCM token saved');
+      }
+    }
+  } catch (e) {
+    console.error('FCM token error:', e);
+  }
+}
+
+async function deleteFCMToken() {
+  try {
+    if (fcmToken && myId) {
+      await db.collection('users').doc(myId).update({
+        fcmTokens: firebase.firestore.FieldValue.arrayRemove(fcmToken)
+      }).catch(function() {});
+    }
+    if (fcmMessaging) {
+      await fcmMessaging.deleteToken();
+    }
+    fcmToken = null;
+    console.log('FCM token deleted');
+  } catch (e) {
+    console.error('Delete FCM token error:', e);
+  }
+}
+
+function listenForegroundMessages() {
+  if (!fcmMessaging) return;
+  fcmMessaging.onMessage(function(payload) {
+    var title = payload.notification?.title || 'New Message';
+    var body = payload.notification?.body || '';
+    showNotif('msg', '🔔', title, body);
+  });
+}
+
 
 // ==================== PROFILE ====================
 function loadProfile() {
@@ -253,6 +381,7 @@ function loadProfile() {
       }
     }
   });
+  updatePushToggleUI();
 }
 
 function copyCurrentPass() {
@@ -564,6 +693,7 @@ function showMainApp() {
     listenGlobalTyping();
     listenGlobalRecording();
     startAppStatusPolling();
+    initPushNotifications();
   });
 }
 
