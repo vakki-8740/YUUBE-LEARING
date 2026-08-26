@@ -6,8 +6,145 @@
   <title>youtube</title>
   <link rel="icon" href="https://i.ibb.co/gMtLCwHp/image.webp">
   <link rel="stylesheet" href="style.css">
+  <style>
+    #pinOverlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #000;
+      display: flex; align-items: center; justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      -webkit-user-select: none; user-select: none;
+    }
+    #pinOverlay.hidden { display: none; }
+    .pin-box { text-align: center; }
+    .pin-lock-icon {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .pin-lock-icon svg { color: #fff; }
+    .pin-title { color: #fff; font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+    .pin-sub { color: #8e8e93; font-size: 14px; margin-bottom: 30px; }
+    .pin-inputs { display: flex; gap: 10px; justify-content: center; margin-bottom: 16px; }
+    .pin-box input[type="text"] {
+      width: 48px; height: 56px; border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.08);
+      color: #fff; font-size: 24px; font-weight: 700;
+      text-align: center; outline: none;
+      transition: border-color 0.2s;
+      caret-color: transparent;
+    }
+    .pin-box input[type="text"]:focus {
+      border-color: #007AFF;
+    }
+    .pin-box input[type="text"].error {
+      border-color: #FF3B30;
+      animation: pinShake 0.5s ease;
+    }
+    @keyframes pinShake {
+      0%, 100% { transform: translateX(0); }
+      10%, 50%, 90% { transform: translateX(-6px); }
+      30%, 70% { transform: translateX(6px); }
+    }
+    .pin-error {
+      color: #FF3B30; font-size: 13px; font-weight: 500;
+      min-height: 18px; margin-top: 4px;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .pin-error.show { opacity: 1; }
+    .pin-submit-btn {
+      margin-top: 20px; padding: 14px 40px;
+      background: #007AFF; color: #fff; border: none;
+      border-radius: 12px; font-size: 16px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .pin-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
 </head>
 <body>
+
+  <!-- PIN Overlay -->
+  <div id="pinOverlay">
+    <div class="pin-box">
+      <div class="pin-lock-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <div class="pin-title">Enter PIN</div>
+      <div class="pin-sub">Enter 6-digit PIN to continue</div>
+      <div class="pin-inputs" id="pinInputs">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" oninput="pinNext(this, 0)" onkeydown="pinKey(event, 0)" onfocus="this.select()">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" oninput="pinNext(this, 1)" onkeydown="pinKey(event, 1)" onfocus="this.select()">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" oninput="pinNext(this, 2)" onkeydown="pinKey(event, 2)" onfocus="this.select()">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" oninput="pinNext(this, 3)" onkeydown="pinKey(event, 3)" onfocus="this.select()">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" oninput="pinNext(this, 4)" onkeydown="pinKey(event, 4)" onfocus="this.select()">
+        <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]*" oninput="pinNext(this, 5)" onkeydown="pinKey(event, 5)" onfocus="this.select()">
+      </div>
+      <div class="pin-error" id="pinError">Galat PIN hai!</div>
+      <button class="pin-submit-btn" id="pinSubmitBtn" disabled onclick="verifyPin()">Submit</button>
+    </div>
+  </div>
+
+  <script>
+    const PIN_CODE = '272026';
+    const pinInputs = document.querySelectorAll('#pinInputs input');
+
+    function pinNext(el, idx) {
+      el.value = el.value.replace(/[^0-9]/g, '').slice(-1);
+      if (el.value && idx < 5) {
+        pinInputs[idx + 1].focus();
+      }
+      checkPinComplete();
+    }
+
+    function pinKey(e, idx) {
+      if (e.key === 'Backspace' && !pinInputs[idx].value && idx > 0) {
+        pinInputs[idx - 1].focus();
+        pinInputs[idx - 1].value = '';
+        checkPinComplete();
+      }
+      if (e.key === 'Enter') {
+        verifyPin();
+      }
+    }
+
+    function checkPinComplete() {
+      let full = '';
+      pinInputs.forEach(i => full += i.value);
+      document.getElementById('pinSubmitBtn').disabled = full.length !== 6;
+    }
+
+    function verifyPin() {
+      let full = '';
+      pinInputs.forEach(i => full += i.value);
+      if (full === PIN_CODE) {
+        sessionStorage.setItem('pinVerified', '1');
+        document.getElementById('pinOverlay').classList.add('hidden');
+        document.body.focus();
+      } else {
+        document.getElementById('pinError').classList.add('show');
+        pinInputs.forEach(i => {
+          i.classList.add('error');
+          i.value = '';
+        });
+        setTimeout(() => {
+          pinInputs.forEach(i => i.classList.remove('error'));
+          document.getElementById('pinError').classList.remove('show');
+        }, 600);
+        pinInputs[0].focus();
+      }
+    }
+
+    // Check on page load
+    if (sessionStorage.getItem('pinVerified') === '1') {
+      document.getElementById('pinOverlay').classList.add('hidden');
+    } else {
+      setTimeout(() => pinInputs[0].focus(), 100);
+    }
+  </script>
 
   <!-- Name Screen -->
   <div class="name-screen" id="nameScreen">
