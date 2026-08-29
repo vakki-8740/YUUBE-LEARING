@@ -518,7 +518,130 @@
 
           </div>
         </div>
+      <!-- Video Page -->
+      <div class="page" id="videoPage">
+        <div class="video-page">
+
+          <!-- User List View -->
+          <div id="videoUserView">
+            <div class="video-list-header">Send Video</div>
+            <div class="video-user-list" id="videoUserList">
+              <div class="video-empty" id="videoUserEmpty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ios-gray3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <div>No users found</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Conversation View -->
+          <div id="videoConvView" style="display:none;">
+            <div class="video-conv-header">
+              <button class="video-back-btn" onclick="closeVideoConv()">←</button>
+              <div class="video-conv-avatar" id="videoConvAvatar">U</div>
+              <div class="video-conv-name" id="videoConvName">User</div>
+              <button class="video-select-btn" id="videoSelectBtn" onclick="toggleVideoSelectMode()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 11l3 3L22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+              </button>
+              <button class="video-delete-selected-btn" id="videoDeleteSelectedBtn" onclick="deleteSelectedVideoRecordings()" style="display:none;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                <span id="videoDeleteCount">0</span>
+              </button>
+            </div>
+
+            <div class="video-conv-msgs" id="videoConvMsgs">
+              <div class="video-conv-empty" id="videoConvEmpty">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--ios-gray3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="23 7 16 12 23 17 23 7"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+                <div>No videos yet</div>
+                <div style="font-size:12px;margin-top:4px;">Tap the camera to send a video</div>
+              </div>
+            </div>
+
+            <!-- Reply Bar -->
+            <div class="video-reply-bar" id="videoReplyBar" style="display:none;">
+              <div class="video-reply-line"></div>
+              <div class="video-reply-content">
+                <div class="video-reply-label">Replying</div>
+                <div class="video-reply-text" id="videoReplyText"></div>
+              </div>
+              <button class="video-reply-close" onclick="cancelVideoReply()">✕</button>
+            </div>
+
+            <!-- Emoji Picker Popup -->
+            <div class="video-emoji-picker" id="videoEmojiPicker" style="display:none;">
+              <div class="video-emoji-list">
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🤨')">🤨</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😁')">😁</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🫠')">🫠</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🥺')">🥺</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🥲')">🥲</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🙂')">🙂</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('👍🏻')">👍🏻</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😘')">😘</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😜')">😜</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😍')">😍</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('❤️')">❤️</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😭')">😭</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😊')">😊</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😑')">😑</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🤪')">🤪</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😳')">😳</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😰')">😰</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🤗')">🤗</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🙃')">🙃</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('☹️')">☹️</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😟')">😟</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('😋')">😋</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('👄')">👄</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🫦')">🫦</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('👀')">👀</span>
+                <span class="video-emoji-opt" onclick="pickVideoReaction('🫂')">🫂</span>
+              </div>
+            </div>
+
+            <!-- Input / Upload Bar -->
+            <div class="video-input-area" id="videoInputArea">
+              <button class="video-cam-btn" id="videoCamBtn" onclick="triggerVideoUpload()" title="Upload Video">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="23 7 16 12 23 17 23 7"/>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                </svg>
+              </button>
+              <input type="file" id="videoFileInput" accept="video/mp4,video/webm,video/quicktime,video/avi" style="display:none;" onchange="handleVideoFileSelect(event)">
+
+              <div class="video-conv-preview" id="videoConvPreview" style="display:none;">
+                <div class="video-conv-preview-player" id="videoPreviewPlayer">
+                  <video id="videoPreviewEl" style="max-width:200px;max-height:120px;border-radius:8px;"></video>
+                  <span class="video-conv-preview-dur" id="videoPreviewDur">0:00</span>
+                </div>
+                <div class="video-conv-preview-actions">
+                  <button class="video-conv-preview-btn cancel" onclick="cancelVideoPreview()">Delete</button>
+                  <button class="video-conv-preview-btn send" id="videoConvSendBtn" onclick="sendVideoPreview()">Send</button>
+                </div>
+                <div class="video-conv-upload-progress" id="videoConvUploadProgress" style="display:none;">
+                  <div class="video-conv-progress-bar"><div class="video-conv-progress-fill" id="videoConvProgressFill"></div></div>
+                  <div class="video-conv-progress-label" id="videoConvProgressLabel">Uploading...</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
+
     </div>
 
     <!-- Bottom Nav -->
@@ -544,6 +667,13 @@
           <line x1="8" y1="23" x2="16" y2="23"/>
         </svg>
         Voice
+      </button>
+      <button class="nav-item" id="navVideo" onclick="switchTab('video')">
+        <svg class="nav-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+        Video
       </button>
     </div>
   </div>

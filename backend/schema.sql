@@ -75,4 +75,22 @@ CREATE TABLE IF NOT EXISTS app_config (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS video_recordings (
+  id VARCHAR(36) PRIMARY KEY,
+  user_id VARCHAR(255) NOT NULL,
+  receiver_id VARCHAR(255) DEFAULT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  original_name VARCHAR(500) DEFAULT '',
+  duration INTEGER DEFAULT 0,
+  file_size INTEGER DEFAULT 0,
+  media_type VARCHAR(50) DEFAULT 'video/mp4',
+  reply_to VARCHAR(36) DEFAULT NULL,
+  reactions TEXT DEFAULT '{}',
+  seen BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_video_recordings_user ON video_recordings(user_id);
+CREATE INDEX IF NOT EXISTS idx_video_recordings_receiver ON video_recordings(receiver_id);
+
 INSERT INTO app_config (key, value) VALUES ('app_enabled', 'true') ON CONFLICT (key) DO NOTHING;
