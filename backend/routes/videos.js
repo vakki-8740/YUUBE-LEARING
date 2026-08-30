@@ -139,9 +139,35 @@ router.get('/:id/video', async (req, res) => {
     const rec = result.rows[0];
     const fullPath = path.join(__dirname, '..', rec.file_path);
     if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'File not found' });
-    res.setHeader('Content-Type', rec.media_type || 'video/mp4');
-    res.setHeader('Content-Disposition', 'inline');
-    fs.createReadStream(fullPath).pipe(res);
+
+    const stat = fs.statSync(fullPath);
+    const fileSize = stat.size;
+    const contentType = rec.media_type || 'video/mp4';
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunkSize = end - start + 1;
+
+      res.writeHead(206, {
+        'Content-Range': 'bytes ' + start + '-' + end + '/' + fileSize,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunkSize,
+        'Content-Type': contentType,
+        'Content-Disposition': 'inline'
+      });
+      fs.createReadStream(fullPath, { start: start, end: end }).pipe(res);
+    } else {
+      res.writeHead(200, {
+        'Content-Length': fileSize,
+        'Content-Type': contentType,
+        'Accept-Ranges': 'bytes',
+        'Content-Disposition': 'inline'
+      });
+      fs.createReadStream(fullPath).pipe(res);
+    }
   } catch (err) {
     console.error('Video serve error:', err);
     res.status(500).json({ error: 'Failed to serve video' });
