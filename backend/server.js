@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { initDb, isDbReady } = require('./db');
 const voicePacksRouter = require('./routes/voicePacks');
 const imagesRouter = require('./routes/images');
@@ -10,6 +11,11 @@ const videosRouter = require('./routes/videos');
 const appControlRouter = require('./routes/appControl');
 
 const { setupRelay } = require('./relay');
+
+const uploadsDir = path.join(__dirname, 'uploads');
+const videosDir = path.join(uploadsDir, 'videos');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+if (!fs.existsSync(videosDir)) fs.mkdirSync(videosDir, { recursive: true });
 
 const app = express();
 const PORT = process.env.PORT || 3000;

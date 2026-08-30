@@ -138,7 +138,7 @@ router.get('/:id/video', async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     const rec = result.rows[0];
     const fullPath = path.join(__dirname, '..', rec.file_path);
-    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'File not found' });
+    if (!fs.existsSync(fullPath)) return res.status(404).json({ error: 'File not found on disk' });
 
     const stat = fs.statSync(fullPath);
     const fileSize = stat.size;
@@ -146,31 +146,28 @@ router.get('/:id/video', async (req, res) => {
     const range = req.headers.range;
 
     if (range) {
-      const parts = range.replace(/bytes=/, '').split('-');
-      const start = parseInt(parts[0], 10);
-      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-      const chunkSize = end - start + 1;
-
+      const chunks = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(chunks[0], 10);
+      const end = chunks[1] ? parseInt(chunks[1], 10) : Math.min(start + 10 * 1024 * 1024 - 1, fileSize - 1);
+      const stream = fs.createReadStream(fullPath, { start: start, end: end });
       res.writeHead(206, {
         'Content-Range': 'bytes ' + start + '-' + end + '/' + fileSize,
         'Accept-Ranges': 'bytes',
-        'Content-Length': chunkSize,
-        'Content-Type': contentType,
-        'Content-Disposition': 'inline'
+        'Content-Length': end - start + 1,
+        'Content-Type': contentType
       });
-      fs.createReadStream(fullPath, { start: start, end: end }).pipe(res);
+      stream.pipe(res);
     } else {
       res.writeHead(200, {
         'Content-Length': fileSize,
         'Content-Type': contentType,
-        'Accept-Ranges': 'bytes',
-        'Content-Disposition': 'inline'
+        'Accept-Ranges': 'bytes'
       });
       fs.createReadStream(fullPath).pipe(res);
     }
   } catch (err) {
-    console.error('Video serve error:', err);
-    res.status(500).json({ error: 'Failed to serve video' });
+    console.error('Video serve error:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to serve video' });
   }
 });
 
