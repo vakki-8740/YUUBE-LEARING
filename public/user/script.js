@@ -33,7 +33,7 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/user/firebase-messaging-sw.js').catch(function() {});
 }
 
-const VOICE_API = 'https://chat-backend-e163.onrender.com';
+const VOICE_API = 'https://yutube-com-pcu9.onrender.com';
 
 const LOGO_URLS = [
   'https://i.ibb.co/PGtpdnv1/image.webp',
@@ -3449,45 +3449,58 @@ function downloadVideoFromTG(id) {
   icon.innerHTML = '<div class="video-dl-spinner"></div>';
 
   var url = VIDEO_API + '/api/videos/' + id + '/download';
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url, true);
+  xhr.responseType = 'blob';
 
-  fetch(url).then(function(response) {
-    if (!response.ok) throw new Error('Download failed');
-    var reader = response.body.getReader();
-    var contentLength = parseInt(response.headers.get('Content-Length')) || 0;
-    var received = 0;
-    var chunks = [];
-
-    function pump() {
-      return reader.read().then(function(result) {
-        if (result.done) {
-          var blob = new Blob(chunks, { type: 'video/mp4' });
-          var blobUrl = URL.createObjectURL(blob);
-          video.src = blobUrl;
-          video.load();
-          overlay.style.display = 'none';
-          return;
-        }
-        chunks.push(result.value);
-        received += result.value.length;
-        if (contentLength > 0) {
-          var progress = Math.round((received / contentLength) * 100);
-          fill.style.width = progress + '%';
-          pct.textContent = progress + '%';
-        } else {
-          var mb = (received / (1024 * 1024)).toFixed(1);
-          pct.textContent = mb + ' MB';
-        }
-        return pump();
-      });
+  xhr.onprogress = function(e) {
+    if (e.lengthComputable) {
+      var progress = Math.round((e.loaded / e.total) * 100);
+      fill.style.width = progress + '%';
+      pct.textContent = progress + '%';
+    } else {
+      var mb = (e.loaded / (1024 * 1024)).toFixed(1);
+      pct.textContent = mb + ' MB downloaded';
     }
-    return pump();
-  }).catch(function(err) {
-    console.error('Download error:', err);
-    icon.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ios-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
-    pct.textContent = 'Failed. Try again.';
-    dlBtn.style.display = 'flex';
-    barWrap.style.display = 'none';
-  });
+  };
+
+  xhr.onload = function() {
+    if (xhr.status === 200) {
+      fill.style.width = '100%';
+      pct.textContent = '100%';
+      var blob = xhr.response;
+      var blobUrl = URL.createObjectURL(blob);
+      video.src = blobUrl;
+      video.load();
+      setTimeout(function() {
+        overlay.style.display = 'none';
+      }, 300);
+    } else {
+      showError(id);
+    }
+  };
+
+  xhr.onerror = function() {
+    showError(id);
+  };
+
+  xhr.ontimeout = function() {
+    showError(id);
+  };
+
+  xhr.timeout = 120000;
+  xhr.send();
+}
+
+function showError(id) {
+  var icon = document.getElementById('vdl-icon-' + id);
+  var pct = document.getElementById('vdl-pct-' + id);
+  var dlBtn = document.getElementById('vdl-btn-' + id);
+  var barWrap = document.getElementById('vdl-bar-' + id);
+  if (icon) icon.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ios-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+  if (pct) pct.textContent = 'Failed. Tap to retry.';
+  if (dlBtn) dlBtn.style.display = 'flex';
+  if (barWrap) barWrap.style.display = 'none';
 }
 
 function onVidPlay(id) {
