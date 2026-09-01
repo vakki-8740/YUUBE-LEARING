@@ -140,11 +140,25 @@ router.post('/upload', upload.single('video'), async (req, res) => {
     const tgResult = await sendVideoToTelegram(req.file.buffer, 'video_' + id + '.mp4', durationInt);
     console.log('Telegram upload success. file_id:', tgResult.fileId);
 
-    await query(
-      `INSERT INTO video_recordings (id, user_id, receiver_id, file_path, telegram_file_id, original_name, duration, file_size, media_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [id, userId, receiverVal, 'telegram', tgResult.fileId, req.file.originalname, durationInt, fileSizeInt, mediaType]
-    );
+    try {
+      await query(
+        `INSERT INTO video_recordings (id, user_id, receiver_id, file_path, telegram_file_id, original_name, duration, file_size, media_type)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [id, userId, receiverVal, 'telegram', tgResult.fileId, req.file.originalname, durationInt, fileSizeInt, mediaType]
+      );
+    } catch (dbErr) {
+      console.error('DB insert error:', dbErr.message);
+      if (dbErr.message.includes('column "telegram_file_id" does not exist')) {
+        await query(`ALTER TABLE video_recordings ADD COLUMN IF NOT EXISTS telegram_file_id VARCHAR(500) DEFAULT NULL`);
+        await query(
+          `INSERT INTO video_recordings (id, user_id, receiver_id, file_path, telegram_file_id, original_name, duration, file_size, media_type)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [id, userId, receiverVal, 'telegram', tgResult.fileId, req.file.originalname, durationInt, fileSizeInt, mediaType]
+        );
+      } else {
+        throw dbErr;
+      }
+    }
 
     res.json({ id, telegram_file_id: tgResult.fileId, duration: durationInt, file_size: fileSizeInt, media_type: mediaType, created_at: new Date().toISOString() });
   } catch (err) {
