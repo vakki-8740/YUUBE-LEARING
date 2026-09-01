@@ -224,7 +224,7 @@ router.post('/mark-seen', async (req, res) => {
 router.get('/:id/video', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await query(`SELECT telegram_file_id, media_type FROM video_recordings WHERE id = $1`, [id]);
+    const result = await query(`SELECT telegram_file_id, media_type, file_size FROM video_recordings WHERE id = $1`, [id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
     const rec = result.rows[0];
 
@@ -232,16 +232,66 @@ router.get('/:id/video', async (req, res) => {
       return res.status(404).json({ error: 'No Telegram file ID' });
     }
 
-    console.log('Fetching video from Telegram:', rec.telegram_file_id);
     const fileInfo = await getTelegramFileUrl(rec.telegram_file_id);
-    console.log('Telegram file URL obtained, streaming...');
-
     streamFromUrl(fileInfo.url, res);
   } catch (err) {
     console.error('Video serve error:', err.message);
     if (!res.headersSent) res.status(500).json({ error: 'Failed to serve video' });
   }
 });
+
+router.get('/:id/download', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query(`SELECT telegram_file_id, media_type, file_size FROM video_recordings WHERE id = $1`, [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    const rec = result.rows[0];
+
+    if (!rec.telegram_file_id) {
+      return res.status(404).json({ error: 'No Telegram file ID' });
+    }
+
+    const fileInfo = await getTelegramFileUrl(rec.telegram_file_id);
+    const protocol = fileInfo.url.startsWith('https') ? https : http;
+
+    protocol.get(fileInfo.url, (tgRes) => {
+      if (tgRes.statusCode === 301 || tgRes.statusCode === 302) {
+        return protocol.get(tgRes.headers.location, (tgRes2) => {
+          streamWithProgress(tgRes2, res);
+        }).on('error', (err) => {
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to fetch' });
+        });
+      }
+      streamWithProgress(tgRes, res);
+    }).on('error', (err) => {
+      console.error('Telegram download error:', err.message);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to fetch from Telegram' });
+    });
+  } catch (err) {
+    console.error('Video download error:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to download video' });
+  }
+});
+
+function streamWithProgress(tgRes, res) {
+  const contentType = tgRes.headers['content-type'] || 'video/mp4';
+  const contentLength = parseInt(tgRes.headers['content-length']) || 0;
+
+  res.writeHead(200, {
+    'Content-Type': contentType,
+    'Content-Length': contentLength,
+    'Accept-Ranges': 'bytes',
+    'Content-Disposition': 'inline',
+    'Cache-Control': 'no-cache'
+  });
+
+  tgRes.pipe(res);
+
+  tgRes.on('error', (err) => {
+    console.error('Stream error:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: 'Stream failed' });
+  });
+}
 
 router.post('/:id/react', async (req, res) => {
   try {

@@ -3389,16 +3389,27 @@ function renderVideoPackBubble(p) {
     selectClass = ' select-allowed' + (isSelected ? ' selected' : '');
   }
 
-  var videoUrl = VIDEO_API + '/api/videos/' + p.id + '/video';
+  var fileSizeMB = p.file_size ? (p.file_size / (1024 * 1024)).toFixed(1) : '?';
+  var dur = p.duration ? formatDuration(p.duration) : '0:00';
+
   var mediaHtml = '<div class="video-pack-player" id="vp-' + p.id + '">' +
-    '<div class="video-loading-overlay" id="vload-' + p.id + '">' +
-      '<div class="video-loading-spinner"></div>' +
-      '<div class="video-loading-text">Loading video...</div>' +
+    '<video id="vid-' + p.id + '" preload="none" playsinline webkit-playsinline onclick="event.stopPropagation()" onplay="onVidPlay(\'' + p.id + '\')" onwaiting="onVidWaiting(\'' + p.id + '\')" oncanplay="onVidCanPlay(\'' + p.id + '\')" onerror="onVidError(\'' + p.id + '\')"></video>' +
+    '<div class="video-download-overlay" id="vdload-' + p.id + '">' +
+      '<div class="video-download-icon" id="vdl-icon-' + p.id + '">' +
+        '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+      '</div>' +
+      '<div class="video-download-info">' +
+        '<span class="video-download-size">' + fileSizeMB + ' MB</span>' +
+        '<span class="video-download-dur">' + dur + '</span>' +
+      '</div>' +
+      '<div class="video-download-bar-wrap" id="vdl-bar-' + p.id + '" style="display:none;">' +
+        '<div class="video-download-bar"><div class="video-download-fill" id="vdl-fill-' + p.id + '"></div></div>' +
+        '<span class="video-download-pct" id="vdl-pct-' + p.id + '">0%</span>' +
+      '</div>' +
+      '<button class="video-download-btn" id="vdl-btn-' + p.id + '" onclick="downloadVideoFromTG(\'' + p.id + '\')">' +
+        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download' +
+      '</button>' +
     '</div>' +
-    '<video preload="none" playsinline webkit-playsinline onclick="event.stopPropagation()" onplay="onVideoPlay(\'' + p.id + '\')" onwaiting="onVideoWaiting(\'' + p.id + '\')" oncanplay="onVideoCanPlay(\'' + p.id + '\')" onerror="onVideoError(\'' + p.id + '\')"></video>' +
-    '<button class="video-play-btn" id="vplay-' + p.id + '" onclick="playVideoFromTelegram(\'' + p.id + '\', this)">' +
-      '<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
-    '</button>' +
   '</div>';
 
   return '<div class="video-pack-bubble ' + side + selectClass + '" data-vp-id="' + p.id + '">' +
@@ -3422,56 +3433,93 @@ function renderVideoPackBubble(p) {
   '</div>';
 }
 
-function playVideoFromTelegram(id, btn) {
+function downloadVideoFromTG(id) {
+  var overlay = document.getElementById('vdload-' + id);
+  var barWrap = document.getElementById('vdl-bar-' + id);
+  var fill = document.getElementById('vdl-fill-' + id);
+  var pct = document.getElementById('vdl-pct-' + id);
+  var dlBtn = document.getElementById('vdl-btn-' + id);
+  var icon = document.getElementById('vdl-icon-' + id);
+  var video = document.getElementById('vid-' + id);
+
+  if (!overlay || !video) return;
+
+  dlBtn.style.display = 'none';
+  barWrap.style.display = 'flex';
+  icon.innerHTML = '<div class="video-dl-spinner"></div>';
+
+  var url = VIDEO_API + '/api/videos/' + id + '/download';
+
+  fetch(url).then(function(response) {
+    if (!response.ok) throw new Error('Download failed');
+    var reader = response.body.getReader();
+    var contentLength = parseInt(response.headers.get('Content-Length')) || 0;
+    var received = 0;
+    var chunks = [];
+
+    function pump() {
+      return reader.read().then(function(result) {
+        if (result.done) {
+          var blob = new Blob(chunks, { type: 'video/mp4' });
+          var blobUrl = URL.createObjectURL(blob);
+          video.src = blobUrl;
+          video.load();
+          overlay.style.display = 'none';
+          return;
+        }
+        chunks.push(result.value);
+        received += result.value.length;
+        if (contentLength > 0) {
+          var progress = Math.round((received / contentLength) * 100);
+          fill.style.width = progress + '%';
+          pct.textContent = progress + '%';
+        } else {
+          var mb = (received / (1024 * 1024)).toFixed(1);
+          pct.textContent = mb + ' MB';
+        }
+        return pump();
+      });
+    }
+    return pump();
+  }).catch(function(err) {
+    console.error('Download error:', err);
+    icon.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ios-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    pct.textContent = 'Failed. Try again.';
+    dlBtn.style.display = 'flex';
+    barWrap.style.display = 'none';
+  });
+}
+
+function onVidPlay(id) {
+  var overlay = document.getElementById('vdload-' + id);
+  if (overlay) overlay.style.display = 'none';
+}
+
+function onVidWaiting(id) {
   var player = document.getElementById('vp-' + id);
-  if (!player) return;
-  var video = player.querySelector('video');
-  var loading = document.getElementById('vload-' + id);
-  var playBtn = document.getElementById('vplay-' + id);
-
-  if (video.src) {
-    if (video.paused) { video.play(); }
-    else { video.pause(); }
-    return;
-  }
-
-  if (playBtn) playBtn.style.display = 'none';
-  if (loading) loading.style.display = 'flex';
-
-  var videoUrl = VIDEO_API + '/api/videos/' + id + '/video';
-  video.src = videoUrl;
-  video.load();
+  if (player) player.classList.add('buffering');
 }
 
-function onVideoPlay(id) {
-  var playBtn = document.getElementById('vplay-' + id);
-  var loading = document.getElementById('vload-' + id);
-  if (playBtn) playBtn.style.display = 'none';
-  if (loading) loading.style.display = 'none';
-}
-
-function onVideoWaiting(id) {
-  var loading = document.getElementById('vload-' + id);
-  if (loading) loading.style.display = 'flex';
-}
-
-function onVideoCanPlay(id) {
-  var loading = document.getElementById('vload-' + id);
+function onVidCanPlay(id) {
   var player = document.getElementById('vp-' + id);
-  if (loading) loading.style.display = 'none';
-  if (player) {
-    var video = player.querySelector('video');
-    if (video && video.paused) video.play().catch(function() {});
-  }
+  if (player) player.classList.remove('buffering');
+  var video = document.getElementById('vid-' + id);
+  if (video && video.paused) video.play().catch(function() {});
 }
 
-function onVideoError(id) {
-  var loading = document.getElementById('vload-' + id);
-  var playBtn = document.getElementById('vplay-' + id);
-  if (loading) {
-    loading.innerHTML = '<div class="video-loading-text" style="color:var(--ios-red);">Failed to load video</div>';
+function onVidError(id) {
+  var overlay = document.getElementById('vdload-' + id);
+  if (overlay) {
+    overlay.style.display = 'flex';
+    var icon = document.getElementById('vdl-icon-' + id);
+    if (icon) icon.innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ios-red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+    var pct = document.getElementById('vdl-pct-' + id);
+    if (pct) pct.textContent = 'Failed. Try again.';
+    var dlBtn = document.getElementById('vdl-btn-' + id);
+    if (dlBtn) dlBtn.style.display = 'flex';
+    var barWrap = document.getElementById('vdl-bar-' + id);
+    if (barWrap) barWrap.style.display = 'none';
   }
-  if (playBtn) playBtn.style.display = 'flex';
 }
 
 function triggerVideoUpload() {
