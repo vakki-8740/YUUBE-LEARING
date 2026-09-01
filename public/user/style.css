@@ -3464,6 +3464,19 @@ button:active {
 }
 .video-emoji-opt:active { background: var(--ios-gray6); transform: scale(1.2); }
 
+/* Video Loading Overlay */
+.video-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255,255,255,0.2);
+  border-top-color: #FF6B6B;
+  border-radius: 50%;
+  animation: videoSpin 0.8s linear infinite;
+}
+@keyframes videoSpin {
+  to { transform: rotate(360deg); }
+}
+
 /* ==================== MOBILE FIRST ==================== */
 /* ==================== MOBILE 768px ==================== */
 @media (max-width: 768px) {

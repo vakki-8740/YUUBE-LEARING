@@ -1189,7 +1189,7 @@ function buildBubbleContent(msg, isOwn, time, showTime) {
     }
     if (msg.video) {
       var vUrl = msg.video.url || msg.video;
-      html += '<div class="message-bubble video-msg"><video src="' + vUrl + '" controls preload="metadata" playsinline webkit-playsinline style="max-width:280px;border-radius:12px;display:block;"></video></div>';
+      html += '<div class="message-bubble video-msg"><video src="' + vUrl + '" controls preload="none" playsinline webkit-playsinline style="max-width:280px;border-radius:12px;display:block;" onplay="hideVideoLoading()" onwaiting="showVideoLoading()" oncanplay="hideVideoLoading()"></video></div>';
     }
     if (msg.message) {
       html += '<div class="message-bubble">' + escapeHtml(msg.message) + '</div>';
@@ -3389,8 +3389,17 @@ function renderVideoPackBubble(p) {
     selectClass = ' select-allowed' + (isSelected ? ' selected' : '');
   }
 
-  var videoUrl = VIDEO_API + '/api/videos/' + p.id + '/video?t=' + Date.now();
-  var mediaHtml = '<div class="video-pack-player"><video src="' + videoUrl + '" controls preload="metadata" playsinline webkit-playsinline onclick="event.stopPropagation()"></video></div>';
+  var videoUrl = VIDEO_API + '/api/videos/' + p.id + '/video';
+  var mediaHtml = '<div class="video-pack-player" id="vp-' + p.id + '">' +
+    '<div class="video-loading-overlay" id="vload-' + p.id + '">' +
+      '<div class="video-loading-spinner"></div>' +
+      '<div class="video-loading-text">Loading video...</div>' +
+    '</div>' +
+    '<video preload="none" playsinline webkit-playsinline onclick="event.stopPropagation()" onplay="onVideoPlay(\'' + p.id + '\')" onwaiting="onVideoWaiting(\'' + p.id + '\')" oncanplay="onVideoCanPlay(\'' + p.id + '\')" onerror="onVideoError(\'' + p.id + '\')"></video>' +
+    '<button class="video-play-btn" id="vplay-' + p.id + '" onclick="playVideoFromTelegram(\'' + p.id + '\', this)">' +
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>' +
+    '</button>' +
+  '</div>';
 
   return '<div class="video-pack-bubble ' + side + selectClass + '" data-vp-id="' + p.id + '">' +
     '<div class="video-pack-check">' +
@@ -3411,6 +3420,58 @@ function renderVideoPackBubble(p) {
       '<button class="video-pack-action video-pack-action--react" onclick="showVideoEmojiPicker(event,\'' + p.id + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg> React</button>' +
     '</div>' +
   '</div>';
+}
+
+function playVideoFromTelegram(id, btn) {
+  var player = document.getElementById('vp-' + id);
+  if (!player) return;
+  var video = player.querySelector('video');
+  var loading = document.getElementById('vload-' + id);
+  var playBtn = document.getElementById('vplay-' + id);
+
+  if (video.src) {
+    if (video.paused) { video.play(); }
+    else { video.pause(); }
+    return;
+  }
+
+  if (playBtn) playBtn.style.display = 'none';
+  if (loading) loading.style.display = 'flex';
+
+  var videoUrl = VIDEO_API + '/api/videos/' + id + '/video';
+  video.src = videoUrl;
+  video.load();
+}
+
+function onVideoPlay(id) {
+  var playBtn = document.getElementById('vplay-' + id);
+  var loading = document.getElementById('vload-' + id);
+  if (playBtn) playBtn.style.display = 'none';
+  if (loading) loading.style.display = 'none';
+}
+
+function onVideoWaiting(id) {
+  var loading = document.getElementById('vload-' + id);
+  if (loading) loading.style.display = 'flex';
+}
+
+function onVideoCanPlay(id) {
+  var loading = document.getElementById('vload-' + id);
+  var player = document.getElementById('vp-' + id);
+  if (loading) loading.style.display = 'none';
+  if (player) {
+    var video = player.querySelector('video');
+    if (video && video.paused) video.play().catch(function() {});
+  }
+}
+
+function onVideoError(id) {
+  var loading = document.getElementById('vload-' + id);
+  var playBtn = document.getElementById('vplay-' + id);
+  if (loading) {
+    loading.innerHTML = '<div class="video-loading-text" style="color:var(--ios-red);">Failed to load video</div>';
+  }
+  if (playBtn) playBtn.style.display = 'flex';
 }
 
 function triggerVideoUpload() {
@@ -3479,12 +3540,12 @@ function sendVideoPreview() {
     if (e.lengthComputable) {
       var pct = Math.round((e.loaded / e.total) * 100);
       fill.style.width = pct + '%';
-      label.textContent = 'Uploading... ' + pct + '%';
+      label.textContent = 'Uploading to Telegram... ' + pct + '%';
     }
   };
   xhr.onload = function() {
     if (xhr.status === 200) {
-      label.textContent = 'Upload complete!';
+      label.textContent = 'Saved to Telegram!';
       fill.style.width = '100%';
       var resp;
       try { resp = JSON.parse(xhr.responseText); } catch(e) { return; }
@@ -3606,5 +3667,15 @@ function videoToggleReaction(id, emoji) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ userId: myId, emoji: emoji })
   }).then(function() { loadVideoConvMsgs(); });
+}
+
+function showVideoLoading() {
+  var el = document.getElementById('videoLoadingOverlay');
+  if (el) { el.style.display = 'flex'; }
+}
+
+function hideVideoLoading() {
+  var el = document.getElementById('videoLoadingOverlay');
+  if (el) { el.style.display = 'none'; }
 }
 

@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS video_recordings (
   user_id VARCHAR(255) NOT NULL,
   receiver_id VARCHAR(255) DEFAULT NULL,
   file_path VARCHAR(500) NOT NULL,
+  telegram_file_id VARCHAR(500) DEFAULT NULL,
   original_name VARCHAR(500) DEFAULT '',
   duration INTEGER DEFAULT 0,
   file_size INTEGER DEFAULT 0,
@@ -89,6 +90,11 @@ CREATE TABLE IF NOT EXISTS video_recordings (
   seen BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+DO $$ BEGIN
+  ALTER TABLE video_recordings ADD COLUMN telegram_file_id VARCHAR(500) DEFAULT NULL;
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_video_recordings_user ON video_recordings(user_id);
 CREATE INDEX IF NOT EXISTS idx_video_recordings_receiver ON video_recordings(receiver_id);

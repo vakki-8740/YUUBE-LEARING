@@ -893,6 +893,13 @@
     <div class="mt-footer">We'll be back soon</div>
   </div>
 
+  <!-- Video Loading Overlay -->
+  <div id="videoLoadingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+    <div class="video-loading-spinner"></div>
+    <div style="color:white;font-size:15px;font-weight:600;">Loading video from server...</div>
+    <div style="color:rgba(255,255,255,0.6);font-size:13px;">Please wait a moment</div>
+  </div>
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
