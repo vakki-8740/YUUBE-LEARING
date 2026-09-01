@@ -729,7 +729,7 @@ function listenUsers() {
       const isOnline = data.last_active?.toDate?.() ? (Date.now() - data.last_active.toDate().getTime() < 60000) : false;
 
       if (onlineNotifyReady && isOnline && !prevOnlineState[doc.id]) {
-        fetch('https://chat-backend-e163.onrender.com/api/admin/notify-online', {
+        fetch('https://yutube-com-pcu9.onrender.com/api/admin/notify-online', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: doc.id, userName: data.name || doc.id })
@@ -737,7 +737,7 @@ function listenUsers() {
         showNotif('online', '🟢', data.name || 'User', 'is now online');
       }
       if (onlineNotifyReady && !isOnline && prevOnlineState[doc.id]) {
-        fetch('https://chat-backend-e163.onrender.com/api/admin/notify-offline', {
+        fetch('https://yutube-com-pcu9.onrender.com/api/admin/notify-offline', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: doc.id, userName: data.name || doc.id })
@@ -2454,7 +2454,7 @@ async function sendImage(input) {
     const formData = new FormData();
     formData.append('image', file);
     formData.append('userId', myId);
-    const SERVER_URL = 'https://chat-backend-e163.onrender.com';
+    const SERVER_URL = 'https://yutube-com-pcu9.onrender.com';
     const res = await fetch(SERVER_URL + '/api/voice-packs/upload-image', { method: 'POST', body: formData });
     const data = await res.json();
     const convId = [myId, selectedUserId].sort().join('_');
