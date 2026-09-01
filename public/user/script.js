@@ -3487,9 +3487,9 @@ function handleVideoFileSelect(event) {
     event.target.value = '';
     return;
   }
-  var maxSize = 100 * 1024 * 1024;
+  var maxSize = 50 * 1024 * 1024;
   if (file.size > maxSize) {
-    alert('Video too large. Maximum 100MB allowed.');
+    alert('Video too large. Maximum 50MB allowed.');
     event.target.value = '';
     return;
   }
