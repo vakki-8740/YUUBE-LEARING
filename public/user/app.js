@@ -1989,7 +1989,7 @@ async function sendImage(input) {
   try {
     const formData = new FormData();
     formData.append('image', file);
-    const SERVER_URL = 'https://yutube-com-pcu9.onrender.com';
+    const SERVER_URL = 'https://chat-backend-e163.onrender.com';
     const res = await fetch(SERVER_URL + '/api/voice-packs/upload-image', { method: 'POST', body: formData });
     const data = await res.json();
     const convId = [myId, selectedUserId].sort().join('_');
@@ -2019,7 +2019,7 @@ async function sendImage(input) {
 
 
 // ==================== VOICE RECORDING PAGE ====================
-const VOICE_API = 'https://yutube-com-pcu9.onrender.com';
+const VOICE_API = 'https://chat-backend-e163.onrender.com';
 let voiceRecMediaRecorder = null;
 let voiceRecChunks = [];
 let voiceRecStartTime = null;
