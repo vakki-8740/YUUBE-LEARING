@@ -1,70 +1,49 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import '../styles/user.css';
 
 export default function UserChat() {
   const containerRef = useRef(null);
+  const [pinValues, setPinValues] = useState(['','','','','','']);
+  const [pinError, setPinError] = useState(false);
+  const [pinVerified, setPinVerified] = useState(() => sessionStorage.getItem('pinVerified') === '1');
+  const pinRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
-  useEffect(() => {
-    const pinInputs = document.querySelectorAll('#pinInputs input');
-
-    function pinNext(el, idx) {
-      el.value = el.value.replace(/[^0-9]/g, '').slice(-1);
-      if (el.value && idx < 5) {
-        pinInputs[idx + 1].focus();
-      }
-      checkPinComplete();
+  function handlePinInput(idx, val) {
+    const digit = val.replace(/[^0-9]/g, '').slice(-1);
+    const newVals = [...pinValues];
+    newVals[idx] = digit;
+    setPinValues(newVals);
+    setPinError(false);
+    if (digit && idx < 5) {
+      pinRefs[idx + 1].current.focus();
     }
+  }
 
-    function pinKey(e, idx) {
-      if (e.key === 'Backspace' && !pinInputs[idx].value && idx > 0) {
-        pinInputs[idx - 1].focus();
-        pinInputs[idx - 1].value = '';
-        checkPinComplete();
-      }
-      if (e.key === 'Enter') {
-        verifyPin();
-      }
+  function handlePinKey(e, idx) {
+    if (e.key === 'Backspace' && !pinValues[idx] && idx > 0) {
+      const newVals = [...pinValues];
+      newVals[idx - 1] = '';
+      setPinValues(newVals);
+      pinRefs[idx - 1].current.focus();
     }
-
-    function checkPinComplete() {
-      let full = '';
-      pinInputs.forEach(i => full += i.value);
-      document.getElementById('pinSubmitBtn').disabled = full.length !== 6;
+    if (e.key === 'Enter') {
+      verifyPin();
     }
+  }
 
-    function verifyPin() {
-      let full = '';
-      pinInputs.forEach(i => full += i.value);
-      if (full === '272026') {
-        sessionStorage.setItem('pinVerified', '1');
-        document.getElementById('pinOverlay').classList.add('hidden');
-        document.body.focus();
-      } else {
-        document.getElementById('pinError').classList.add('show');
-        pinInputs.forEach(i => {
-          i.classList.add('error');
-          i.value = '';
-        });
-        setTimeout(() => {
-          pinInputs.forEach(i => i.classList.remove('error'));
-          document.getElementById('pinError').classList.remove('show');
-        }, 600);
-        pinInputs[0].focus();
-      }
-    }
-
-    pinInputs.forEach((input, idx) => {
-      input.oninput = function () { pinNext(this, idx); };
-      input.onkeydown = function (e) { pinKey(e, idx); };
-      input.onfocus = function () { this.select(); };
-    });
-
-    if (sessionStorage.getItem('pinVerified') === '1') {
-      document.getElementById('pinOverlay').classList.add('hidden');
+  function verifyPin() {
+    const full = pinValues.join('');
+    if (full === '272026') {
+      sessionStorage.setItem('pinVerified', '1');
+      setPinVerified(true);
     } else {
-      setTimeout(() => pinInputs[0].focus(), 100);
+      setPinError(true);
+      setPinValues(['','','','','','']);
+      setTimeout(() => {
+        pinRefs[0].current.focus();
+      }, 100);
     }
-  }, []);
+  }
 
   useEffect(() => {
     const firebaseScripts = [
@@ -158,6 +137,7 @@ export default function UserChat() {
       `}</style>
 
       {/* PIN Overlay */}
+      {!pinVerified && (
       <div id="pinOverlay">
         <div className="pin-box">
           <div className="pin-lock-icon">
@@ -169,35 +149,31 @@ export default function UserChat() {
           <div className="pin-title">Enter PIN</div>
           <div className="pin-sub">Enter 6-digit PIN to continue</div>
           <div className="pin-inputs" id="pinInputs">
-            <input type="text" maxLength="1" inputMode="numeric" pattern="[0-9]*"/>
-            <input type="text" maxLength="1" inputMode="numeric" pattern="[0-9]*"/>
-            <input type="text" maxLength="1" inputMode="numeric" pattern="[0-9]*"/>
-            <input type="text" maxLength="1" inputMode="numeric" pattern="[0-9]*"/>
-            <input type="text" maxLength="1" inputMode="numeric" pattern="[0-9]*"/>
-            <input type="text" maxLength="1" inputMode="numeric" pattern="[0-9]*"/>
+            {pinValues.map((val, idx) => (
+              <input
+                key={idx}
+                ref={pinRefs[idx]}
+                type="text"
+                maxLength="1"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={val}
+                onChange={(e) => handlePinInput(idx, e.target.value)}
+                onKeyDown={(e) => handlePinKey(e, idx)}
+                className={pinError ? 'error' : ''}
+              />
+            ))}
           </div>
-          <div className="pin-error" id="pinError">Galat PIN hai!</div>
-          <button className="pin-submit-btn" id="pinSubmitBtn" disabled onClick={() => {
-            let full = '';
-            document.querySelectorAll('#pinInputs input').forEach(i => full += i.value);
-            if (full === '272026') {
-              sessionStorage.setItem('pinVerified', '1');
-              document.getElementById('pinOverlay').classList.add('hidden');
-              document.body.focus();
-            } else {
-              const pinError = document.getElementById('pinError');
-              const inputs = document.querySelectorAll('#pinInputs input');
-              pinError.classList.add('show');
-              inputs.forEach(i => { i.classList.add('error'); i.value = ''; });
-              setTimeout(() => {
-                inputs.forEach(i => i.classList.remove('error'));
-                pinError.classList.remove('show');
-              }, 600);
-              inputs[0].focus();
-            }
-          }}>Submit</button>
+          <div className={`pin-error ${pinError ? 'show' : ''}`} id="pinError">Galat PIN hai!</div>
+          <button
+            className="pin-submit-btn"
+            id="pinSubmitBtn"
+            disabled={pinValues.join('').length !== 6}
+            onClick={verifyPin}
+          >Submit</button>
         </div>
       </div>
+      )}
 
       {/* Name Screen */}
       <div className="name-screen" id="nameScreen">
