@@ -44,6 +44,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', db: isDbReady() ? 'connected' : 'unavailable' });
 });
 
+// React SPA catch-all: serve index.html for all non-API, non-file routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
 async function start() {
   await initDb();
   const server = app.listen(PORT, '0.0.0.0', () => {

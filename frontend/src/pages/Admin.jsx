@@ -1,11 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Admin Panel - Chat</title>
-  <style>
-    * {
+import { useRef, useEffect } from 'react';
+
+const ADMIN_HTML = `<style>
+* {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
@@ -1865,11 +1861,9 @@
         height: 48px;
       }
     }
-  </style>
-</head>
-<body>
+</style>
 
-  <!-- Login Screen -->
+<!-- Login Screen -->
   <div class="login-screen" id="loginScreen">
     <div class="login-icon">🔐</div>
     <div class="login-title">Admin Panel</div>
@@ -2198,12 +2192,36 @@
 
   <audio id="remoteAudio" autoplay playsinline style="display:none"></audio>
 
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  
 
-  <script>
-    firebase.initializeApp({
+  <!-- Telegram Settings Modal -->
+  <div id="tgSettingsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); z-index:2000; align-items:center; justify-content:center;" onclick="if(event.target===this)closeTelegramSettings()">
+    <div style="background:#fff; border-radius:16px; padding:28px; width:90%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,0.2); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span style="font-size:18px; font-weight:700;">Telegram Settings</span>
+      </div>
+      <label style="display:block; font-size:13px; font-weight:600; color:#555; margin-bottom:4px;">Bot Token</label>
+      <input id="tgBotToken" type="text" placeholder="Enter your bot token" style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:14px; box-sizing:border-box; outline:none; margin-bottom:14px;">
+      <label style="display:block; font-size:13px; font-weight:600; color:#555; margin-bottom:4px;">Chat ID</label>
+      <input id="tgChatId" type="text" placeholder="Enter your chat ID" style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:14px; box-sizing:border-box; outline:none; margin-bottom:18px;">
+      <div style="display:flex; gap:10px;">
+        <button onclick="saveTelegramSettings()" style="flex:1; padding:10px; border:none; border-radius:10px; background:linear-gradient(135deg,#007AFF,#0056D2); color:#fff; font-size:14px; font-weight:600; cursor:pointer;">Save</button>
+        <button onclick="closeTelegramSettings()" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:10px; background:#fff; color:#333; font-size:14px; font-weight:600; cursor:pointer;">Cancel</button>
+      </div>
+      <div id="tgSaveStatus" style="font-size:12px; color:#888; margin-top:10px; text-align:center;"></div>
+    </div>
+  </div>
+`;
+
+const FIREBASE_SCRIPTS = [
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js',
+  'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js'
+];
+
+const ADMIN_JS = `
+firebase.initializeApp({
       apiKey: "AIzaSyB2j604pnQWRzpu_yE0biwWktths5TxW38",
       authDomain: "own-chat-app-d5fd0.firebaseapp.com",
       projectId: "own-chat-app-d5fd0",
@@ -2304,7 +2322,7 @@
       const list = document.getElementById('userList');
 
       if (users.length === 0) {
-        list.innerHTML = `<div class="no-users"><div class="icon">📭</div><div>No users yet</div></div>`;
+        list.innerHTML = \`<div class="no-users"><div class="icon">📭</div><div>No users yet</div></div>\`;
         return;
       }
 
@@ -2315,23 +2333,23 @@
         const dotClass = user.is_online ? 'online-dot' : 'offline-dot';
         const initial = (user.name || 'U').charAt(0).toUpperCase();
 
-        return `
-          <div class="user-item ${isActive ? 'active' : ''}" onclick="selectUser('${user.id}')">
+        return \`
+          <div class="user-item \${isActive ? 'active' : ''}" onclick="selectUser('\${user.id}')">
             <div class="user-avatar">
-              ${initial}
-              <div class="${dotClass}"></div>
+              \${initial}
+              <div class="\${dotClass}"></div>
             </div>
             <div class="user-info">
               <div class="user-name">
-                ${user.name || 'User'}
+                \${user.name || 'User'}
               </div>
-              <div class="user-last-msg">${escapeHtml(lastMsg)}</div>
+              <div class="user-last-msg">\${escapeHtml(lastMsg)}</div>
             </div>
             <div style="text-align:right;">
-              <div class="user-time">${time}</div>
+              <div class="user-time">\${time}</div>
             </div>
           </div>
-        `;
+        \`;
       }).join('');
     }
 
@@ -2995,9 +3013,9 @@
     function sendTelegramAlert(userName, message, timestamp, toUser) {
       if (!telegramBotToken || !telegramChatId) return;
       const text = encodeURIComponent(
-        `👤 User: ${userName}\n💬 To: ${toUser}\n📝 Message: ${message || '[Image]'}\n⏰ Time: ${timestamp}`
+        \`👤 User: \${userName}\n💬 To: \${toUser}\n📝 Message: \${message || '[Image]'}\n⏰ Time: \${timestamp}\`
       );
-      fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage?chat_id=${telegramChatId}&text=${text}`)
+      fetch(\`https://api.telegram.org/bot\${telegramBotToken}/sendMessage?chat_id=\${telegramChatId}&text=\${text}\`)
         .catch(err => console.error('Telegram error:', err));
     }
 
@@ -3031,9 +3049,9 @@
     function sendTelegramCallAlert(fromName, toName, type, timestamp) {
       if (!telegramBotToken || !telegramChatId) return;
       const text = encodeURIComponent(
-        `📞 Call Alert\n👤 From: ${fromName}\n👤 To: ${toName}\n📱 Type: ${type === 'video' ? 'Video Call' : 'Audio Call'}\n⏰ Time: ${timestamp}`
+        \`📞 Call Alert\n👤 From: \${fromName}\n👤 To: \${toName}\n📱 Type: \${type === 'video' ? 'Video Call' : 'Audio Call'}\n⏰ Time: \${timestamp}\`
       );
-      fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage?chat_id=${telegramChatId}&text=${text}`)
+      fetch(\`https://api.telegram.org/bot\${telegramBotToken}/sendMessage?chat_id=\${telegramChatId}&text=\${text}\`)
         .catch(err => console.error('Telegram call alert error:', err));
     }
 
@@ -3619,25 +3637,37 @@
     }
 
     document.getElementById('tgSettingsBtn').addEventListener('click', openTelegramSettings);
-  </script>
+`;
 
-  <!-- Telegram Settings Modal -->
-  <div id="tgSettingsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); backdrop-filter:blur(4px); z-index:2000; align-items:center; justify-content:center;" onclick="if(event.target===this)closeTelegramSettings()">
-    <div style="background:#fff; border-radius:16px; padding:28px; width:90%; max-width:400px; box-shadow:0 8px 40px rgba(0,0,0,0.2); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF9500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span style="font-size:18px; font-weight:700;">Telegram Settings</span>
-      </div>
-      <label style="display:block; font-size:13px; font-weight:600; color:#555; margin-bottom:4px;">Bot Token</label>
-      <input id="tgBotToken" type="text" placeholder="Enter your bot token" style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:14px; box-sizing:border-box; outline:none; margin-bottom:14px;">
-      <label style="display:block; font-size:13px; font-weight:600; color:#555; margin-bottom:4px;">Chat ID</label>
-      <input id="tgChatId" type="text" placeholder="Enter your chat ID" style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:14px; box-sizing:border-box; outline:none; margin-bottom:18px;">
-      <div style="display:flex; gap:10px;">
-        <button onclick="saveTelegramSettings()" style="flex:1; padding:10px; border:none; border-radius:10px; background:linear-gradient(135deg,#007AFF,#0056D2); color:#fff; font-size:14px; font-weight:600; cursor:pointer;">Save</button>
-        <button onclick="closeTelegramSettings()" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:10px; background:#fff; color:#333; font-size:14px; font-weight:600; cursor:pointer;">Cancel</button>
-      </div>
-      <div id="tgSaveStatus" style="font-size:12px; color:#888; margin-top:10px; text-align:center;"></div>
-    </div>
-  </div>
-</body>
-</html>
+function Admin() {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    el.innerHTML = ADMIN_HTML;
+
+    let chain = Promise.resolve();
+    FIREBASE_SCRIPTS.forEach(src => {
+      chain = chain.then(() => new Promise(resolve => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        el.appendChild(s);
+      }));
+    });
+
+    chain.then(() => {
+      const s = document.createElement('script');
+      s.textContent = ADMIN_JS;
+      el.appendChild(s);
+    });
+
+    return () => {
+      el.innerHTML = '';
+    };
+  }, []);
+
+  return <div ref={containerRef} style={{ height: '100vh', overflow: 'hidden' }} />;
+}
+
+export default Admin;

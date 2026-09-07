@@ -1,10 +1,12 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Voice Vault — Admin Panel</title>
-<style>
+import { useRef, useEffect } from 'react'
+
+export default function VoiceVault() {
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const CSS = `
 *,:after,:before{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#f0edff;
@@ -29,15 +31,16 @@
   --shadow:0 8px 32px rgba(108,92,231,0.1);
   --glow:0 0 40px rgba(108,92,231,0.08);
 }
-body{
+.vault-root{
   font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter','Segoe UI',sans-serif;
   background:var(--bg);
   color:var(--text);
   min-height:100vh;
   -webkit-font-smoothing:antialiased;
   overflow-x:hidden;
+  position:relative;
 }
-body::before{
+.vault-root::before{
   content:'';
   position:fixed;
   top:-50%;
@@ -50,7 +53,7 @@ body::before{
   z-index:0;
 }
 
-.header{
+.vault-root .header{
   position:sticky;
   top:0;
   z-index:100;
@@ -60,7 +63,7 @@ body::before{
   border-bottom:1px solid var(--border);
   padding:0 24px;
 }
-.header-inner{
+.vault-root .header-inner{
   max-width:960px;
   margin:0 auto;
   display:flex;
@@ -68,12 +71,12 @@ body::before{
   justify-content:space-between;
   padding:16px 0 14px;
 }
-.header-left{
+.vault-root .header-left{
   display:flex;
   align-items:center;
   gap:14px;
 }
-.header-icon{
+.vault-root .header-icon{
   width:38px;
   height:38px;
   border-radius:12px;
@@ -84,8 +87,8 @@ body::before{
   box-shadow:0 4px 12px rgba(108,92,231,0.3);
   flex-shrink:0;
 }
-.header-icon svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.header h1{
+.vault-root .header-icon svg{width:20px;height:20px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.vault-root .header h1{
   font-size:18px;
   font-weight:700;
   letter-spacing:-0.3px;
@@ -94,7 +97,7 @@ body::before{
   -webkit-text-fill-color:transparent;
   background-clip:text;
 }
-.header-sub{
+.vault-root .header-sub{
   display:flex;
   align-items:center;
   gap:8px;
@@ -102,8 +105,8 @@ body::before{
   font-size:12px;
   color:var(--text2);
 }
-.header-sub .dot{width:3px;height:3px;border-radius:50%;background:var(--text3)}
-.stat-pill{
+.vault-root .header-sub .dot{width:3px;height:3px;border-radius:50%;background:var(--text3)}
+.vault-root .stat-pill{
   display:inline-flex;
   align-items:center;
   gap:5px;
@@ -114,10 +117,10 @@ body::before{
   font-size:11px;
   color:var(--text2);
 }
-.stat-pill svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.6}
-.stat-pill strong{color:var(--text);font-weight:600}
+.vault-root .stat-pill svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.6}
+.vault-root .stat-pill strong{color:var(--text);font-weight:600}
 
-.btn{
+.vault-root .btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -134,30 +137,30 @@ body::before{
   overflow:hidden;
   letter-spacing:0.2px;
 }
-.btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.btn:active{transform:scale(0.96)}
-.btn-refresh{
+.vault-root .btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.vault-root .btn:active{transform:scale(0.96)}
+.vault-root .btn-refresh{
   background:linear-gradient(135deg,var(--accent),#5a4bd1);
   color:#fff;
   box-shadow:0 4px 16px rgba(108,92,231,0.25);
 }
-.btn-refresh:hover{box-shadow:0 6px 24px rgba(108,92,231,0.35)}
-.btn-sm{
+.vault-root .btn-refresh:hover{box-shadow:0 6px 24px rgba(108,92,231,0.35)}
+.vault-root .btn-sm{
   padding:6px 12px;
   font-size:11px;
   border-radius:var(--radius-xs);
   letter-spacing:0.3px;
 }
-.btn-sm svg{width:13px;height:13px}
-.btn-play{background:rgba(0,184,148,0.15);color:var(--green2);border:1px solid rgba(0,184,148,0.2)}
-.btn-play:hover{background:rgba(0,184,148,0.25)}
-.btn-stop{background:rgba(253,203,110,0.15);color:var(--orange);border:1px solid rgba(253,203,110,0.2)}
-.btn-download{background:rgba(108,92,231,0.15);color:var(--accent2);border:1px solid rgba(108,92,231,0.2)}
-.btn-download:hover{background:rgba(108,92,231,0.25)}
-.btn-delete{background:rgba(225,112,85,0.12);color:var(--red2);border:1px solid rgba(225,112,85,0.15)}
-.btn-delete:hover{background:rgba(225,112,85,0.2)}
+.vault-root .btn-sm svg{width:13px;height:13px}
+.vault-root .btn-play{background:rgba(0,184,148,0.15);color:var(--green2);border:1px solid rgba(0,184,148,0.2)}
+.vault-root .btn-play:hover{background:rgba(0,184,148,0.25)}
+.vault-root .btn-stop{background:rgba(253,203,110,0.15);color:var(--orange);border:1px solid rgba(253,203,110,0.2)}
+.vault-root .btn-download{background:rgba(108,92,231,0.15);color:var(--accent2);border:1px solid rgba(108,92,231,0.2)}
+.vault-root .btn-download:hover{background:rgba(108,92,231,0.25)}
+.vault-root .btn-delete{background:rgba(225,112,85,0.12);color:var(--red2);border:1px solid rgba(225,112,85,0.15)}
+.vault-root .btn-delete:hover{background:rgba(225,112,85,0.2)}
 
-#loading{
+.vault-root #loading{
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -167,7 +170,7 @@ body::before{
   font-size:14px;
   gap:16px;
 }
-.loader-ring{
+.vault-root .loader-ring{
   width:44px;
   height:44px;
   border-radius:50%;
@@ -177,13 +180,13 @@ body::before{
   box-shadow:0 0 20px rgba(108,92,231,0.1);
 }
 @keyframes spin{to{transform:rotate(360deg)}}
-.loader-text{font-size:13px;color:var(--text3);letter-spacing:0.5px;display:flex;align-items:center;gap:8px}
-.loader-dots span{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--text3);animation:dotPulse 1.4s ease-in-out infinite}
-.loader-dots span:nth-child(2){animation-delay:.2s}
-.loader-dots span:nth-child(3){animation-delay:.4s}
+.vault-root .loader-text{font-size:13px;color:var(--text3);letter-spacing:0.5px;display:flex;align-items:center;gap:8px}
+.vault-root .loader-dots span{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--text3);animation:dotPulse 1.4s ease-in-out infinite}
+.vault-root .loader-dots span:nth-child(2){animation-delay:.2s}
+.vault-root .loader-dots span:nth-child(3){animation-delay:.4s}
 @keyframes dotPulse{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1.2)}}
 
-#error{
+.vault-root #error{
   display:none;
   flex-direction:column;
   align-items:center;
@@ -191,9 +194,9 @@ body::before{
   padding:80px 20px;
   text-align:center;
 }
-#error svg{width:48px;height:48px;stroke:var(--red2);opacity:.6;margin-bottom:16px}
-#error p{color:var(--text2);font-size:14px;margin-bottom:16px}
-.retry-btn{
+.vault-root #error svg{width:48px;height:48px;stroke:var(--red2);opacity:.6;margin-bottom:16px}
+.vault-root #error p{color:var(--text2);font-size:14px;margin-bottom:16px}
+.vault-root .retry-btn{
   background:rgba(225,112,85,0.12);
   color:var(--red2);
   border:1px solid rgba(225,112,85,0.2);
@@ -207,9 +210,9 @@ body::before{
   gap:6px;
   transition:all .2s ease;
 }
-.retry-btn:hover{background:rgba(225,112,85,0.2)}
+.vault-root .retry-btn:hover{background:rgba(225,112,85,0.2)}
 
-main{
+.vault-root main{
   max-width:960px;
   margin:0 auto;
   padding:20px 16px 60px;
@@ -217,7 +220,7 @@ main{
   z-index:1;
 }
 
-.rec-card{
+.vault-root .rec-card{
   background:var(--card);
   border:1px solid var(--border);
   border-radius:var(--radius);
@@ -227,10 +230,10 @@ main{
   animation:fadeSlideIn .4s ease both;
   box-shadow:var(--shadow);
 }
-.rec-card:hover{border-color:var(--border2)}
+.vault-root .rec-card:hover{border-color:var(--border2)}
 @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 
-.rec-top{
+.vault-root .rec-top{
   display:flex;
   align-items:flex-start;
   gap:14px;
@@ -238,7 +241,7 @@ main{
   cursor:pointer;
   user-select:none;
 }
-.user-badge{
+.vault-root .user-badge{
   width:40px;
   height:40px;
   border-radius:12px;
@@ -253,21 +256,21 @@ main{
   box-shadow:0 4px 12px rgba(108,92,231,0.2);
   letter-spacing:0.5px;
 }
-.rec-info{flex:1;min-width:0}
-.rec-user{
+.vault-root .rec-info{flex:1;min-width:0}
+.vault-root .rec-user{
   display:flex;
   align-items:center;
   gap:8px;
   margin-bottom:4px;
 }
-.rec-user-name{
+.vault-root .rec-user-name{
   font-size:14px;
   font-weight:600;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
 }
-.rec-user-badge{
+.vault-root .rec-user-badge{
   font-size:9px;
   padding:2px 7px;
   border-radius:10px;
@@ -277,51 +280,51 @@ main{
   letter-spacing:0.3px;
   white-space:nowrap;
 }
-.rec-meta-row{
+.vault-root .rec-meta-row{
   display:flex;
   flex-wrap:wrap;
   gap:4px 14px;
 }
-.rec-meta-item{
+.vault-root .rec-meta-item{
   display:inline-flex;
   align-items:center;
   gap:5px;
   font-size:12px;
   color:var(--text2);
 }
-.rec-meta-item svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.5;flex-shrink:0}
-.rec-meta-item strong{color:var(--text);font-weight:600}
+.vault-root .rec-meta-item svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.5;flex-shrink:0}
+.vault-root .rec-meta-item strong{color:var(--text);font-weight:600}
 
-.rec-expand{
+.vault-root .rec-expand{
   overflow:hidden;
   max-height:0;
   transition:max-height .35s cubic-bezier(.4,0,.2,1);
 }
-.rec-expand.open{max-height:300px}
-.rec-body{
+.vault-root .rec-expand.open{max-height:300px}
+.vault-root .rec-body{
   padding:0 18px 16px 72px;
 }
-.rec-player-wrap{
+.vault-root .rec-player-wrap{
   margin-bottom:10px;
   background:var(--card2);
   border-radius:var(--radius-sm);
   padding:6px;
   border:1px solid var(--border);
 }
-.rec-player-wrap audio{
+.vault-root .rec-player-wrap audio{
   width:100%;
   height:36px;
   display:block;
   border-radius:var(--radius-xs);
   outline:none;
 }
-.rec-player-wrap audio::-webkit-media-controls-panel{background:transparent}
-.rec-actions{
+.vault-root .rec-player-wrap audio::-webkit-media-controls-panel{background:transparent}
+.vault-root .rec-actions{
   display:flex;
   gap:6px;
   flex-wrap:wrap;
 }
-.rec-id-bar{
+.vault-root .rec-id-bar{
   display:flex;
   align-items:center;
   gap:6px;
@@ -329,8 +332,8 @@ main{
   padding-top:8px;
   border-top:1px solid var(--border);
 }
-.rec-id-bar svg{width:10px;height:10px;stroke:var(--text3);opacity:.5}
-.rec-id-bar span{
+.vault-root .rec-id-bar svg{width:10px;height:10px;stroke:var(--text3);opacity:.5}
+.vault-root .rec-id-bar span{
   font-size:10px;
   font-family:'SF Mono','Cascadia Code','Courier New',monospace;
   color:var(--text3);
@@ -338,7 +341,7 @@ main{
   line-height:1.3;
 }
 
-.empty-state{
+.vault-root .empty-state{
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -346,11 +349,11 @@ main{
   padding:100px 20px;
   text-align:center;
 }
-.empty-state svg{width:64px;height:64px;stroke:var(--text3);opacity:.3;margin-bottom:16px}
-.empty-state h3{font-size:16px;font-weight:600;color:var(--text2);margin-bottom:6px}
-.empty-state p{font-size:13px;color:var(--text3)}
+.vault-root .empty-state svg{width:64px;height:64px;stroke:var(--text3);opacity:.3;margin-bottom:16px}
+.vault-root .empty-state h3{font-size:16px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.vault-root .empty-state p{font-size:13px;color:var(--text3)}
 
-.toast-container{
+.vault-root .toast-container{
   position:fixed;
   bottom:24px;
   left:50%;
@@ -362,7 +365,7 @@ main{
   align-items:center;
   pointer-events:none;
 }
-.toast{
+.vault-root .toast{
   background:rgba(255,255,255,0.95);
   backdrop-filter:blur(12px);
   border:1px solid var(--border2);
@@ -377,28 +380,25 @@ main{
   box-shadow:0 8px 32px rgba(108,92,231,0.12);
   animation:toastIn .3s ease both;
 }
-.toast svg{width:16px;height:16px;flex-shrink:0}
-.toast.toast-error svg{stroke:var(--red2)}
-.toast.toast-success svg{stroke:var(--green2)}
-.toast.toast-info svg{stroke:var(--accent2)}
+.vault-root .toast svg{width:16px;height:16px;flex-shrink:0}
+.vault-root .toast.toast-error svg{stroke:var(--red2)}
+.vault-root .toast.toast-success svg{stroke:var(--green2)}
+.vault-root .toast.toast-info svg{stroke:var(--accent2)}
 @keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes toastOut{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(20px) scale(.95)}}
 
 @media(max-width:500px){
-  .header{padding:0 16px}
-  .header-inner{padding:14px 0 12px}
-  .header h1{font-size:16px}
-  .rec-top{padding:14px 14px 10px}
-  .rec-body{padding:0 14px 14px 64px}
-  .user-badge{width:36px;height:36px;font-size:12px}
-  main{padding:16px 12px 60px}
+  .vault-root .header{padding:0 16px}
+  .vault-root .header-inner{padding:14px 0 12px}
+  .vault-root .header h1{font-size:16px}
+  .vault-root .rec-top{padding:14px 14px 10px}
+  .vault-root .rec-body{padding:0 14px 14px 64px}
+  .vault-root .user-badge{width:36px;height:36px;font-size:12px}
+  .vault-root main{padding:16px 12px 60px}
 }
+`
 
-
-</style>
-</head>
-<body>
-
+    const HTML = `
 <div class="header">
   <div class="header-inner">
     <div class="header-left">
@@ -417,7 +417,7 @@ main{
         </div>
       </div>
     </div>
-    <button class="btn btn-refresh" onclick="loadData()">
+    <button class="btn btn-refresh" id="refreshBtn">
       <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       Refresh
     </button>
@@ -435,7 +435,7 @@ main{
 <div id="error">
   <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
   <p>Failed to load voice vault</p>
-  <button class="retry-btn" onclick="loadData()">
+  <button class="retry-btn" id="retryBtn">
     <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
     Retry
   </button>
@@ -444,8 +444,9 @@ main{
 <div class="toast-container" id="toastContainer"></div>
 
 <main id="list"></main>
+`
 
-<script>
+    const JS = `
 var SERVER = 'https://chat-backend-e163.onrender.com';
 var allRecordings = [];
 var expandedMap = {};
@@ -612,9 +613,9 @@ function renderList(data){
             '<audio id="player_'+r.id+'" style="display:none" controls preload="none"></audio>'+
           '</div>'+
           '<div class="rec-actions">'+
-            '<button class="btn btn-sm btn-play" onclick="event.stopPropagation();playAudio(\''+r.id+'\',this)"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Play</button>'+
-            '<button class="btn btn-sm btn-download" onclick="event.stopPropagation();downloadAudio(\''+r.id+'\')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button>'+
-            '<button class="btn btn-sm btn-delete" onclick="event.stopPropagation();deleteAudio(\''+r.id+'\')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button>'+
+            '<button class="btn btn-sm btn-play" onclick="event.stopPropagation();playAudio(\\''+r.id+'\\',this)"><svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>Play</button>'+
+            '<button class="btn btn-sm btn-download" onclick="event.stopPropagation();downloadAudio(\\''+r.id+'\\')"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Download</button>'+
+            '<button class="btn btn-sm btn-delete" onclick="event.stopPropagation();deleteAudio(\\''+r.id+'\\')"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete</button>'+
           '</div>'+
           '<div class="rec-id-bar">'+
             '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'+
@@ -633,8 +634,35 @@ function escapeHtml(s){
   if(!s)return''
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
 }
+`
 
-loadData()
-</script>
-</body>
-</html>
+    containerRef.current.innerHTML = ''
+
+    const style = document.createElement('style')
+    style.textContent = CSS
+    containerRef.current.appendChild(style)
+
+    const wrapper = document.createElement('div')
+    wrapper.className = 'vault-root'
+    wrapper.innerHTML = HTML
+    containerRef.current.appendChild(wrapper)
+
+    const script = document.createElement('script')
+    script.textContent = JS
+    containerRef.current.appendChild(script)
+
+    const refreshBtn = document.getElementById('refreshBtn')
+    const retryBtn = document.getElementById('retryBtn')
+    if (refreshBtn) refreshBtn.addEventListener('click', loadData)
+    if (retryBtn) retryBtn.addEventListener('click', loadData)
+
+    loadData()
+
+    return () => {
+      if (refreshBtn) refreshBtn.removeEventListener('click', loadData)
+      if (retryBtn) retryBtn.removeEventListener('click', loadData)
+    }
+  }, [])
+
+  return <div ref={containerRef} />
+}
