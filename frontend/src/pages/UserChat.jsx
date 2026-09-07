@@ -71,7 +71,7 @@ export default function UserChat() {
       }
       const existingAppScript = document.querySelector('script[src*="script.js"]');
       if (!existingAppScript) {
-        await loadScript('/user/script.js?v=20260731d');
+        await loadScript('/script.js?v=' + Date.now());
       }
     }
 
