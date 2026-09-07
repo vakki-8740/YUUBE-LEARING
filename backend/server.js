@@ -45,6 +45,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // React SPA catch-all: serve index.html for all non-API, non-file routes
+// Only used when backend serves frontend directly (e.g., Render)
+// When using Vercel for frontend, this is not needed but kept as fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });

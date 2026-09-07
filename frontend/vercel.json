@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "https://chat-backend-e163.onrender.com/api/$1" },
+    { "source": "/((?!assets/).*)", "destination": "/index.html" }
+  ]
+}
