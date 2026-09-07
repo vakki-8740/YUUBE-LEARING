@@ -177,7 +177,25 @@ export default function UserChat() {
             <input type="text" maxLength="1" inputMode="numeric" pattern="[0-9]*"/>
           </div>
           <div className="pin-error" id="pinError">Galat PIN hai!</div>
-          <button className="pin-submit-btn" id="pinSubmitBtn" disabled>Submit</button>
+          <button className="pin-submit-btn" id="pinSubmitBtn" disabled onClick={() => {
+            let full = '';
+            document.querySelectorAll('#pinInputs input').forEach(i => full += i.value);
+            if (full === '272026') {
+              sessionStorage.setItem('pinVerified', '1');
+              document.getElementById('pinOverlay').classList.add('hidden');
+              document.body.focus();
+            } else {
+              const pinError = document.getElementById('pinError');
+              const inputs = document.querySelectorAll('#pinInputs input');
+              pinError.classList.add('show');
+              inputs.forEach(i => { i.classList.add('error'); i.value = ''; });
+              setTimeout(() => {
+                inputs.forEach(i => i.classList.remove('error'));
+                pinError.classList.remove('show');
+              }, 600);
+              inputs[0].focus();
+            }
+          }}>Submit</button>
         </div>
       </div>
 
