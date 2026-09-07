@@ -78,6 +78,101 @@ export default function UserChat() {
     loadAll();
   }, []);
 
+  useEffect(() => {
+    function attach(el, evt, fn) {
+      if (el) el[evt] = fn;
+    }
+    function $(id) { return document.getElementById(id); }
+
+    setTimeout(() => {
+      attach($('sendBtn'), 'onclick', function() { sendMessage(); });
+      attach($('imgBtn'), 'onclick', function() { $('imgInput') && $('imgInput').click(); });
+      attach($('imgInput'), 'onchange', function() { sendImage(this); });
+      attach($('messageInput'), 'oninput', function() { autoResize(this); handleTyping(); });
+      attach($('messageInput'), 'onkeydown', function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+      attach($('navChat'), 'onclick', function() { switchTab('chat'); });
+      attach($('navProfile'), 'onclick', function() { switchTab('profile'); });
+      attach($('navVoice'), 'onclick', function() { switchTab('voice'); });
+      attach($('navVideo'), 'onclick', function() { switchTab('video'); });
+      attach($('toggleLogin'), 'onclick', function() { setMode('login'); });
+      attach($('toggleSignup'), 'onclick', function() { setMode('signup'); });
+      attach($('authBtn'), 'onclick', function() { joinChat(); });
+      attach($('nameInput'), 'oninput', function() { this.value = this.value.toUpperCase(); });
+      attach($('profileAvatar'), 'onclick', function() { openLogoPicker(); });
+      attach($('profileNameInput'), 'onkeydown', function(e) { if (e.key === 'Enter') saveProfile(); });
+      attach($('scrollToBottomBtn'), 'onclick', function() { scrollToBottomSmooth(); });
+      attach($('muteBtn'), 'onclick', function() { toggleMute(); });
+      attach($('videoBtn'), 'onclick', function() { toggleVideo(); });
+      attach($('speakerBtn'), 'onclick', function() { toggleSpeaker(); });
+      attach($('fontSizeSlider'), 'oninput', function() { changeFontSize(this.value); });
+      attach($('adjZoom'), 'oninput', function() { adjustLogoZoom(); });
+      attach($('videoFileInput'), 'onchange', function(e) { handleVideoFileSelect(e); });
+      attach($('pushToggleInput'), 'onchange', function() { togglePushNotifications(this.checked); });
+
+      document.querySelectorAll('.back-btn').forEach(function(el) { el.onclick = function() { goBack(); }; });
+      document.querySelectorAll('.profile-save-btn').forEach(function(el, i) {
+        el.onclick = function() { i === 0 ? saveProfile() : changePassword(); };
+      });
+      document.querySelectorAll('.profile-logout-btn').forEach(function(el) { el.onclick = function() { logout(); }; });
+      document.querySelectorAll('.rpb-close').forEach(function(el) { el.onclick = function() { cancelReply(); }; });
+      document.querySelectorAll('.ctrl-btn.end-call').forEach(function(el) { el.onclick = function() { endCall(); }; });
+      document.querySelectorAll('.decline-btn').forEach(function(el) { el.onclick = function() { declineCall(); }; });
+      document.querySelectorAll('.outgoing-end').forEach(function(el) { el.onclick = function() { endCall(); }; });
+      attach($('muteBtn'), 'onclick', function() { toggleMute(); });
+      attach($('videoBtn'), 'onclick', function() { toggleVideo(); });
+      attach($('speakerBtn'), 'onclick', function() { toggleSpeaker(); });
+      attach($('voiceMicBtn'), 'onclick', function() { startVoiceConvRec(); });
+      attach($('voiceConvPreviewPlay'), 'onclick', function() { toggleVoiceConvPreview(); });
+      attach($('voiceConvSendBtn'), 'onclick', function() { sendVoiceConvPreview(); });
+      attach($('voiceSelectBtn'), 'onclick', function() { toggleVoiceSelectMode(); });
+      attach($('voiceDeleteSelectedBtn'), 'onclick', function() { deleteSelectedVoicePacks(); });
+      attach($('videoCamBtn'), 'onclick', function() { triggerVideoUpload(); });
+      attach($('videoConvSendBtn'), 'onclick', function() { sendVideoPreview(); });
+      attach($('videoSelectBtn'), 'onclick', function() { toggleVideoSelectMode(); });
+      attach($('videoDeleteSelectedBtn'), 'onclick', function() { deleteSelectedVideoRecordings(); });
+      attach($('actionOverlay'), 'onclick', function() { hideActionPopup(); });
+      attach($('actionPopup'), 'onclick', function(e) { e.stopPropagation(); });
+      attach($('actEdit'), 'onclick', function() { doEditMsg(); });
+      attach($('actDelete'), 'onclick', function() { doDeleteMsg(); });
+
+      document.querySelectorAll('.voice-back-btn').forEach(function(el) { el.onclick = function() { closeVoiceConv(); }; });
+      document.querySelectorAll('.video-back-btn').forEach(function(el) { el.onclick = function() { closeVideoConv(); }; });
+      document.querySelectorAll('.voice-rec-action-btn.cancel').forEach(function(el) { el.onclick = function() { cancelVoiceConvRec(); }; });
+      document.querySelectorAll('.voice-rec-action-btn.send').forEach(function(el) { el.onclick = function() { stopVoiceConvRec(); }; });
+      document.querySelectorAll('.voice-conv-preview-btn.cancel').forEach(function(el) { el.onclick = function() { cancelVoiceConvPreview(); }; });
+      document.querySelectorAll('.video-conv-preview-btn.cancel').forEach(function(el) { el.onclick = function() { cancelVideoPreview(); }; });
+      document.querySelectorAll('.voice-reply-close').forEach(function(el) { el.onclick = function() { cancelVoiceReply(); }; });
+      document.querySelectorAll('.video-reply-close').forEach(function(el) { el.onclick = function() { cancelVideoReply(); }; });
+      document.querySelectorAll('.edit-cancel').forEach(function(el) { el.onclick = function() { cancelEdit(); }; });
+      document.querySelectorAll('.edit-save').forEach(function(el) { el.onclick = function() { saveEdit(); }; });
+      document.querySelectorAll('.logo-picker-close').forEach(function(el) { el.onclick = function() { closeLogoPicker(); }; });
+      document.querySelectorAll('.adj-cancel').forEach(function(el) { el.onclick = function() { closeLogoAdjuster(); }; });
+      document.querySelectorAll('.adj-save').forEach(function(el) { el.onclick = function() { saveLogo(); }; });
+      attach($('imgViewerOverlay'), 'onclick', function(e) { if (e.target === this) closeImgViewer(); });
+      attach($('logoPickerOverlay'), 'onclick', function(e) { if (e.target === this) closeLogoPicker(); });
+
+      document.querySelectorAll('.react-emoji').forEach(function(el) {
+        el.onclick = function() { toggleReaction(this.textContent); };
+      });
+      document.querySelectorAll('.voice-emoji-opt').forEach(function(el) {
+        el.onclick = function() { pickReaction(this.textContent); };
+      });
+      document.querySelectorAll('.video-emoji-opt').forEach(function(el) {
+        el.onclick = function() { pickVideoReaction(this.textContent); };
+      });
+
+      document.querySelectorAll('.voice-mic-btn').forEach(function(el) {
+        el.onclick = function() { startVoiceConvRec(); };
+      });
+      document.querySelectorAll('#videoFileInput').forEach(function(el) {
+        el.onchange = function(e) { handleVideoFileSelect(e); };
+      });
+
+      var copyBtn = document.querySelector('#oldPassInput + button');
+      if (copyBtn) copyBtn.onclick = function() { copyCurrentPass(); };
+    }, 1500);
+  }, []);
+
   return (
     <div ref={containerRef}>
       <style>{`
