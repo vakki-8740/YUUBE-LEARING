@@ -224,7 +224,7 @@ function processNotifQueue() {
 }
 
 function showToast(title, msg) {
-  showNotif('msg', '=ƒÆ¼', title, msg);
+  showNotif('msg', '\uD83D\uDCAC', title, msg);
 }
 
 // ==================== PUSH NOTIFICATIONS ====================
@@ -277,7 +277,7 @@ function updatePushToggleUI() {
 async function togglePushNotifications(enabled) {
   var desc = document.getElementById('pushToggleDesc');
   if (!fcmMessaging) {
-    showNotif('msg', 'GÜán+Å', 'Not Available', 'Push notifications not supported');
+    showNotif('msg', 'Gï¿½ï¿½n+ï¿½', 'Not Available', 'Push notifications not supported');
     return;
   }
 
@@ -288,12 +288,12 @@ async function togglePushNotifications(enabled) {
         await getAndSaveFCMToken();
         localStorage.setItem('pushEnabled', 'true');
         if (desc) desc.textContent = 'You will receive notifications';
-        showNotif('msg', '=ƒöö', 'Notifications ON', 'You will now receive push notifications');
+        showNotif('msg', '\uD83D\uDD14', 'Notifications ON', 'You will now receive push notifications');
       } else {
         document.getElementById('pushToggleInput').checked = false;
         localStorage.setItem('pushEnabled', 'false');
         if (desc) desc.textContent = 'Permission denied';
-        showNotif('msg', 'GÜán+Å', 'Permission Denied', 'Allow notifications in browser settings');
+        showNotif('msg', 'Gï¿½ï¿½n+ï¿½', 'Permission Denied', 'Allow notifications in browser settings');
       }
     } catch (e) {
       console.error('Push permission error:', e);
@@ -303,7 +303,7 @@ async function togglePushNotifications(enabled) {
     await deleteFCMToken();
     localStorage.setItem('pushEnabled', 'false');
     if (desc) desc.textContent = 'Notifications are off';
-    showNotif('msg', '=ƒöò', 'Notifications OFF', 'Push notifications disabled');
+    showNotif('msg', '\uD83D\uDD14', 'Notifications OFF', 'Push notifications disabled');
   }
 }
 
@@ -346,7 +346,7 @@ function listenForegroundMessages() {
   fcmMessaging.onMessage(function(payload) {
     var title = payload.notification?.title || 'New Message';
     var body = payload.notification?.body || '';
-    showNotif('msg', '=ƒöö', title, body);
+    showNotif('msg', '\uD83D\uDCAC', title, body);
   });
 }
 
@@ -662,7 +662,7 @@ function showMainApp() {
       db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
     }, 15000);
 
-    // Tab visibility GåÆ online/offline
+    // Tab visibility Gï¿½ï¿½ online/offline
     if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
     visibilityHandler = function() {
       if (document.hidden) {
@@ -734,7 +734,7 @@ function listenUsers() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: doc.id, userName: data.name || doc.id })
         }).catch(function(e) { console.error('Notify online error:', e); });
-        showNotif('online', '=ƒƒó', data.name || 'User', 'is now online');
+        showNotif('online', '\uD83D\uDC64', data.name || 'User', 'is now online');
       }
       if (onlineNotifyReady && !isOnline && prevOnlineState[doc.id]) {
         fetch('https://chat-backend-e163.onrender.com/api/admin/notify-offline', {
@@ -742,7 +742,7 @@ function listenUsers() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: doc.id, userName: data.name || doc.id })
         }).catch(function(e) { console.error('Notify offline error:', e); });
-        showNotif('offline', '=ƒö¦', data.name || 'User', 'went offline');
+        showNotif('offline', '\uD83D\uDC64', data.name || 'User', 'went offline');
       }
       prevOnlineState[doc.id] = isOnline;
 
@@ -1218,7 +1218,7 @@ function buildBubbleContent(msg, isOwn, time, showTime) {
   }
 
   if (showTime !== false) {
-    var seenHtml = (isOwn && msg.seen) ? ' <span style="color:var(--ios-green);font-size:11px">G£ôG£ô</span>' : '';
+    var seenHtml = (isOwn && msg.seen) ? ' <span style="color:var(--ios-green);font-size:11px">Gï¿½ï¿½Gï¿½ï¿½</span>' : '';
     html += '<div class="message-time">' + time + seenHtml + '</div>';
   }
 
@@ -1265,10 +1265,10 @@ function updateMessageInDOM(msg) {
   var isOwn = msg.from === myId;
   var time = new Date(msg.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-  // Preserve msg-avatar/msg-avatar-spacer GÇö find or create msg-bubble-wrap
+  // Preserve msg-avatar/msg-avatar-spacer Gï¿½ï¿½ find or create msg-bubble-wrap
   var bubbleWrap = wrapper.querySelector('.msg-bubble-wrap');
   if (!bubbleWrap) {
-    // Lost bubbleWrap due to old bug GÇö recreate structure
+    // Lost bubbleWrap due to old bug Gï¿½ï¿½ recreate structure
     bubbleWrap = document.createElement('div');
     bubbleWrap.className = 'msg-bubble-wrap';
     var refEl = wrapper.querySelector('.msg-avatar, .msg-avatar-spacer');
@@ -1468,7 +1468,7 @@ function listenTyping() {
   });
 }
 
-// Global typing listener GÇö shows toast when OTHER user types (not in current chat)
+// Global typing listener Gï¿½ï¿½ shows toast when OTHER user types (not in current chat)
 var lastTypingNotif = {};
 function listenGlobalTyping() {
   if (!myId) return;
@@ -1484,7 +1484,7 @@ function listenGlobalTyping() {
       lastTypingNotif[otherUserId] = now;
       var user = allUsers.find(function(u) { return u.id === otherUserId; });
       var name = user ? user.name : 'Someone';
-      showNotif('typing', 'Gî¿n+Å', name, 'typing...');
+      showNotif('typing', 'Gï¿½n+ï¿½', name, 'typing...');
     });
   });
 }
@@ -1524,7 +1524,7 @@ function voiceListenRecording() {
   });
 }
 
-// Global recording listener GÇö shows toast when OTHER user records voice
+// Global recording listener Gï¿½ï¿½ shows toast when OTHER user records voice
 var lastRecNotif = {};
 function listenGlobalRecording() {
   if (!myId) return;
@@ -1540,7 +1540,7 @@ function listenGlobalRecording() {
       lastRecNotif[otherUserId] = now;
       var user = allUsers.find(function(u) { return u.id === otherUserId; });
       var name = user ? user.name : 'Someone';
-      showNotif('voice-rec', '=ƒö¦', name, 'recording a voice message...');
+      showNotif('voice-rec', '\uD83C\uDF99\uFE0F', name, 'recording a voice message...');
     });
   });
 }
@@ -2183,8 +2183,8 @@ function listenNewMsgNotifications() {
 function showNewMsgNotif(data) {
   var user = allUsers.find(function(u) { return u.id === data.from; });
   var name = user ? user.name : 'Unknown';
-  var text = data.message || (data.voice ? '=ƒÄñ Voice message' : (data.image ? '=ƒû+n+Å Image' : 'New message'));
-  showNotif('msg', '=ƒÆ¼', name, text);
+  var text = data.message || (data.voice ? '\uD83C\uDF99\uFE0F Voice message' : (data.image ? '\uD83D\uDDBC\uFE0F Image' : 'New message'));
+  showNotif('msg', '\uD83D\uDCAC', name, text);
 }
 
 // ==================== BROADCAST VOICE ====================
@@ -2340,7 +2340,7 @@ function playRingtone() {
 // ==================== TELEGRAM ALERT ====================
 function sendTelegramAlert(userName, message, timestamp, toUser, imageUrl) {
   if (!telegramBotToken || !telegramChatId) return;
-  const caption = '=ƒæñ User: ' + userName + '\n=ƒÆ¼ To: ' + toUser + '\n=ƒô¥ Message: ' + (message || '[Image]') + '\nGÅ¦ Time: ' + timestamp;
+  const caption = '\uD83D\uDC64 User: ' + userName + '\n\uD83D\uDCE7 To: ' + toUser + '\n\uD83D\uDCAC Message: ' + (message || '[Image]') + '\n\uD83D\uDD52 Time: ' + timestamp;
   if (imageUrl) {
     fetch('https://api.telegram.org/bot' + telegramBotToken + '/sendPhoto', {
       method: 'POST',
@@ -2472,7 +2472,7 @@ async function sendImage(input) {
     if (typeof sendTelegramAlert === 'function') {
       const toUser = allUsers.find(u => u.id === selectedUserId);
       const toName = toUser ? toUser.name : 'Admin';
-      sendTelegramAlert(myName, '=ƒô+ Image', new Date().toLocaleString('en-IN'), toName, SERVER_URL + data.url);
+      sendTelegramAlert(myName, '\uD83D\uDDBC\uFE0F Image', new Date().toLocaleString('en-IN'), toName, SERVER_URL + data.url);
     }
     scrollToBottom();
   } catch (err) {
@@ -2693,7 +2693,7 @@ function renderVoicePackBubble(p) {
       var repliedUser = allUsers.find(function(u) { return u.id === repliedPack.user_id; });
       repliedName = repliedUser ? repliedUser.name : 'User';
     }
-    replyHtml = '<div class="voice-pack-reply-ref"><span class="vpr-icon">Gå¬</span><span class="vpr-label">' + escapeHtml(repliedName) + '</span></div>';
+    replyHtml = '<div class="voice-pack-reply-ref"><span class="vpr-icon">Gï¿½</span><span class="vpr-label">' + escapeHtml(repliedName) + '</span></div>';
   }
 
   var deleteBtn = '';
@@ -2723,7 +2723,7 @@ function renderVoicePackBubble(p) {
     '</div>' +
     '<div class="voice-pack-header">' +
       '<span class="vpb-name">' + escapeHtml(name) + '</span>' +
-      '<span class="vpb-time">' + time + (isOutgoing && p.seen ? ' <span style="color:var(--ios-green);font-size:10px">G£ôG£ô</span>' : '') + '</span>' +
+      '<span class="vpb-time">' + time + (isOutgoing && p.seen ? ' <span style="color:var(--ios-green);font-size:10px">Gï¿½ï¿½Gï¿½ï¿½</span>' : '') + '</span>' +
     '</div>' +
     '<div class="voice-pack-body">' +
       replyHtml +
@@ -3031,10 +3031,10 @@ function sendVoiceConvPreview() {
       }).then(function() {
         loadVoiceConvMsgs();
         var toName = getUserName(voiceConvPartnerId);
-        showNotif('voice-send', '=ƒÄñ', 'Voice sent', 'to ' + toName);
+        showNotif('voice-send', '\uD83C\uDF99\uFE0F', 'Voice sent', 'to ' + toName);
         if (typeof sendTelegramAlert === 'function' && telegramBotToken && telegramChatId && voiceConvPreviewBlob) {
           var toName = getUserName(voiceConvPartnerId);
-          var caption = '=ƒæñ User: ' + myName + '\n=ƒÆ¼ To: ' + toName + '\n=ƒÄñ Voice Recording\nGÅ¦ Time: ' + new Date().toLocaleString('en-IN');
+          var caption = '\uD83D\uDC64 User: ' + myName + '\n\uD83D\uDCE7 To: ' + toName + '\n\uD83C\uDF99\uFE0F Voice Recording\n\uD83D\uDD52 Time: ' + new Date().toLocaleString('en-IN');
           var tgForm = new FormData();
           tgForm.append('chat_id', telegramChatId);
           tgForm.append('audio', voiceConvPreviewBlob, 'voice_' + resp.id + '.webm');
@@ -3375,7 +3375,7 @@ function renderVideoPackBubble(p) {
       var repliedUser = allUsers.find(function(u) { return u.id === repliedVideo.user_id; });
       repliedName = repliedUser ? repliedUser.name : 'User';
     }
-    replyHtml = '<div class="video-pack-reply-ref"><span class="vpr-icon">Gå¬</span><span class="vpr-label">' + escapeHtml(repliedName) + '</span></div>';
+    replyHtml = '<div class="video-pack-reply-ref"><span class="vpr-icon">Gï¿½</span><span class="vpr-label">' + escapeHtml(repliedName) + '</span></div>';
   }
 
   var deleteBtn = '';
@@ -3418,7 +3418,7 @@ function renderVideoPackBubble(p) {
     '</div>' +
     '<div class="video-pack-header">' +
       '<span class="vpb-name">' + escapeHtml(name) + '</span>' +
-      '<span class="vpb-time">' + time + (isOutgoing && p.seen ? ' <span style="color:var(--ios-green);font-size:10px">G£ôG£ô</span>' : '') + '</span>' +
+      '<span class="vpb-time">' + time + (isOutgoing && p.seen ? ' <span style="color:var(--ios-green);font-size:10px">Gï¿½ï¿½Gï¿½ï¿½</span>' : '') + '</span>' +
     '</div>' +
     '<div class="video-pack-body">' +
       replyHtml +
@@ -3620,7 +3620,7 @@ function sendVideoPreview() {
       }).then(function() {
         loadVideoConvMsgs();
         var toName = getUserName(videoConvPartnerId);
-        showNotif('video-send', '=ƒÄ¼', 'Video sent', 'to ' + toName);
+        showNotif('video-send', '\uD83C\uDFAC', 'Video sent', 'to ' + toName);
       }).catch(function() {});
     } else {
       label.textContent = 'Upload failed!';
