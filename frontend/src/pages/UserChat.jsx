@@ -69,9 +69,9 @@ export default function UserChat() {
       for (const src of firebaseScripts) {
         await loadScript(src);
       }
-      const existingAppScript = document.querySelector('script[src*="script.js"]');
+      const existingAppScript = document.querySelector('script[src*="script-core.js"]');
       if (!existingAppScript) {
-        await loadScript('/script.js?v=' + Date.now());
+        await loadScript('/script-core.js?v=' + Date.now());
       }
     }
 

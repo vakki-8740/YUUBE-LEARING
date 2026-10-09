@@ -34,6 +34,7 @@
 - **Online/Offline Fix**: Added error handler to Firestore onSnapshot listener in listenUsers(). Re-subscribe listenUsers() on visibilitychange (tab visible) to fix mobile browsers pausing/throttling the snapshot listener in background.
 - **Telegram Bot Removed**: Deleted telegram-bot/ directory. Replaced with PWA control page at `public/control/`.
 - **App Control PWA Page**: New standalone page at `public/control/index.html` with ON/OFF toggle, status display, auto-refresh. PWA enabled (manifest.json + sw.js) — installable on mobile via "Add to Home Screen".
+- **Page/Code Splitting (performance)**: Every route is now its own lazy-loaded chunk (`React.lazy` in `App.jsx`), and the old single `frontend/public/script.js` (3742 lines) was split into `script-core.js` (chat/auth/calls), `script-voice.js` (voice tab) and `script-video.js` (video tab). Voice/video load on first tab open via `ensureScriptLoaded()` in core. `escapeHtmlAttr`, `getTimeAgo` and `showVideoLoading`/`hideVideoLoading` were moved into core because both tab scripts need them. Video's `showError` was renamed to `showVideoError` so it stops clobbering core's login-error `showError`.
 
 ### In Progress
 - (none)
@@ -59,8 +60,11 @@
 - HTTP API base: `VOICE_API` variable points to backend
 
 ## Relevant Files
-- `public/user/index.html`: Main user chat app (~5600 lines, all CSS + JS inline)
-- `public/admin/index.html`: Admin panel — untouched
+- `frontend/src/pages/UserChat.jsx`: Main user chat app (React shell; real DOM logic lives in `public/script-core.js`)
+- `frontend/public/script-core.js`: Chat, auth, profile, calls, typing/recording — loaded on every app start
+- `frontend/public/script-voice.js`: Voice tab — loaded lazily on first Voice tab open
+- `frontend/public/script-video.js`: Video tab — loaded lazily on first Video tab open
+- `frontend/src/pages/Admin.jsx`: Admin panel
 - `backend/server.js`: Express server with voices route mounted
 - `backend/routes/voices.js`: Voice recordings CRUD with SQLite
 - `backend/routes/voicePacks.js`: Voice pack backend — untouched
