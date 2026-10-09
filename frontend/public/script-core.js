@@ -682,56 +682,60 @@ function startAppStatusPolling() {
 // ==================== SHOW MAIN APP ====================
 
 function showMainApp() {
+  // Paint the app first. Waiting on /api/admin/status here used to hold the
+  // whole app hostage to the backend cold start.
+  document.getElementById('nameScreen').classList.add('hide');
+  document.getElementById('mainApp').classList.add('show');
+
+  // Maintenance is checked in the background instead of blocking startup.
   checkAppEnabled(function(enabled) {
-    if (!enabled) {
-      document.getElementById('nameScreen').classList.add('hide');
-      document.getElementById('mainApp').classList.remove('show');
-      document.getElementById('maintenanceOverlay').classList.add('show');
-      startAppStatusPolling();
-      return;
-    }
+    if (enabled) return;
+    document.getElementById('mainApp').classList.remove('show');
+    document.getElementById('maintenanceOverlay').classList.add('show');
+    startAppStatusPolling();
+  });
 
-    document.getElementById('nameScreen').classList.add('hide');
-    document.getElementById('mainApp').classList.add('show');
+  startKeepAlive();
+  const initial = myName.charAt(0).toUpperCase();
+  if (myPhotoURL) {
+    setAvatarImg('myAvatar', myPhotoURL);
+  } else {
+    document.getElementById('myAvatar').innerHTML = '<span class="my-av-initial">' + initial + '</span>';
+  }
 
-    startKeepAlive();
-    const initial = myName.charAt(0).toUpperCase();
-    if (myPhotoURL) {
-      setAvatarImg('myAvatar', myPhotoURL);
+  db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+
+  // Heartbeat - update last_active every 15 sec
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(() => {
+    db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+  }, 15000);
+
+  // Tab visibility G�� online/offline
+  if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
+  visibilityHandler = function() {
+    if (document.hidden) {
+      db.collection('users').doc(myId).update({
+        is_online: false,
+        last_seen: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
     } else {
-      document.getElementById('myAvatar').innerHTML = '<span class="my-av-initial">' + initial + '</span>';
-    }
-
-    db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-
-    // Heartbeat - update last_active every 15 sec
-    if (heartbeatInterval) clearInterval(heartbeatInterval);
-    heartbeatInterval = setInterval(() => {
-      db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
-    }, 15000);
-
-    // Tab visibility G�� online/offline
-    if (visibilityHandler) document.removeEventListener('visibilitychange', visibilityHandler);
-    visibilityHandler = function() {
-      if (document.hidden) {
-        db.collection('users').doc(myId).update({
-          is_online: false,
-          last_seen: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        if (heartbeatInterval) clearInterval(heartbeatInterval);
-        heartbeatInterval = null;
-      } else {
-        db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        if (!heartbeatInterval) {
-          heartbeatInterval = setInterval(() => {
-            db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
-          }, 15000);
-        }
-        listenUsers();
+      db.collection('users').doc(myId).set({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      if (!heartbeatInterval) {
+        heartbeatInterval = setInterval(() => {
+          db.collection('users').doc(myId).update({ is_online: true, last_active: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
+        }, 15000);
       }
-    };
-    document.addEventListener('visibilitychange', visibilityHandler);
+      listenUsers();
+    }
+  };
+  document.addEventListener('visibilitychange', visibilityHandler);
 
+  // Listeners start on the next tick, so the first tap after login is never
+  // queued behind Firestore setup.
+  setTimeout(function() {
     listenUsers();
     loadProfile();
     initFontSize();
@@ -742,7 +746,7 @@ function showMainApp() {
     listenGlobalRecording();
     startAppStatusPolling();
     initPushNotifications();
-  });
+  }, 0);
 }
 
 // ==================== WAKE BACKEND ====================

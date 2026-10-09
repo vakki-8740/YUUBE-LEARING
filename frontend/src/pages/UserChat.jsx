@@ -66,9 +66,11 @@ export default function UserChat() {
     }
 
     async function loadAll() {
-      for (const src of firebaseScripts) {
-        await loadScript(src);
-      }
+      // firebase-app-compat has to land first — the other three only extend
+      // it. Loading those three together saves two round trips on mobile.
+      await loadScript(firebaseScripts[0]);
+      await Promise.all(firebaseScripts.slice(1).map(loadScript));
+
       const existingAppScript = document.querySelector('script[src*="script-core.js"]');
       if (!existingAppScript) {
         await loadScript('/script-core.js?v=' + Date.now());
@@ -84,7 +86,9 @@ export default function UserChat() {
     }
     function $(id) { return document.getElementById(id); }
 
-    setTimeout(() => {
+    // React has already rendered every id in this tree, so the handlers can
+    // be bound right away. The fixed 1.5s wait only delayed first tap.
+    (() => {
       attach($('sendBtn'), 'onclick', function() { sendMessage(); });
       attach($('imgBtn'), 'onclick', function() { $('imgInput') && $('imgInput').click(); });
       attach($('imgInput'), 'onchange', function() { sendImage(this); });
@@ -133,6 +137,7 @@ export default function UserChat() {
       attach($('actionOverlay'), 'onclick', function() { hideActionPopup(); });
       attach($('actionPopup'), 'onclick', function(e) { e.stopPropagation(); });
       attach($('actEdit'), 'onclick', function() { doEditMsg(); });
+      attach($('actReply'), 'onclick', function() { doReplyMsg(); });
       attach($('actDelete'), 'onclick', function() { doDeleteMsg(); });
 
       document.querySelectorAll('.voice-back-btn').forEach(function(el) { el.onclick = function() { closeVoiceConv(); }; });
@@ -170,7 +175,7 @@ export default function UserChat() {
 
       var copyBtn = document.querySelector('#oldPassInput + button');
       if (copyBtn) copyBtn.onclick = function() { copyCurrentPass(); };
-    }, 1500);
+    })();
   }, []);
 
   return (
@@ -252,6 +257,7 @@ export default function UserChat() {
                 maxLength="1"
                 inputMode="numeric"
                 pattern="[0-9]*"
+                autoFocus={idx === 0}
                 value={val}
                 onChange={(e) => handlePinInput(idx, e.target.value)}
                 onKeyDown={(e) => handlePinKey(e, idx)}
@@ -569,32 +575,53 @@ export default function UserChat() {
                 {/* Emoji Picker Popup */}
                 <div className="voice-emoji-picker" id="voiceEmojiPicker" style={{display:'none'}}>
                   <div className="voice-emoji-list">
-                    <span className="voice-emoji-opt">&#129300;</span>
-                    <span className="voice-emoji-opt">&#128513;</span>
-                    <span className="voice-emoji-opt">&#129309;</span>
-                    <span className="voice-emoji-opt">&#128557;</span>
-                    <span className="voice-emoji-opt">&#128533;</span>
-                    <span className="voice-emoji-opt">&#128578;</span>
-                    <span className="voice-emoji-opt">&#128077;&#127999;</span>
-                    <span className="voice-emoji-opt">&#128084;</span>
-                    <span className="voice-emoji-opt">&#128540;</span>
-                    <span className="voice-emoji-opt">&#128525;</span>
-                    <span className="voice-emoji-opt">&#10084;&#65039;</span>
-                    <span className="voice-emoji-opt">&#128557;</span>
-                    <span className="voice-emoji-opt">&#128522;</span>
-                    <span className="voice-emoji-opt">&#128548;</span>
-                    <span className="voice-emoji-opt">&#129316;</span>
-                    <span className="voice-emoji-opt">&#128566;</span>
-                    <span className="voice-emoji-opt">&#128560;</span>
-                    <span className="voice-emoji-opt">&#129303;</span>
-                    <span className="voice-emoji-opt">&#128579;</span>
-                    <span className="voice-emoji-opt">&#128542;</span>
-                    <span className="voice-emoji-opt">&#128543;</span>
-                    <span className="voice-emoji-opt">&#128523;</span>
-                    <span className="voice-emoji-opt">&#128068;</span>
-                    <span className="voice-emoji-opt">&#129308;</span>
-                    <span className="voice-emoji-opt">&#128064;</span>
-                    <span className="voice-emoji-opt">&#129302;</span>
+                    <span className="voice-emoji-opt">😁</span>
+                    <span className="voice-emoji-opt">😫</span>
+                    <span className="voice-emoji-opt">😂</span>
+                    <span className="voice-emoji-opt">😘</span>
+                    <span className="voice-emoji-opt">🤭</span>
+                    <span className="voice-emoji-opt">😞</span>
+                    <span className="voice-emoji-opt">👍</span>
+                    <span className="voice-emoji-opt">🥺</span>
+                    <span className="voice-emoji-opt">❤️</span>
+                    <span className="voice-emoji-opt">🙄</span>
+                    <span className="voice-emoji-opt">😣</span>
+                    <span className="voice-emoji-opt">🤨</span>
+                    <span className="voice-emoji-opt">😥</span>
+                    <span className="voice-emoji-opt">🫠</span>
+                    <span className="voice-emoji-opt">🤣</span>
+                    <span className="voice-emoji-opt">😅</span>
+                    <span className="voice-emoji-opt">😆</span>
+                    <span className="voice-emoji-opt">😍</span>
+                    <span className="voice-emoji-opt">🥰</span>
+                    <span className="voice-emoji-opt">😙</span>
+                    <span className="voice-emoji-opt">😗</span>
+                    <span className="voice-emoji-opt">🤩</span>
+                    <span className="voice-emoji-opt">🤗</span>
+                    <span className="voice-emoji-opt">😜</span>
+                    <span className="voice-emoji-opt">🤤</span>
+                    <span className="voice-emoji-opt">😛</span>
+                    <span className="voice-emoji-opt">🙃</span>
+                    <span className="voice-emoji-opt">😕</span>
+                    <span className="voice-emoji-opt">🫤</span>
+                    <span className="voice-emoji-opt">😖</span>
+                    <span className="voice-emoji-opt">😭</span>
+                    <span className="voice-emoji-opt">😨</span>
+                    <span className="voice-emoji-opt">😩</span>
+                    <span className="voice-emoji-opt">😤</span>
+                    <span className="voice-emoji-opt">😮‍💨</span>
+                    <span className="voice-emoji-opt">🤒</span>
+                    <span className="voice-emoji-opt">🤕</span>
+                    <span className="voice-emoji-opt">😵‍💫</span>
+                    <span className="voice-emoji-opt">😵</span>
+                    <span className="voice-emoji-opt">🤡</span>
+                    <span className="voice-emoji-opt">👻</span>
+                    <span className="voice-emoji-opt">🙈</span>
+                    <span className="voice-emoji-opt">😻</span>
+                    <span className="voice-emoji-opt">😹</span>
+                    <span className="voice-emoji-opt">🙀</span>
+                    <span className="voice-emoji-opt">👏</span>
+                    <span className="voice-emoji-opt">🤲</span>
                   </div>
                 </div>
 
@@ -709,32 +736,53 @@ export default function UserChat() {
                 {/* Emoji Picker Popup */}
                 <div className="video-emoji-picker" id="videoEmojiPicker" style={{display:'none'}}>
                   <div className="video-emoji-list">
-                    <span className="video-emoji-opt">&#129300;</span>
-                    <span className="video-emoji-opt">&#128513;</span>
-                    <span className="video-emoji-opt">&#129309;</span>
-                    <span className="video-emoji-opt">&#128557;</span>
-                    <span className="video-emoji-opt">&#128533;</span>
-                    <span className="video-emoji-opt">&#128578;</span>
-                    <span className="video-emoji-opt">&#128077;&#127999;</span>
-                    <span className="video-emoji-opt">&#128084;</span>
-                    <span className="video-emoji-opt">&#128540;</span>
-                    <span className="video-emoji-opt">&#128525;</span>
-                    <span className="video-emoji-opt">&#10084;&#65039;</span>
-                    <span className="video-emoji-opt">&#128557;</span>
-                    <span className="video-emoji-opt">&#128522;</span>
-                    <span className="video-emoji-opt">&#128548;</span>
-                    <span className="video-emoji-opt">&#129316;</span>
-                    <span className="video-emoji-opt">&#128566;</span>
-                    <span className="video-emoji-opt">&#128560;</span>
-                    <span className="video-emoji-opt">&#129303;</span>
-                    <span className="video-emoji-opt">&#128579;</span>
-                    <span className="video-emoji-opt">&#128542;</span>
-                    <span className="video-emoji-opt">&#128543;</span>
-                    <span className="video-emoji-opt">&#128523;</span>
-                    <span className="video-emoji-opt">&#128068;</span>
-                    <span className="video-emoji-opt">&#129308;</span>
-                    <span className="video-emoji-opt">&#128064;</span>
-                    <span className="video-emoji-opt">&#129302;</span>
+                    <span className="video-emoji-opt">😁</span>
+                    <span className="video-emoji-opt">😫</span>
+                    <span className="video-emoji-opt">😂</span>
+                    <span className="video-emoji-opt">😘</span>
+                    <span className="video-emoji-opt">🤭</span>
+                    <span className="video-emoji-opt">😞</span>
+                    <span className="video-emoji-opt">👍</span>
+                    <span className="video-emoji-opt">🥺</span>
+                    <span className="video-emoji-opt">❤️</span>
+                    <span className="video-emoji-opt">🙄</span>
+                    <span className="video-emoji-opt">😣</span>
+                    <span className="video-emoji-opt">🤨</span>
+                    <span className="video-emoji-opt">😥</span>
+                    <span className="video-emoji-opt">🫠</span>
+                    <span className="video-emoji-opt">🤣</span>
+                    <span className="video-emoji-opt">😅</span>
+                    <span className="video-emoji-opt">😆</span>
+                    <span className="video-emoji-opt">😍</span>
+                    <span className="video-emoji-opt">🥰</span>
+                    <span className="video-emoji-opt">😙</span>
+                    <span className="video-emoji-opt">😗</span>
+                    <span className="video-emoji-opt">🤩</span>
+                    <span className="video-emoji-opt">🤗</span>
+                    <span className="video-emoji-opt">😜</span>
+                    <span className="video-emoji-opt">🤤</span>
+                    <span className="video-emoji-opt">😛</span>
+                    <span className="video-emoji-opt">🙃</span>
+                    <span className="video-emoji-opt">😕</span>
+                    <span className="video-emoji-opt">🫤</span>
+                    <span className="video-emoji-opt">😖</span>
+                    <span className="video-emoji-opt">😭</span>
+                    <span className="video-emoji-opt">😨</span>
+                    <span className="video-emoji-opt">😩</span>
+                    <span className="video-emoji-opt">😤</span>
+                    <span className="video-emoji-opt">😮‍💨</span>
+                    <span className="video-emoji-opt">🤒</span>
+                    <span className="video-emoji-opt">🤕</span>
+                    <span className="video-emoji-opt">😵‍💫</span>
+                    <span className="video-emoji-opt">😵</span>
+                    <span className="video-emoji-opt">🤡</span>
+                    <span className="video-emoji-opt">👻</span>
+                    <span className="video-emoji-opt">🙈</span>
+                    <span className="video-emoji-opt">😻</span>
+                    <span className="video-emoji-opt">😹</span>
+                    <span className="video-emoji-opt">🙀</span>
+                    <span className="video-emoji-opt">👏</span>
+                    <span className="video-emoji-opt">🤲</span>
                   </div>
                 </div>
 
@@ -808,32 +856,53 @@ export default function UserChat() {
       <div className="action-overlay" id="actionOverlay">
         <div className="action-popup" id="actionPopup">
           <div className="react-row">
-            <span className="react-emoji">&#129300;</span>
-            <span className="react-emoji">&#128513;</span>
-            <span className="react-emoji">&#129309;</span>
-            <span className="react-emoji">&#128557;</span>
-            <span className="react-emoji">&#128533;</span>
-            <span className="react-emoji">&#128578;</span>
-            <span className="react-emoji">&#128077;&#127999;</span>
-            <span className="react-emoji">&#128084;</span>
-            <span className="react-emoji">&#128540;</span>
-            <span className="react-emoji">&#128525;</span>
-            <span className="react-emoji">&#10084;&#65039;</span>
-            <span className="react-emoji">&#128557;</span>
-            <span className="react-emoji">&#128522;</span>
-            <span className="react-emoji">&#128548;</span>
-            <span className="react-emoji">&#129316;</span>
-            <span className="react-emoji">&#128566;</span>
-            <span className="react-emoji">&#128560;</span>
-            <span className="react-emoji">&#129303;</span>
-            <span className="react-emoji">&#128579;</span>
-            <span className="react-emoji">&#128542;</span>
-            <span className="react-emoji">&#128543;</span>
-            <span className="react-emoji">&#128523;</span>
-            <span className="react-emoji">&#128068;</span>
-            <span className="react-emoji">&#129308;</span>
-            <span className="react-emoji">&#128064;</span>
-            <span className="react-emoji">&#129302;</span>
+            <span className="react-emoji">😁</span>
+            <span className="react-emoji">😫</span>
+            <span className="react-emoji">😂</span>
+            <span className="react-emoji">😘</span>
+            <span className="react-emoji">🤭</span>
+            <span className="react-emoji">😞</span>
+            <span className="react-emoji">👍</span>
+            <span className="react-emoji">🥺</span>
+            <span className="react-emoji">❤️</span>
+            <span className="react-emoji">🙄</span>
+            <span className="react-emoji">😣</span>
+            <span className="react-emoji">🤨</span>
+            <span className="react-emoji">😥</span>
+            <span className="react-emoji">🫠</span>
+            <span className="react-emoji">🤣</span>
+            <span className="react-emoji">😅</span>
+            <span className="react-emoji">😆</span>
+            <span className="react-emoji">😍</span>
+            <span className="react-emoji">🥰</span>
+            <span className="react-emoji">😙</span>
+            <span className="react-emoji">😗</span>
+            <span className="react-emoji">🤩</span>
+            <span className="react-emoji">🤗</span>
+            <span className="react-emoji">😜</span>
+            <span className="react-emoji">🤤</span>
+            <span className="react-emoji">😛</span>
+            <span className="react-emoji">🙃</span>
+            <span className="react-emoji">😕</span>
+            <span className="react-emoji">🫤</span>
+            <span className="react-emoji">😖</span>
+            <span className="react-emoji">😭</span>
+            <span className="react-emoji">😨</span>
+            <span className="react-emoji">😩</span>
+            <span className="react-emoji">😤</span>
+            <span className="react-emoji">😮‍💨</span>
+            <span className="react-emoji">🤒</span>
+            <span className="react-emoji">🤕</span>
+            <span className="react-emoji">😵‍💫</span>
+            <span className="react-emoji">😵</span>
+            <span className="react-emoji">🤡</span>
+            <span className="react-emoji">👻</span>
+            <span className="react-emoji">🙈</span>
+            <span className="react-emoji">😻</span>
+            <span className="react-emoji">😹</span>
+            <span className="react-emoji">🙀</span>
+            <span className="react-emoji">👏</span>
+            <span className="react-emoji">🤲</span>
           </div>
           <div className="act-sep"></div>
           <button className="act-btn" id="actEdit">
@@ -843,7 +912,7 @@ export default function UserChat() {
             Edit
           </button>
           <div className="act-sep" id="actEditSep"></div>
-          <button className="act-btn">
+          <button className="act-btn" id="actReply">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 17 4 12 9 7"/>
               <path d="M20 18v-2a4 4 0 0 0-4-4H4"/>

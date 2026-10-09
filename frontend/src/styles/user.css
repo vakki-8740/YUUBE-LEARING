@@ -3875,6 +3875,15 @@ button:active {
     bottom: 56px;
     max-width: 220px;
   }
+  /* The picker is only 220px wide here, so with the full emoji set a wrapping
+     grid grew to seven rows. Scroll it sideways like the other two pickers. */
+  .video-emoji-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+  .video-emoji-list::-webkit-scrollbar { display: none; }
 
   .scroll-to-bottom {
     bottom: 80px;
