@@ -97,6 +97,8 @@ let iceFromCount = 0;
 let iceToCount = 0;
 let isMuted = false;
 let isVideoOn = true;
+let callFacingMode = 'user';
+let switchingCamera = false;
 let missedTimeout = null;
 let callIncomingListener = null;
 let callUpdateListener = null;
@@ -1962,6 +1964,8 @@ async function startCall(userId, type) {
   iceToCount = 0;
   isMuted = false;
   isVideoOn = (type === 'video');
+  callFacingMode = 'user';
+  switchingCamera = false;
 
   const lv = document.getElementById('localVideo');
   if (lv) {
@@ -2034,6 +2038,8 @@ function showIncomingCall(callId, data) {
   iceToCount = 0;
   isVideoOn = (data.type === 'video');
   isMuted = false;
+  callFacingMode = 'user';
+  switchingCamera = false;
 
   const name = getUserName(data.from);
   const init = getInitial(data.from);
@@ -2144,6 +2150,7 @@ function cleanupCall() {
   if (callUpdateListener) { callUpdateListener(); callUpdateListener = null; }
   iceFromCount = 0;
   iceToCount = 0;
+  switchingCamera = false;
   document.getElementById('incomingCall').classList.remove('show');
   document.getElementById('outgoingCall').classList.remove('show');
   document.getElementById('activeCall').classList.remove('show');
@@ -2229,6 +2236,8 @@ function setupPeerConn(isCaller) {
 
   document.getElementById('muteBtn').className = 'ctrl-btn';
   document.getElementById('videoBtn').className = 'ctrl-btn';
+  const fBtn = document.getElementById('flipBtn');
+  if (fBtn) fBtn.className = 'ctrl-btn';
 }
 
 // ==================== LISTEN CALL UPDATES (Firestore) ====================
@@ -2384,12 +2393,15 @@ function showActiveCallUI(name, type) {
   document.getElementById('activeNameText').textContent = name;
   document.getElementById('activeName').textContent = name;
   const vBtn = document.getElementById('videoBtn');
+  const fBtn = document.getElementById('flipBtn');
   if (type === 'audio') {
     vBtn.style.opacity = '0.3';
     vBtn.style.pointerEvents = 'none';
+    if (fBtn) { fBtn.style.opacity = '0.3'; fBtn.style.pointerEvents = 'none'; }
   } else {
     vBtn.style.opacity = '1';
     vBtn.style.pointerEvents = 'auto';
+    if (fBtn) { fBtn.style.opacity = '1'; fBtn.style.pointerEvents = 'auto'; }
   }
 }
 
@@ -2418,6 +2430,67 @@ function toggleVideo() {
   callLocalStream.getVideoTracks().forEach(t => t.enabled = isVideoOn);
   document.getElementById('videoBtn').classList.toggle('off', !isVideoOn);
   document.getElementById('localVideo').style.display = isVideoOn ? 'block' : 'none';
+}
+
+// ==================== SWITCH CAMERA (front / back) ====================
+// Purani video track ko roko aur nayi facingMode wali track peer
+// connection me replaceTrack() se swap kar do — call tootegi nahi.
+async function switchCamera() {
+  if (!currentCallData || currentCallData.type !== 'video') return;
+  if (!callLocalStream || !callPeerConn || switchingCamera) return;
+
+  const newFacing = callFacingMode === 'user' ? 'environment' : 'user';
+  const flipBtn = document.getElementById('flipBtn');
+  switchingCamera = true;
+  if (flipBtn) flipBtn.classList.add('off');
+
+  let newStream = null;
+  try {
+    newStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: newFacing } },
+      audio: false
+    });
+    const newTrack = newStream.getVideoTracks()[0];
+    if (!newTrack) throw new Error('No track for ' + newFacing + ' camera');
+
+    const settings = newTrack.getSettings ? newTrack.getSettings() : {};
+    if (settings.facingMode) callFacingMode = settings.facingMode;
+
+    // Video off hai toh nayi track bhi off rakho
+    newTrack.enabled = isVideoOn;
+
+    const oldTrack = callLocalStream.getVideoTracks()[0];
+    const sender = callPeerConn.getSenders().find(s => s.track && s.track.kind === 'video');
+    if (sender) {
+      await sender.replaceTrack(newTrack);
+    } else {
+      callPeerConn.addTrack(newTrack, callLocalStream);
+    }
+
+    // Local preview bhi update karo
+    if (oldTrack) {
+      callLocalStream.removeTrack(oldTrack);
+      oldTrack.stop();
+    }
+    callLocalStream.addTrack(newTrack);
+
+    const lv = document.getElementById('localVideo');
+    if (lv) {
+      lv.srcObject = null;
+      lv.srcObject = callLocalStream;
+      lv.style.display = isVideoOn ? 'block' : 'none';
+      lv.play().catch(() => {});
+    }
+
+    if (flipBtn) flipBtn.classList.remove('off');
+  } catch (err) {
+    console.error('Switch camera error:', err);
+    if (newStream) newStream.getTracks().forEach(t => t.stop());
+    if (flipBtn) flipBtn.classList.remove('off');
+    alert('Could not switch camera. This device may not support it.');
+  } finally {
+    switchingCamera = false;
+  }
 }
 
 function toggleSpeaker() {

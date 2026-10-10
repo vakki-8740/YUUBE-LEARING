@@ -127,6 +127,7 @@ export default function UserChat() {
         var isVideo = (el.getAttribute('title') || '').toLowerCase().indexOf('video') === 0;
         el.onclick = function() { startCallToSelected(isVideo ? 'video' : 'audio'); };
       });
+      attach($('flipBtn'), 'onclick', function() { switchCamera(); });
       attach($('muteBtn'), 'onclick', function() { toggleMute(); });
       attach($('videoBtn'), 'onclick', function() { toggleVideo(); });
       attach($('speakerBtn'), 'onclick', function() { toggleSpeaker(); });
@@ -1018,6 +1019,10 @@ export default function UserChat() {
             <div className="ctrl-group">
               <button className="ctrl-btn" id="videoBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></button>
               <span className="ctrl-label">Video</span>
+            </div>
+            <div className="ctrl-group">
+              <button className="ctrl-btn" id="flipBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 19H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2l1.5-2h7L18 7h2a2 2 0 0 1 2 2v3"/><path d="m16 16 3 3 3-3"/><path d="M19 19v-7"/><path d="m8 8-3-3-3 3"/><path d="M5 5v7"/></svg></button>
+              <span className="ctrl-label">Flip</span>
             </div>
             <div className="ctrl-group">
               <button className="ctrl-btn" id="speakerBtn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></button>

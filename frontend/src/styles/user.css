@@ -2244,6 +2244,7 @@ button:active {
 .call-bottom-controls {
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 28px;
   padding: 24px 16px;
   padding-bottom: calc(24px + var(--safe-bottom));
