@@ -1891,6 +1891,16 @@ function updCallBtn() {
   btns.forEach(b => { b.style.display = selectedUserId ? '' : 'none'; });
 }
 
+// Chat header ke call buttons yahin se call hote hain
+function startCallToSelected(type) {
+  if (!selectedUserId) {
+    alert('Select a user first to start a call.');
+    return;
+  }
+  if (currentCallData) return;
+  startCall(selectedUserId, type);
+}
+
 function getUserName(uid) {
   if (uid === myId) return myName;
   const u = allUsers.find(x => x.id === uid);
@@ -1976,6 +1986,7 @@ async function startCall(userId, type) {
   } catch (err) {
     console.error('Start call error:', err);
     cleanupCall();
+    alert('Could not start the call. Please try again.');
   }
 }
 
@@ -2056,11 +2067,21 @@ async function acceptCall() {
   showActiveCallUI(name, type);
 
   try {
-    const doc = await callsDb.doc(callId).get();
+    let doc = await callsDb.doc(callId).get();
     if (!doc.exists) { cleanupCall(); return; }
-    const offer = JSON.parse(doc.data().offer);
+    let offerStr = doc.data().offer;
+
+    // Caller ka offer thoda late likha ja sakta hai — 5 sec tak wait karo
+    for (let i = 0; i < 20 && !offerStr && currentCallData; i++) {
+      await new Promise(r => setTimeout(r, 250));
+      doc = await callsDb.doc(callId).get();
+      offerStr = doc.exists ? doc.data().offer : '';
+    }
+    if (!currentCallData) return;
+    if (!offerStr) throw new Error('Call offer not received');
+
     setupPeerConn(false);
-    await callPeerConn.setRemoteDescription(offer);
+    await callPeerConn.setRemoteDescription(JSON.parse(offerStr));
     const answer = await callPeerConn.createAnswer();
     await callPeerConn.setLocalDescription(answer);
     await callsDb.doc(callId).update({
@@ -2074,6 +2095,7 @@ async function acceptCall() {
   } catch (err) {
     console.error('Accept call error:', err);
     cleanupCall();
+    alert('Could not connect the call. Please try again.');
   }
 }
 
@@ -2111,9 +2133,12 @@ function cleanupCall() {
   document.getElementById('incomingCall').classList.remove('show');
   document.getElementById('outgoingCall').classList.remove('show');
   document.getElementById('activeCall').classList.remove('show');
-  document.getElementById('remoteVideo').style.display = 'none';
-  document.getElementById('remoteVideo').src = '';
-  document.getElementById('remoteAudio').src = '';
+  const rv = document.getElementById('remoteVideo');
+  const ra = document.getElementById('remoteAudio');
+  const lv = document.getElementById('localVideo');
+  if (rv) { rv.pause(); rv.srcObject = null; rv.style.display = 'none'; }
+  if (ra) { ra.pause(); ra.srcObject = null; }
+  if (lv) { lv.pause(); lv.srcObject = null; lv.style.display = 'none'; }
   document.getElementById('noVideo').style.display = 'flex';
   stopRingtone();
   resetSlide();
@@ -2133,19 +2158,32 @@ function setupPeerConn(isCaller) {
   const remoteStream = new MediaStream();
 
   callPeerConn.ontrack = (event) => {
-    event.streams[0].getTracks().forEach(t => remoteStream.addTrack(t));
+    event.streams[0].getTracks().forEach(t => {
+      if (!remoteStream.getTracks().includes(t)) remoteStream.addTrack(t);
+    });
     const rv = document.getElementById('remoteVideo');
     const nv = document.getElementById('noVideo');
-    if (remoteStream.getVideoTracks().length > 0) {
-      rv.srcObject = remoteStream;
-      rv.style.display = 'block';
-      nv.style.display = 'none';
-      rv.play().catch(() => {});
-    }
     const ra = document.getElementById('remoteAudio');
-    if (remoteStream.getAudioTracks().length > 0) {
-      ra.srcObject = remoteStream;
-      ra.play().catch(() => {});
+    const hasVideo = remoteStream.getVideoTracks().length > 0;
+
+    // Ek hi call me audio dobara mat bajao — video call ka awaaz
+    // remoteVideo se aati hai, sirf audio call me remoteAudio use hota hai.
+    if (rv) {
+      rv.srcObject = remoteStream;
+      rv.style.display = hasVideo ? 'block' : 'none';
+      if (hasVideo) rv.play().catch(() => {});
+      else rv.pause();
+    }
+    if (nv) nv.style.display = hasVideo ? 'none' : 'flex';
+
+    if (ra) {
+      if (hasVideo) {
+        ra.pause();
+        ra.srcObject = null;
+      } else {
+        ra.srcObject = remoteStream;
+        ra.play().catch(() => {});
+      }
     }
   };
 
@@ -2159,7 +2197,8 @@ function setupPeerConn(isCaller) {
   };
 
   callPeerConn.onconnectionstatechange = () => {
-    if (['disconnected', 'failed', 'closed'].includes(callPeerConn.connectionState)) {
+    const state = callPeerConn ? callPeerConn.connectionState : 'closed';
+    if (['disconnected', 'failed', 'closed'].includes(state)) {
       cleanupCall();
     }
   };
@@ -2365,10 +2404,13 @@ function toggleVideo() {
 }
 
 function toggleSpeaker() {
+  const rv = document.getElementById('remoteVideo');
   const ra = document.getElementById('remoteAudio');
-  if (!ra) return;
-  ra.muted = !ra.muted;
-  document.getElementById('speakerBtn').classList.toggle('off', ra.muted);
+  // Video call me awaaz remoteVideo se aati hai, audio call me remoteAudio se.
+  const active = (rv && rv.srcObject && rv.style.display !== 'none') ? rv : ra;
+  if (!active) return;
+  active.muted = !active.muted;
+  document.getElementById('speakerBtn').classList.toggle('off', active.muted);
 }
 
 // ==================== RINGTONE ====================

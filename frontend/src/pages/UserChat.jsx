@@ -122,6 +122,11 @@ export default function UserChat() {
       document.querySelectorAll('.ctrl-btn.end-call').forEach(function(el) { el.onclick = function() { endCall(); }; });
       document.querySelectorAll('.decline-btn').forEach(function(el) { el.onclick = function() { declineCall(); }; });
       document.querySelectorAll('.outgoing-end').forEach(function(el) { el.onclick = function() { endCall(); }; });
+      // Chat header ke call buttons — audio aur video dono ke liye
+      document.querySelectorAll('.call-actions .call-btn').forEach(function(el) {
+        var isVideo = (el.getAttribute('title') || '').toLowerCase().indexOf('video') === 0;
+        el.onclick = function() { startCallToSelected(isVideo ? 'video' : 'audio'); };
+      });
       attach($('muteBtn'), 'onclick', function() { toggleMute(); });
       attach($('videoBtn'), 'onclick', function() { toggleVideo(); });
       attach($('speakerBtn'), 'onclick', function() { toggleSpeaker(); });
