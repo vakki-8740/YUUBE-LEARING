@@ -89,6 +89,7 @@ let authMode = 'signup';
 
 // Call feature state
 let callLocalStream = null;
+let callRemoteStream = null;
 let callPeerConn = null;
 let currentCallData = null;
 let callTimerInt = null;
@@ -1920,15 +1921,28 @@ selectUser = function(userId) {
 };
 
 // ==================== START CALL ====================
+// Mic ki settings — echo cancellation + noise suppression ON.
+// Inke bina mobile me speaker se nikli awaaz wapas mic se uth jaati
+// hai, jisse echo aur background noise sunai deta hai.
+const CALL_AUDIO_CONSTRAINTS = {
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true
+};
+
+async function getCallStream(type) {
+  return navigator.mediaDevices.getUserMedia({
+    audio: CALL_AUDIO_CONSTRAINTS,
+    video: type === 'video'
+  });
+}
+
 async function startCall(userId, type) {
   if (currentCallData) return;
   if (!userId) return;
 
   try {
-    callLocalStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: type === 'video'
-    });
+    callLocalStream = await getCallStream(type);
   } catch (err) {
     alert('Cannot access microphone/camera. Please allow permissions.');
     return;
@@ -2052,10 +2066,7 @@ async function acceptCall() {
   const { callId, userId, type } = currentCallData;
 
   try {
-    callLocalStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: type === 'video'
-    });
+    callLocalStream = await getCallStream(type);
   } catch (err) {
     alert('Cannot access microphone/camera');
     callsDb.doc(callId).update({ status: 'declined' }).catch(() => {});
@@ -2111,15 +2122,16 @@ function declineCall() {
 
 // ==================== END CALL ====================
 async function endCall() {
-  if (currentCallData) {
-    try {
-      await callsDb.doc(currentCallData.callId).update({
-        status: 'ended',
-        ended_at: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } catch (e) {}
-  }
+  // Pehle call turant band karo, phir Firestore update karo.
+  // Agar update me der ya fail ho toh bhi awaaz rukni chahiye.
+  const callId = currentCallData ? currentCallData.callId : null;
   cleanupCall();
+  if (callId) {
+    callsDb.doc(callId).update({
+      status: 'ended',
+      ended_at: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
+  }
 }
 
 function cleanupCall() {
@@ -2127,6 +2139,8 @@ function cleanupCall() {
   if (callTimerInt) { clearInterval(callTimerInt); callTimerInt = null; }
   if (callPeerConn) { callPeerConn.close(); callPeerConn = null; }
   if (callLocalStream) { callLocalStream.getTracks().forEach(t => t.stop()); callLocalStream = null; }
+  // Remote ki tracks bhi roko — warna mic/speaker path zinda reh jaata hai
+  if (callRemoteStream) { callRemoteStream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} }); callRemoteStream = null; }
   if (callUpdateListener) { callUpdateListener(); callUpdateListener = null; }
   iceFromCount = 0;
   iceToCount = 0;
@@ -2161,27 +2175,30 @@ function setupPeerConn(isCaller) {
     event.streams[0].getTracks().forEach(t => {
       if (!remoteStream.getTracks().includes(t)) remoteStream.addTrack(t);
     });
+    callRemoteStream = remoteStream;
+
     const rv = document.getElementById('remoteVideo');
     const nv = document.getElementById('noVideo');
     const ra = document.getElementById('remoteAudio');
     const hasVideo = remoteStream.getVideoTracks().length > 0;
 
-    // Ek hi call me audio dobara mat bajao — video call ka awaaz
-    // remoteVideo se aati hai, sirf audio call me remoteAudio use hota hai.
-    if (rv) {
-      rv.srcObject = remoteStream;
-      rv.style.display = hasVideo ? 'block' : 'none';
-      if (hasVideo) rv.play().catch(() => {});
-      else rv.pause();
-    }
-    if (nv) nv.style.display = hasVideo ? 'none' : 'flex';
-
-    if (ra) {
-      if (hasVideo) {
-        ra.pause();
-        ra.srcObject = null;
-      } else {
-        ra.srcObject = remoteStream;
+    // Awaaz HAMESHA ek hi element se bajani hai. Do elements par ek hi
+    // stream lagane se echo/phasing (noise jaisi awaaz) aati hai, aur
+    // video element me `autoplay` hai — isliye audio-only stream ko
+    // video element par bilkul mat lagao.
+    if (hasVideo) {
+      if (ra) { ra.pause(); ra.srcObject = null; }
+      if (rv) {
+        if (rv.srcObject !== remoteStream) rv.srcObject = remoteStream;
+        rv.style.display = 'block';
+        rv.play().catch(() => {});
+      }
+      if (nv) nv.style.display = 'none';
+    } else {
+      if (rv) { rv.pause(); rv.srcObject = null; rv.style.display = 'none'; }
+      if (nv) nv.style.display = 'flex';
+      if (ra) {
+        if (ra.srcObject !== remoteStream) ra.srcObject = remoteStream;
         ra.play().catch(() => {});
       }
     }
