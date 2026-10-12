@@ -6,6 +6,9 @@ let voiceConvAudio = null;
 let voiceConvPlayEl = null;
 let voiceConvInterval = null;
 let voiceConvPollTimer = null;
+// Har 3 second wala poll sirf tabhi DOM chhoo-ta hai jab data badla ho
+// (ya minute bucket badla, taaki "2m ago" refresh rahe).
+let voiceConvRenderSig = null;
 let voiceReplyToId = null;
 let voiceReplyToName = '';
 let voiceUnsubRecording = null;
@@ -102,6 +105,7 @@ function openVoiceConv(userId, userName) {
     avatar.textContent = (userName || 'U').charAt(0).toUpperCase();
   }
   updateVoiceSelectUI();
+  voiceConvRenderSig = null;
   loadVoiceConvMsgs();
   if (voiceConvPollTimer) clearInterval(voiceConvPollTimer);
   voiceConvPollTimer = setInterval(loadVoiceConvMsgs, 3000);
@@ -128,6 +132,7 @@ function closeVoiceConv() {
   }
   stopPlaybackRAF(null);
   if (voiceConvPollTimer) clearInterval(voiceConvPollTimer);
+  voiceConvRenderSig = null;
   if (voiceUnsubRecording) { voiceUnsubRecording(); voiceUnsubRecording = null; }
   voiceConvPlayEl = null;
   voiceConvPartnerId = null;
@@ -155,6 +160,13 @@ async function loadVoiceConvMsgs() {
     var msgsEl = document.getElementById('voiceConvMsgs');
     var prevCount = voiceConvData.length;
     voiceConvData = data;
+    // FIX: pehle yeh har 3 second poore conversation ka innerHTML uchhaad ke
+    // dobara bana deta tha — media elements delete + re-create hote the, aur
+    // wahi 'hang' aur scroll/playback ka hilna lagta tha. Ab wahi data aur
+    // wahi minute aaye toh kuch mat karo.
+    var voiceSig = JSON.stringify(data) + '|' + Math.floor(Date.now() / 60000);
+    if (voiceSig === voiceConvRenderSig && msgsEl.childElementCount > 0) return;
+    voiceConvRenderSig = voiceSig;
     if (data.length === 0) {
       msgsEl.innerHTML = '<div class="voice-conv-empty" id="voiceConvEmpty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--ios-gray3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg><div>No media yet</div><div style="font-size:12px;margin-top:4px;">Tap the mic to send media</div></div>';
       return;

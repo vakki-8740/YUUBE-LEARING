@@ -4466,3 +4466,208 @@ button:active {
   margin-top: 12px;
 }
 
+
+/* ============================================================
+   CHAT CUSTOM KEYBOARD (user panel)
+   Device ki soft keyboard band — apna QWERTY keyboard.
+   #messageInput inputMode="none" hone ki wajah se native keyboard
+   kabhi khulti nahi; yeh wala sirf tap par slide hoke aata hai.
+   ============================================================ */
+.main-app {
+  transition: padding-bottom 0.3s cubic-bezier(0.32, 0.08, 0.24, 1);
+}
+
+/* Chat area keyboard ke upar khisak jaaye, warna input-bar chhup jaata */
+.main-app.kb-open {
+  padding-bottom: var(--kb-h, 250px);
+}
+
+/* Neeche wala nav keyboard ke waqt bekaar hai — chhupa do */
+.main-app.kb-open .bottom-nav {
+  display: none;
+}
+
+.chat-kb {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 250;
+  background: #d1d4db;
+  padding: 8px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.14);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  visibility: hidden;
+  transform: translateY(110%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.08, 0.24, 1),
+              visibility 0s linear 0.3s;
+}
+
+.chat-kb.show {
+  visibility: visible;
+  transform: translateY(0);
+  transition: transform 0.3s cubic-bezier(0.32, 0.08, 0.24, 1),
+              visibility 0s linear 0s;
+}
+
+.kb-row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.kb-row:last-child {
+  margin-bottom: 0;
+}
+
+/* Doosri row ko aadha key andar karke align karo (Gboard style) */
+.kb-row.mid {
+  padding: 0 calc(5% + 3px);
+}
+
+.kb-key {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111;
+  font-family: inherit;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: background 0.06s linear;
+}
+
+.kb-key.pressed {
+  background: #b6bac2;
+}
+
+.kb-key.fn {
+  background: #adb3bd;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.kb-key.fn.pressed {
+  background: #8f959f;
+}
+
+.kb-key.side {
+  flex: 1.5;
+}
+
+.kb-key.small-label {
+  font-size: 14px;
+}
+
+.kb-key.mode {
+  flex: 1.7;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.kb-key.space {
+  flex: 5;
+}
+
+.kb-key.emoji {
+  flex: 1.3;
+  font-size: 20px;
+}
+
+.kb-key.fn.on {
+  background: #007aff;
+  color: #fff;
+}
+
+.kb-key.fn.on.pressed {
+  background: #0062cc;
+}
+
+.kb-key.send {
+  flex: 1.5;
+  background: #007aff;
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
+}
+
+.kb-key.send.pressed {
+  background: #0062cc;
+}
+
+.kb-emoji-panel {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  max-height: 0;
+  opacity: 0;
+  visibility: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 4px;
+  margin-bottom: 0;
+  border-bottom: 1px solid transparent;
+  /* Keyboard ki height ResizeObserver se --kb-h me jaati hai, aur .main-app
+     ka padding bhi utni hi time me badalta hai — isliye timing same rakho. */
+  transition: max-height 0.3s cubic-bezier(0.32, 0.08, 0.24, 1),
+              opacity 0.2s linear,
+              margin-bottom 0.3s cubic-bezier(0.32, 0.08, 0.24, 1),
+              border-bottom-color 0.3s linear,
+              visibility 0s linear 0.3s;
+}
+
+.kb-emoji-panel.show {
+  max-height: 150px;
+  opacity: 1;
+  visibility: visible;
+  margin-bottom: 9px;
+  border-bottom-color: rgba(0, 0, 0, 0.12);
+  transition: max-height 0.3s cubic-bezier(0.32, 0.08, 0.24, 1),
+              opacity 0.2s linear,
+              margin-bottom 0.3s cubic-bezier(0.32, 0.08, 0.24, 1),
+              border-bottom-color 0.3s linear,
+              visibility 0s linear 0s;
+}
+
+.kb-emoji-btn {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  height: 34px;
+  padding: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.kb-emoji-btn.pressed {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+@media (max-width: 360px) {
+  .kb-key {
+    height: 40px;
+    font-size: 18px;
+  }
+  .kb-row {
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .kb-emoji-panel {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  /* .show par hi lagao — warna max-height: 0 override ho jaata aur panel
+     chhupne ke bajay hamesha khula rehta. */
+  .kb-emoji-panel.show {
+    max-height: 130px;
+  }
+}

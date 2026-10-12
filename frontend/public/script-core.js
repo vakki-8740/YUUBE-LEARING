@@ -143,7 +143,11 @@ function ensureScriptLoaded(src, cb) {
   var key = src.split('?')[0];
   if (loadedTabScripts[key]) { cb(); return; }
   var s = document.createElement('script');
-  s.src = src;
+  // Build id se cache-bust — sirf naye deploy par hi nayi file mile. Pehle
+  // yahaan koi version lagta hi nahi tha, matlab script-voice.js/script-video.js
+  // kabhi refresh hoti hi nahi thi (purani file chalti rehti thi).
+  var buildVer = window.__BUILD_ID__ || '1';
+  s.src = src + (src.indexOf('?') > -1 ? '&' : '?') + 'v=' + encodeURIComponent(buildVer);
   s.onload = function() { loadedTabScripts[key] = true; cb(); };
   s.onerror = function() { cb(); };
   document.body.appendChild(s);
@@ -817,10 +821,30 @@ function listenUsers() {
   });
 }
 
+var lastUsersRenderSig = null;
+
 function renderUsers() {
   const list = document.getElementById('userList');
   const onlineCount = allUsers.filter(u => u.is_online).length;
   document.getElementById('onlineCount').textContent = onlineCount;
+
+  // Har15 second ki heartbeat (apni bhi, aur har online user ki bhi) ye
+  // listener chalaa jaati hai. Rebuild se pehle check karo ki jo cheezein
+  // screen par dikhti hain (naam, photo, online dot, active row, status
+  // text) badli bhi ya nahi. Pehle ye check nahi tha, toh har heartbeat par
+  // poori list ka innerHTML uchhaad ke dobara banta tha — jisse saare avatar
+  // <img> delete hoke naye bante the (dobara decode) aur list khud
+  // "hitch" karti thi. Wahi user panel ka sabse bada lag tha.
+  const renderSig = allUsers.map(user =>
+    user.id + '\u0001' +
+    (selectedUserId === user.id ? '1' : '0') + '\u0001' +
+    (user.is_online ? '1' : '0') + '\u0001' +
+    user.name + '\u0001' +
+    user.photoURL + '\u0001' +
+    (user.is_online ? 'Online' : (user.last_seen ? 'Last seen ' + formatLastSeen(user.last_seen) : 'Offline'))
+  ).join('\n');
+  if (renderSig === lastUsersRenderSig) return;
+  lastUsersRenderSig = renderSig;
 
   if (allUsers.length === 0) {
     list.innerHTML = '<div class="no-users-msg"><div class="icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--ios-gray3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div>No other users yet</div></div>';
@@ -1530,11 +1554,22 @@ function listenTyping() {
 
 // Global typing listener G�� shows toast when OTHER user types (not in current chat)
 var lastTypingNotif = {};
+var unsubGlobalTyping = null;
+// Yeh poori 'typing' collection par sunta hai, toh har doosre user ki har
+// keystroke ka snapshot aapke phone par aata hai. Pehle har snapshot par
+// `snap.forEach` se saare docs dobara ghume jaate the — ab sirf jo docs
+// actually badle utne hi (`docChanges()`). Aur unsubscribe variable bhi
+// nahi tha, isliye dobara login par listener stack ho jaata tha.
 function listenGlobalTyping() {
   if (!myId) return;
-  db.collection('typing').onSnapshot(function(snap) {
-    snap.forEach(function(doc) {
-      var data = doc.data();
+  if (unsubGlobalTyping) unsubGlobalTyping();
+  unsubGlobalTyping = db.collection('typing').onSnapshot(function(snap) {
+    var changes = snap.docChanges();
+    if (!changes.length) return;
+    changes.forEach(function(ch) {
+      if (ch.type === 'removed') return;
+      var doc = ch.doc;
+      var data = doc.data() || {};
       var parts = doc.id.split('_');
       var otherUserId = parts.find(function(p) { return p !== myId; });
       if (!otherUserId || !data[otherUserId]) return;
@@ -1586,11 +1621,19 @@ function voiceListenRecording() {
 
 // Global recording listener G�� shows toast when OTHER user records voice
 var lastRecNotif = {};
+var unsubGlobalRecording = null;
+// Same baat — poori 'recording' collection. Sirf badle hue docs + proper
+// unsubscribe (upar wale listener ke saath pattern same rakha hai).
 function listenGlobalRecording() {
   if (!myId) return;
-  db.collection('recording').onSnapshot(function(snap) {
-    snap.forEach(function(doc) {
-      var data = doc.data();
+  if (unsubGlobalRecording) unsubGlobalRecording();
+  unsubGlobalRecording = db.collection('recording').onSnapshot(function(snap) {
+    var changes = snap.docChanges();
+    if (!changes.length) return;
+    changes.forEach(function(ch) {
+      if (ch.type === 'removed') return;
+      var doc = ch.doc;
+      var data = doc.data() || {};
       var parts = doc.id.split('_');
       var otherUserId = parts.find(function(p) { return p !== myId; });
       if (!otherUserId || !data[otherUserId]) return;
@@ -1855,6 +1898,10 @@ function logout() {
   if (unsubMessages) unsubMessages();
   if (unsubTyping) unsubTyping();
   if (unsubRecording) unsubRecording();
+  if (unsubGlobalTyping) { unsubGlobalTyping(); unsubGlobalTyping = null; }
+  if (unsubGlobalRecording) { unsubGlobalRecording(); unsubGlobalRecording = null; }
+  if (unsubNewMsgNotif) { unsubNewMsgNotif(); unsubNewMsgNotif = null; }
+  if (unsubBroadcast) { unsubBroadcast(); unsubBroadcast = null; }
 
   db.collection('users').doc(myId).update({ is_online: false, last_seen: firebase.firestore.FieldValue.serverTimestamp() });
 

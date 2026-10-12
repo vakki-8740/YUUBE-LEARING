@@ -10,6 +10,7 @@ import VideoPage from './user/VideoPage';
 import Popups from './user/Popups';
 import CallingPopup from './user/CallingPopup';
 import CallingPage from './user/CallingPage';
+import ChatKeyboard from './user/ChatKeyboard';
 import { $, attach } from './user/helpers';
 
 // ==================== USER PANEL SHELL ====================
@@ -40,6 +41,11 @@ export default function UserChat() {
     }
 
     async function loadAll() {
+      // script-voice.js / script-video.js bhi isi id se cache-bust hote hain.
+      // Wo Vite bundle me nahi aate (public/ ke hain), isliye id window par
+      // de deni padti hai — script-core.js wahi use karta hai.
+      window.__BUILD_ID__ = __BUILD_ID__;
+
       // firebase-app-compat has to land first — the other three only extend
       // it. Loading those three together saves two round trips on mobile.
       await loadScript(firebaseScripts[0]);
@@ -47,7 +53,10 @@ export default function UserChat() {
 
       const existingAppScript = document.querySelector('script[src*="script-core.js"]');
       if (!existingAppScript) {
-        await loadScript('/script-core.js?v=' + Date.now());
+        // `Date.now()` yahaan har load par alag tha, isliye yeh 99 KB ki file
+        // kabhi cache hoti hi nahi thi. Ab build ke time wala id lagta hai —
+        // sirf naye deploy par cache tootega.
+        await loadScript('/script-core.js?v=' + __BUILD_ID__);
       }
     }
 
@@ -120,6 +129,9 @@ export default function UserChat() {
       <Popups />
       <CallingPopup />
       <CallingPage />
+      {/* Root par, .page ke bahar — kyunki .page par will-change/transform
+          hai, jo position:fixed ko apni taraf le leta hai. */}
+      <ChatKeyboard />
     </div>
   );
 }

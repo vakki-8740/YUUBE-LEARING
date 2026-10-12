@@ -4,6 +4,8 @@ let videoConvPartnerId = null;
 let videoConvPartnerName = '';
 let videoConvData = [];
 let videoConvPollTimer = null;
+// Same as voice: poll 3 sec ka, rebuild sirf jab data/bucket badle.
+let videoConvRenderSig = null;
 let videoReplyToId = null;
 let videoReplyToName = '';
 let videoSelectMode = false;
@@ -49,6 +51,7 @@ function openVideoConv(userId, userName) {
     avatar.textContent = (userName || 'U').charAt(0).toUpperCase();
   }
   updateVideoSelectUI();
+  videoConvRenderSig = null;
   loadVideoConvMsgs();
   if (videoConvPollTimer) clearInterval(videoConvPollTimer);
   videoConvPollTimer = setInterval(loadVideoConvMsgs, 3000);
@@ -67,6 +70,7 @@ function openVideoConv(userId, userName) {
 
 function closeVideoConv() {
   if (videoConvPollTimer) clearInterval(videoConvPollTimer);
+  videoConvRenderSig = null;
   videoConvPartnerId = null;
   videoConvData = [];
   videoSelectMode = false;
@@ -93,6 +97,10 @@ async function loadVideoConvMsgs() {
     var msgsEl = document.getElementById('videoConvMsgs');
     var prevCount = videoConvData.length;
     videoConvData = data;
+    // FIX: voice conversation jaisa hi — har 3 second poora rebuild band.
+    var videoSig = JSON.stringify(data) + '|' + Math.floor(Date.now() / 60000);
+    if (videoSig === videoConvRenderSig && msgsEl.childElementCount > 0) return;
+    videoConvRenderSig = videoSig;
     if (data.length === 0) {
       msgsEl.innerHTML = '<div class="video-conv-empty" id="videoConvEmpty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--ios-gray3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg><div>No videos yet</div><div style="font-size:12px;margin-top:4px;">Tap the camera to send a video</div></div>';
       return;
