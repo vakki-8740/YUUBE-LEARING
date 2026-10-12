@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { isAppKeyboardEnabled, onAppKeyboardChange } from './helpers';
 
 // ==================== CHAT CUSTOM KEYBOARD ====================
 // Device ki soft keyboard band karke apna keyboard.
@@ -179,18 +180,45 @@ export default function ChatKeyboard() {
     stopBack();
   }
 
+  // ---------- setting: default OFF = device ki keyboard ----------
+  // User Profile (Settings) page se ON kare tabhi yeh sab chalu hota hai.
+  // OFF hone par saare attributes hata dete hain, taaki device ki apni
+  // keyboard, autocorrect aur auto-capital sab wapas mil jaaye.
+  function applyKeyboardAttrs(on) {
+    const el = getInput();
+    if (!el) return;
+    if (on) {
+      el.setAttribute('inputmode', 'none');
+      el.setAttribute('autocomplete', 'off');
+      el.setAttribute('autocorrect', 'off');
+      el.setAttribute('autocapitalize', 'off');
+      el.setAttribute('spellcheck', 'false');
+    } else {
+      el.removeAttribute('inputmode');
+      el.removeAttribute('autocomplete');
+      el.removeAttribute('autocorrect');
+      el.removeAttribute('autocapitalize');
+      el.removeAttribute('spellcheck');
+    }
+  }
+
+  useEffect(() => {
+    const sync = () => {
+      const on = isAppKeyboardEnabled();
+      applyKeyboardAttrs(on);
+      if (!on) { setOpen(false); setEmojiOpen(false); }
+    };
+    sync();
+    return onAppKeyboardChange(sync);
+  }, []);
+
   // ---------- open: #messageInput par tap/focus ----------
   useEffect(() => {
     const el = getInput();
     if (!el) return undefined;
-    // Belt + braces: React wala inputMode="none" ke saath yeh bhi set kar
-    // dete hain, taaki har browser/WebView me native keyboard na khule.
-    el.setAttribute('inputmode', 'none');
-    el.setAttribute('autocomplete', 'off');
-    el.setAttribute('autocorrect', 'off');
-    el.setAttribute('autocapitalize', 'off');
-
-    const onOpen = () => setOpen(true);
+    const onOpen = () => {
+      if (isAppKeyboardEnabled()) setOpen(true);
+    };
     const onInput = () => {
       if (!el.value) setShift(1);
     };
@@ -246,6 +274,7 @@ export default function ChatKeyboard() {
     const vv = window.visualViewport;
     if (!vv) return undefined;
     const onVV = () => {
+      if (!isAppKeyboardEnabled()) return;
       const el = getInput();
       if (!el || document.activeElement !== el) return;
       if (el.hasAttribute('readonly')) return;

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { $, attach, each } from './helpers';
+import { $, attach, each, isAppKeyboardEnabled, setAppKeyboardEnabled } from './helpers';
 
 // ==================== PROFILE PAGE ====================
 export default function ProfilePage() {
@@ -8,6 +8,7 @@ export default function ProfilePage() {
     attach($('profileNameInput'), 'onkeydown', function(e) { if (e.key === 'Enter') saveProfile(); });
     attach($('fontSizeSlider'), 'oninput', function() { changeFontSize(this.value); });
     attach($('pushToggleInput'), 'onchange', function() { togglePushNotifications(this.checked); });
+    attach($('kbToggleInput'), 'onchange', function() { setAppKeyboardEnabled(this.checked); });
     each('.profile-save-btn', function(el, i) { el.onclick = function() { i === 0 ? saveProfile() : changePassword(); }; });
     each('.profile-logout-btn', function(el) { el.onclick = function() { logout(); }; });
     const copyBtn = document.querySelector('#oldPassInput + button');
@@ -74,6 +75,20 @@ export default function ProfilePage() {
               </div>
               <label className="ios-toggle" id="pushToggle">
                 <input type="checkbox" id="pushToggleInput"/>
+                <span className="ios-toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <div className="profile-section">
+            <div className="ps-label">Keyboard</div>
+            <div className="push-toggle-row" id="kbToggleRow">
+              <div className="push-toggle-info">
+                <div className="push-toggle-label">App Keyboard</div>
+                <div className="push-toggle-desc" id="kbToggleDesc">Chat me apni keyboard use kare — device ki jagah</div>
+              </div>
+              <label className="ios-toggle" id="kbToggle">
+                <input type="checkbox" id="kbToggleInput" defaultChecked={isAppKeyboardEnabled()}/>
                 <span className="ios-toggle-slider"></span>
               </label>
             </div>

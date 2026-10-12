@@ -77,18 +77,11 @@ export default function ChatPage() {
               </button>
               <input type="file" id="imgInput" accept="image/*" style={{display:'none'}}/>
               <div className="input-wrapper">
-                {/* inputMode="none" — device ki soft keyboard kabhi na khule.
-                    Typing ChatKeyboard.jsx ke apne keyboard se hoti hai. */}
-                <textarea
-                  id="messageInput"
-                  rows="1"
-                  placeholder="Message"
-                  inputMode="none"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                ></textarea>
+                {/* Default: device ki soft keyboard (inputMode ki koi
+                    value nahi). App keyboard Settings se ON ho toh
+                    ChatKeyboard.jsx is textarea ko inputMode="none"
+                    bana deta hai. */}
+                <textarea id="messageInput" rows="1" placeholder="Message"></textarea>
               </div>
               <button className="send-btn" id="sendBtn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
