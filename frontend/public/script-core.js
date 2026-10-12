@@ -2121,6 +2121,9 @@ async function startCall(userId, type) {
       ice_from: [],
       ice_to: []
     });
+    // Note: listener offer LAGNE KE baad hi lagta hai. Isse pehle lagaya
+    // toh answer `callPeerConn` bante uske pehle aa sakta hai aur chup-chaap
+    // chhoot jaayega.
     setupPeerConn(true);
     const offer = await callPeerConn.createOffer();
     await callPeerConn.setLocalDescription(offer);
@@ -2136,12 +2139,39 @@ async function startCall(userId, type) {
     }, 30000);
   } catch (err) {
     console.error('Start call error:', err);
+    // Doc ban chuki hai, toh use khaali ringing me MAT chhodo. Yehi sabse
+    // badi dikkat thi: kuch fail hota toh hamari calling screen ek second
+    // me gayab ho jaati thi, par doosre ki screen par ghanti bajti rehti
+    // thi — aur uske accept karne par uske paas kuch hota hi nahi tha,
+    // kyunki offer kabhi likha hi nahi gaya tha.
+    callsDb.doc(callId).update({
+      status: 'ended',
+      ended_at: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
     cleanupCall();
-    alert('Could not start the call. Please try again.');
+    alert('Could not start the call. Please check your microphone permission and internet.');
   }
 }
 
 // ==================== LISTEN FOR INCOMING CALLS ====================
+// Pehle ki call kabhi theek se band nahi hui (page background me tha toh
+// Firestore listener tham jaata hai) toh currentCallData bacha reh jaata
+// hai — aur uske baad HAR nayi call chup-chaap decline hoti jaati hai.
+// Caller ko uski calling screen turant gayab dikhti thi, aur na usse koi
+// message milta tha, na callee ko. Isliye: screen par koi call UI na dikhe
+// aur peer connection na ho, toh ye kachra hai — use saaf karke nayi call
+// seedhe le lo.
+function isCallStateStale() {
+  if (!currentCallData) return true;
+  if (callPeerConn) return false;
+  const ids = ['incomingCall', 'outgoingCall', 'activeCall'];
+  for (let i = 0; i < ids.length; i++) {
+    const el = document.getElementById(ids[i]);
+    if (el && el.classList.contains('show')) return false;
+  }
+  return true;
+}
+
 function listenForIncomingCalls() {
   if (callIncomingListener) callIncomingListener();
   callIncomingListener = callsDb
@@ -2164,6 +2194,12 @@ function listenForIncomingCalls() {
 
         if (d.status !== 'ringing') return;
 
+        // Purani call ka bacha hua kachra ho toh pehle use saaf karo, warna
+        // nayi call yahin chup-chaap decline ho jaati thi.
+        if (currentCallData && currentCallData.callId !== ch.doc.id && isCallStateStale()) {
+          cleanupCall();
+        }
+
         if (!currentCallData) {
           showIncomingCall(ch.doc.id, d);
         } else if (currentCallData.callId !== ch.doc.id) {
@@ -2176,10 +2212,15 @@ function listenForIncomingCalls() {
 
 // ==================== SHOW INCOMING CALL ====================
 function showIncomingCall(callId, data) {
-  if (currentCallData) {
+  if (currentCallData && !isCallStateStale()) {
+    // Hum sach me dusri call me hain — nayi call politely decline karo.
     callsDb.doc(callId).update({ status: 'declined' }).catch(() => {});
     return;
   }
+  // State kaachra thi (purani call kabhi band nahi hui) toh use saaf karke
+  // nayi call seedhe le lo — warna caller ki calling screen chup-chaap
+  // gayab ho jaati aur is taraf aata bhi kuch nahi tha.
+  if (currentCallData) cleanupCall();
 
   currentCallData = { callId, userId: data.from, type: data.type, role: 'callee' };
   iceFromCount = 0;
@@ -2214,28 +2255,46 @@ function showIncomingCall(callId, data) {
 
 // ==================== ACCEPT CALL ====================
 async function acceptCall() {
-  if (!currentCallData) return;
-  document.getElementById('incomingCall').classList.remove('show');
-  stopRingtone();
-  clearTimeout(missedTimeout);
+  if (!currentCallData) {
+    // Popup dikh raha hai par state khaali hai. Aise me bilkul kuch nahi
+    // hota tha — user button dabata rehta aur screen waisi ki waisi rehti.
+    document.getElementById('incomingCall').classList.remove('show');
+    stopRingtone();
+    showCallToast('Call already ended');
+    return;
+  }
 
   const { callId, userId, type } = currentCallData;
 
+  // Pehle mic/camera lo, tabhi ring screen hatao. Pehle screen pehle hi
+  // hata dete the — getUserMedia fail hote hi user bilkul khaali screen
+  // par reh jaata tha: na popup, na active call, na koi message.
+  let stream = null;
   try {
-    callLocalStream = await getCallStream(type);
+    stream = await getCallStream(type);
   } catch (err) {
-    alert('Cannot access microphone/camera');
+    console.error('Accept call: mic/camera error:', err);
     callsDb.doc(callId).update({ status: 'declined' }).catch(() => {});
-    currentCallData = null;
+    cleanupCall();
+    alert('Cannot access microphone/camera. Please allow the permission and try again.');
     return;
   }
+
+  callLocalStream = stream;
+  document.getElementById('incomingCall').classList.remove('show');
+  stopRingtone();
+  clearTimeout(missedTimeout);
 
   const name = getUserName(userId);
   showActiveCallUI(name, type);
 
   try {
     let doc = await callsDb.doc(callId).get();
-    if (!doc.exists) { cleanupCall(); return; }
+    if (!doc.exists) {
+      showCallToast('Call already ended');
+      cleanupCall();
+      return;
+    }
     let offerStr = doc.data().offer;
 
     // Caller ka offer thoda late likha ja sakta hai — 5 sec tak wait karo
@@ -2245,7 +2304,14 @@ async function acceptCall() {
       offerStr = doc.exists ? doc.data().offer : '';
     }
     if (!currentCallData) return;
-    if (!offerStr) throw new Error('Call offer not received');
+    if (!offerStr) {
+      // Offer hi kabhi nahi aaya, matlab caller ki taraf se call khatam ho
+      // chuki thi. Chup-chaap screen khaali mat chhodo — wajah batao.
+      callsDb.doc(callId).update({ status: 'declined' }).catch(() => {});
+      cleanupCall();
+      alert('Could not connect the call. The caller may have hung up.');
+      return;
+    }
 
     resetCallRestartState();
     setupPeerConn(false);
@@ -2589,6 +2655,10 @@ async function applyAnswer(answerStr) {
     startCallTimer();
   } catch (e) {
     console.error('Apply answer error:', e);
+    // Chup-chaap reh jaane par call zinda laash ki tarah chalti rehti —
+    // screen par call dikhti par kuch hota nahi. Turant reconnect try karo.
+    showCallToast('Could not connect the call');
+    if (callPeerConn) handleCallDrop(callPeerConn);
   } finally {
     applyingAnswer = false;
   }
@@ -2605,6 +2675,10 @@ function listenCallUpdates(callId) {
     if (!currentCallData) { cleanupCall(); return; }
 
     if (d.status === 'ended' || d.status === 'declined' || d.status === 'missed') {
+      // Calling screen chup-chaap gayab mat ho. Wajah batao, warna user
+      // samajhta hi nahi ki call kyun kat gayi.
+      if (d.status === 'declined') showCallToast('Call declined');
+      else if (d.status === 'missed') showCallToast('No answer');
       cleanupCall();
       return;
     }
