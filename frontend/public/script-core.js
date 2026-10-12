@@ -99,6 +99,9 @@ let isMuted = false;
 let isVideoOn = true;
 let callFacingMode = 'user';
 let switchingCamera = false;
+let pendingIceCandidates = [];
+let applyingAnswer = false;
+let connFailTimer = null;
 let missedTimeout = null;
 let callIncomingListener = null;
 let callUpdateListener = null;
@@ -732,6 +735,9 @@ function showMainApp() {
         }, 15000);
       }
       listenUsers();
+      // Call ka listener bhi dobara laga do — mobile browsers background
+      // me snapshot listener tham dete hain, warna call miss ho jaati hai.
+      listenForIncomingCalls();
     }
   };
   document.addEventListener('visibilitychange', visibilityHandler);
@@ -1966,6 +1972,9 @@ async function startCall(userId, type) {
   isVideoOn = (type === 'video');
   callFacingMode = 'user';
   switchingCamera = false;
+  pendingIceCandidates = [];
+  applyingAnswer = false;
+  if (connFailTimer) { clearTimeout(connFailTimer); connFailTimer = null; }
 
   const lv = document.getElementById('localVideo');
   if (lv) {
@@ -2015,12 +2024,27 @@ function listenForIncomingCalls() {
     .where('to', '==', myId)
     .onSnapshot((snap) => {
       snap.docChanges().forEach(ch => {
-        if (ch.type === 'added' || ch.type === 'modified') {
-          const d = ch.doc.data();
-          if (d.from === myId) return;
-          if (d.status === 'ringing' && !currentCallData) {
-            showIncomingCall(ch.doc.id, d);
+        if (ch.type !== 'added' && ch.type !== 'modified') return;
+        const d = ch.doc.data();
+        if (d.from === myId) return;
+
+        // Ye call humari hi hai — status badla hai
+        if (currentCallData && currentCallData.callId === ch.doc.id) {
+          // Caller ne cut/cancel kar diya toh apna ring screen
+          // TURANT band karo, 30 sec tak mat rakhna.
+          if (d.status === 'ended' || d.status === 'declined' || d.status === 'missed') {
+            cleanupCall();
           }
+          return;
+        }
+
+        if (d.status !== 'ringing') return;
+
+        if (!currentCallData) {
+          showIncomingCall(ch.doc.id, d);
+        } else if (currentCallData.callId !== ch.doc.id) {
+          // Hum kisi aur call me busy hain — nayi call ko turant decline
+          callsDb.doc(ch.doc.id).update({ status: 'declined' }).catch(() => {});
         }
       });
     });
@@ -2040,6 +2064,9 @@ function showIncomingCall(callId, data) {
   isMuted = false;
   callFacingMode = 'user';
   switchingCamera = false;
+  pendingIceCandidates = [];
+  applyingAnswer = false;
+  if (connFailTimer) { clearTimeout(connFailTimer); connFailTimer = null; }
 
   const name = getUserName(data.from);
   const init = getInitial(data.from);
@@ -2099,6 +2126,7 @@ async function acceptCall() {
 
     setupPeerConn(false);
     await callPeerConn.setRemoteDescription(JSON.parse(offerStr));
+    await flushPendingIce();
     const answer = await callPeerConn.createAnswer();
     await callPeerConn.setLocalDescription(answer);
     await callsDb.doc(callId).update({
@@ -2142,8 +2170,17 @@ async function endCall() {
 
 function cleanupCall() {
   clearTimeout(missedTimeout);
+  if (connFailTimer) { clearTimeout(connFailTimer); connFailTimer = null; }
   if (callTimerInt) { clearInterval(callTimerInt); callTimerInt = null; }
-  if (callPeerConn) { callPeerConn.close(); callPeerConn = null; }
+  pendingIceCandidates = [];
+  applyingAnswer = false;
+  if (callPeerConn) {
+    // Pehle null karo, phir close — warna close ka 'closed' event
+    // dobara endCall()/cleanupCall() chala sakta hai.
+    const pc = callPeerConn;
+    callPeerConn = null;
+    try { pc.close(); } catch (e) {}
+  }
   if (callLocalStream) { callLocalStream.getTracks().forEach(t => t.stop()); callLocalStream = null; }
   // Remote ki tracks bhi roko — warna mic/speaker path zinda reh jaata hai
   if (callRemoteStream) { callRemoteStream.getTracks().forEach(t => { try { t.stop(); } catch (e) {} }); callRemoteStream = null; }
@@ -2169,6 +2206,9 @@ function cleanupCall() {
 // ==================== WEBRTC SETUP ====================
 function setupPeerConn(isCaller) {
   callPeerConn = new RTCPeerConnection(STUN);
+  // Handler me isi connection ka reference pakdo — warna call khatam hone
+  // ke baad purane connection ke events naye call ko maar dete hain.
+  const pc = callPeerConn;
 
   if (callLocalStream) {
     callLocalStream.getTracks().forEach(t => {
@@ -2178,7 +2218,8 @@ function setupPeerConn(isCaller) {
 
   const remoteStream = new MediaStream();
 
-  callPeerConn.ontrack = (event) => {
+  pc.ontrack = (event) => {
+    if (callPeerConn !== pc) return;
     event.streams[0].getTracks().forEach(t => {
       if (!remoteStream.getTracks().includes(t)) remoteStream.addTrack(t);
     });
@@ -2211,7 +2252,8 @@ function setupPeerConn(isCaller) {
     }
   };
 
-  callPeerConn.onicecandidate = (event) => {
+  pc.onicecandidate = (event) => {
+    if (callPeerConn !== pc) return;
     if (event.candidate && currentCallData) {
       const f = isCaller ? 'ice_from' : 'ice_to';
       callsDb.doc(currentCallData.callId).update({
@@ -2220,10 +2262,29 @@ function setupPeerConn(isCaller) {
     }
   };
 
-  callPeerConn.onconnectionstatechange = () => {
-    const state = callPeerConn ? callPeerConn.connectionState : 'closed';
-    if (['disconnected', 'failed', 'closed'].includes(state)) {
-      cleanupCall();
+  pc.onconnectionstatechange = () => {
+    if (callPeerConn !== pc) return;
+    const state = pc.connectionState;
+
+    if (state === 'connected') {
+      if (connFailTimer) { clearTimeout(connFailTimer); connFailTimer = null; }
+      return;
+    }
+
+    // failed/closed → turant band, aur status likh kar doosre ko bhi batao
+    if (state === 'failed' || state === 'closed') {
+      endCall();
+      return;
+    }
+
+    // Mobile network me 'disconnected' thodi der ke liye aa jaata hai.
+    // Foran mat kaato — 8 sec ka grace do, phir bhi na jude tab kaato.
+    if (state === 'disconnected' && !connFailTimer) {
+      connFailTimer = setTimeout(() => {
+        connFailTimer = null;
+        if (callPeerConn !== pc) return;
+        if (pc.connectionState !== 'connected') endCall();
+      }, 8000);
     }
   };
 
@@ -2238,6 +2299,49 @@ function setupPeerConn(isCaller) {
   document.getElementById('videoBtn').className = 'ctrl-btn';
   const fBtn = document.getElementById('flipBtn');
   if (fBtn) fBtn.className = 'ctrl-btn';
+}
+
+// ==================== ICE / ANSWER HELPERS ====================
+// ICE candidate kabhi kabhi remote description se PEHLE aa jaati hai.
+// Tab add() fail hota hai aur candidate hamesha ke liye khoo jaati hai
+// (count pehle hi badh jaata hai) → call shuru toh hoti hai par
+// "kuch nahi hota". Isliye queue me rakho.
+function addIceSafe(raw) {
+  if (!callPeerConn) return;
+  let cand;
+  try { cand = JSON.parse(raw); } catch (e) { return; }
+  if (!callPeerConn.remoteDescription) {
+    pendingIceCandidates.push(cand);
+    return;
+  }
+  callPeerConn.addIceCandidate(cand).catch(e => console.warn('ICE add failed:', e));
+}
+
+async function flushPendingIce() {
+  if (!callPeerConn || !callPeerConn.remoteDescription) return;
+  const queued = pendingIceCandidates.splice(0);
+  for (const c of queued) {
+    try { await callPeerConn.addIceCandidate(c); } catch (e) {}
+  }
+}
+
+// Caller side: callee ka answer lagana. setRemoteDescription AWAIT
+// karna zaroori hai, warna ICE uske pehle lag jaati hai.
+async function applyAnswer(answerStr) {
+  if (!callPeerConn || callPeerConn.currentRemoteDescription || applyingAnswer) return;
+  applyingAnswer = true;
+  try {
+    await callPeerConn.setRemoteDescription(JSON.parse(answerStr));
+    if (missedTimeout) { clearTimeout(missedTimeout); missedTimeout = null; }
+    await flushPendingIce();
+    if (!currentCallData) return;
+    showActiveCallUI(getUserName(currentCallData.userId), currentCallData.type);
+    startCallTimer();
+  } catch (e) {
+    console.error('Apply answer error:', e);
+  } finally {
+    applyingAnswer = false;
+  }
 }
 
 // ==================== LISTEN CALL UPDATES (Firestore) ====================
@@ -2255,26 +2359,20 @@ function listenCallUpdates(callId) {
       return;
     }
 
-    if (currentCallData.role === 'caller' && d.answer && !callPeerConn?.currentRemoteDescription) {
-      try {
-        const a = JSON.parse(d.answer);
-        callPeerConn.setRemoteDescription(a);
-        const name = getUserName(currentCallData.userId);
-        showActiveCallUI(name, currentCallData.type);
-        startCallTimer();
-      } catch (e) {}
+    if (currentCallData.role === 'caller' && d.answer) {
+      applyAnswer(d.answer);
     }
 
     if (currentCallData.role === 'caller' && d.ice_to && callPeerConn) {
       while (iceToCount < d.ice_to.length) {
-        try { callPeerConn.addIceCandidate(JSON.parse(d.ice_to[iceToCount])); } catch (e) {}
+        addIceSafe(d.ice_to[iceToCount]);
         iceToCount++;
       }
     }
 
     if (currentCallData.role === 'callee' && d.ice_from && callPeerConn) {
       while (iceFromCount < d.ice_from.length) {
-        try { callPeerConn.addIceCandidate(JSON.parse(d.ice_from[iceFromCount])); } catch (e) {}
+        addIceSafe(d.ice_from[iceFromCount]);
         iceFromCount++;
       }
     }
