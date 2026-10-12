@@ -105,6 +105,18 @@ let connFailTimer = null;
 let missedTimeout = null;
 let callIncomingListener = null;
 let callUpdateListener = null;
+// Call stability: mobile par WiFi<->data handoff, weak signal aur free TURN
+// relay ka drop aam baat hai. Turant call kaatne se pehle ICE restart try
+// hota hai — naye candidates ban jaate hain aur media stream toota nahi
+// hota, toh call wahi ka wahi chalti rehti hai.
+let iceRestartCount = 0;
+let lastIceRestartAt = 0;
+let applyingReneg = false;
+let appliedRenegOffer = '';
+let appliedRenegAnswer = '';
+let handledRenegReq = 0;
+let connectWatchdog = null;
+let callWakeLock = null;
 let ringCtx = null;
 let ringInterval = null;
 let telegramBotToken = '8829889871:AAElJEyBCXxXukO-OIYYB3dY44C6112M8vk';
@@ -741,6 +753,10 @@ function showMainApp() {
       // Call ka listener bhi dobara laga do — mobile browsers background
       // me snapshot listener tham dete hain, warna call miss ho jaati hai.
       listenForIncomingCalls();
+      // Screen wake lock bhi wapas — tab hide hote hi browser use chhod
+      // deta hai, aur call ke waqt screen off ho jaaye toh connection
+      // tham jaata hai.
+      if (currentCallData) acquireCallWakeLock();
     }
   };
   document.addEventListener('visibilitychange', visibilityHandler);
@@ -2035,6 +2051,16 @@ const CALL_AUDIO_CONSTRAINTS = {
   autoGainControl: true
 };
 
+// Kitni der 'disconnected' chalne par ICE restart ki koshish karo, aur
+// restart ke baad kitni der wait karne ke baad call kaatein. Pehle yeh
+// grace sirf 8 second tha — mobile par itni der me toh network handoff
+// bhi poora nahi hota, aur theek chalti hui call kat jaati thi.
+const CALL_DISC_GRACE = 30000;
+const CALL_RESTART_WAIT = 20000;
+const CALL_CONNECT_TIMEOUT = 35000;
+const CALL_MAX_RESTARTS = 3;
+const CALL_RESTART_GAP = 8000;
+
 async function getCallStream(type) {
   return navigator.mediaDevices.getUserMedia({
     audio: CALL_AUDIO_CONSTRAINTS,
@@ -2071,6 +2097,7 @@ async function startCall(userId, type) {
   switchingCamera = false;
   pendingIceCandidates = [];
   applyingAnswer = false;
+  resetCallRestartState();
   if (connFailTimer) { clearTimeout(connFailTimer); connFailTimer = null; }
 
   const lv = document.getElementById('localVideo');
@@ -2163,6 +2190,7 @@ function showIncomingCall(callId, data) {
   switchingCamera = false;
   pendingIceCandidates = [];
   applyingAnswer = false;
+  resetCallRestartState();
   if (connFailTimer) { clearTimeout(connFailTimer); connFailTimer = null; }
 
   const name = getUserName(data.from);
@@ -2219,6 +2247,7 @@ async function acceptCall() {
     if (!currentCallData) return;
     if (!offerStr) throw new Error('Call offer not received');
 
+    resetCallRestartState();
     setupPeerConn(false);
     await callPeerConn.setRemoteDescription(JSON.parse(offerStr));
     await flushPendingIce();
@@ -2270,6 +2299,8 @@ function cleanupCall() {
   if (callTimerInt) { clearInterval(callTimerInt); callTimerInt = null; }
   pendingIceCandidates = [];
   applyingAnswer = false;
+  resetCallRestartState();
+  releaseCallWakeLock();
   if (callPeerConn) {
     // Pehle null karo, phir close — warna close ka 'closed' event
     // dobara endCall()/cleanupCall() chala sakta hai.
@@ -2299,6 +2330,106 @@ function cleanupCall() {
 }
 
 // ==================== WEBRTC SETUP ====================
+// ==================== CALL RECONNECT (ICE RESTART) ====================
+function resetCallRestartState() {
+  iceRestartCount = 0;
+  lastIceRestartAt = 0;
+  applyingReneg = false;
+  appliedRenegOffer = '';
+  appliedRenegAnswer = '';
+  handledRenegReq = 0;
+  if (connectWatchdog) { clearTimeout(connectWatchdog); connectWatchdog = null; }
+}
+
+// Call ke dauraan screen ko jagaa kar rakho. Mobile me screen band hote
+// hi OS page ko tham deta hai aur connection 'disconnected' ho jaata hai —
+// yehi "call jud toh jaati hai par jyada der nahi chalti" wali dikkat hai.
+async function acquireCallWakeLock() {
+  try {
+    if (!navigator.wakeLock || callWakeLock) return;
+    callWakeLock = await navigator.wakeLock.request('screen');
+    callWakeLock.addEventListener('release', function() { callWakeLock = null; });
+  } catch (e) { /* kuch browser mana kar dete hain — chalta hai */ }
+}
+
+function releaseCallWakeLock() {
+  try {
+    if (callWakeLock) { callWakeLock.release(); callWakeLock = null; }
+  } catch (e) {}
+}
+
+// Restart ke baad bhi na jude toh tabhi call kaato.
+function watchCallReconnect(pc) {
+  if (connFailTimer) clearTimeout(connFailTimer);
+  connFailTimer = setTimeout(function() {
+    connFailTimer = null;
+    if (callPeerConn !== pc || !currentCallData) return;
+    if (pc.connectionState === 'connected') return;
+    endCall();
+  }, CALL_RESTART_WAIT);
+}
+
+// Caller apni taraf se naya offer bhejta hai (ICE restart). Peer
+// connection wahi rehta hai, toh media toota nahi hota — sirf naye
+// network routes dhundhe jaate hain.
+async function sendIceRestartOffer() {
+  if (!callPeerConn || !currentCallData || currentCallData.role !== 'caller') return;
+  const offer = await callPeerConn.createOffer({ iceRestart: true });
+  await callPeerConn.setLocalDescription(offer);
+  appliedRenegAnswer = '';
+  await callsDb.doc(currentCallData.callId).update({
+    reneg_offer: JSON.stringify(offer)
+  });
+}
+
+async function applyRenegOffer(offerStr) {
+  if (!callPeerConn || applyingReneg || applyingAnswer) return;
+  applyingReneg = true;
+  appliedRenegOffer = offerStr;
+  try {
+    await callPeerConn.setRemoteDescription(JSON.parse(offerStr));
+    await flushPendingIce();
+    const answer = await callPeerConn.createAnswer();
+    await callPeerConn.setLocalDescription(answer);
+    if (!currentCallData) return;
+    await callsDb.doc(currentCallData.callId).update({
+      reneg_answer: JSON.stringify(answer)
+    }).catch(function() {});
+  } catch (e) {
+    console.warn('Renegotiation (ICE restart) failed:', e);
+  } finally {
+    applyingReneg = false;
+  }
+}
+
+// Connection toota — turant kaatne se pehle ICE restart try karo.
+async function handleCallDrop(pc) {
+  if (callPeerConn !== pc || !currentCallData) return;
+  if (pc.connectionState === 'connected') return;
+
+  const canRestart = iceRestartCount < CALL_MAX_RESTARTS &&
+    (Date.now() - lastIceRestartAt) > CALL_RESTART_GAP;
+
+  if (canRestart) {
+    iceRestartCount++;
+    lastIceRestartAt = Date.now();
+    showCallToast('Reconnecting...');
+    try {
+      if (currentCallData.role === 'callee') {
+        // Callee offer bhej nahi sakta (glare) — caller se kaho restart kare
+        await callsDb.doc(currentCallData.callId).update({ reneg_req: Date.now() });
+      } else {
+        await sendIceRestartOffer();
+      }
+    } catch (e) {
+      console.warn('ICE restart error:', e);
+    }
+    watchCallReconnect(pc);
+    return;
+  }
+  endCall();
+}
+
 function setupPeerConn(isCaller) {
   callPeerConn = new RTCPeerConnection(STUN);
   // Handler me isi connection ka reference pakdo — warna call khatam hone
@@ -2367,20 +2498,31 @@ function setupPeerConn(isCaller) {
       return;
     }
 
-    // failed/closed → turant band, aur status likh kar doosre ko bhi batao
-    if (state === 'failed' || state === 'closed') {
+    // failed → turant kaatna band. Mobile par WiFi<->data handoff, weak
+    // signal aur free TURN relay ka drop aam hai. ICE restart se naye
+    // routes mil jaate hain aur call wahi chalti rehti hai.
+    if (state === 'failed') {
+      handleCallDrop(pc);
+      return;
+    }
+
+    // closed = connection apne aap hi band ho chuka — restart ka fayda nahi
+    if (state === 'closed') {
       endCall();
       return;
     }
 
-    // Mobile network me 'disconnected' thodi der ke liye aa jaata hai.
-    // Foran mat kaato — 8 sec ka grace do, phir bhi na jude tab kaato.
+    // Mobile network me 'disconnected' thodi der ke liye aa jaata hai aur
+    // phir khud theek ho jaati hai. Pehle 8 sec ka grace tha, jo bahut kam
+    // tha — ab 30 sec, aur uske baad bhi foran nahi, restart try hota hai.
     if (state === 'disconnected' && !connFailTimer) {
+      showCallToast('Reconnecting...');
       connFailTimer = setTimeout(() => {
         connFailTimer = null;
         if (callPeerConn !== pc) return;
-        if (pc.connectionState !== 'connected') endCall();
-      }, 8000);
+        if (pc.connectionState === 'connected') return;
+        handleCallDrop(pc);
+      }, CALL_DISC_GRACE);
     }
   };
 
@@ -2395,6 +2537,18 @@ function setupPeerConn(isCaller) {
   document.getElementById('videoBtn').className = 'ctrl-btn';
   const fBtn = document.getElementById('flipBtn');
   if (fBtn) fBtn.className = 'ctrl-btn';
+
+  // Agar connection jud hi nahi paya (STUN/TURN blocked, ya dono taraf
+  // strict NAT) toh call ko zinda laash ki tarah mat chalne do. Yeh
+  // "join ho jaata hai par kuch sunai nahi deta" wali haalat bhi pakadta
+  // hai, jo turant endCall karne se pehle nahi pakdi jaati thi.
+  if (connectWatchdog) clearTimeout(connectWatchdog);
+  connectWatchdog = setTimeout(function() {
+    connectWatchdog = null;
+    if (callPeerConn !== pc || !currentCallData) return;
+    if (pc.connectionState === 'connected') return;
+    handleCallDrop(pc);
+  }, CALL_CONNECT_TIMEOUT);
 }
 
 // ==================== ICE / ANSWER HELPERS ====================
@@ -2471,6 +2625,33 @@ function listenCallUpdates(callId) {
         addIceSafe(d.ice_from[iceFromCount]);
         iceFromCount++;
       }
+    }
+
+    // ---- ICE restart (renegotiation) ----
+    // Naya offer/answer in naye fields se aata hai, taaki call ka pehla
+    // offer/answer dobara na lag jaaye. Har dono taraf ka last value se
+    // compare hota hai, warna har snapshot par dobara lagta rehta.
+    if (currentCallData.role === 'caller' && d.reneg_answer && d.reneg_answer !== appliedRenegAnswer) {
+      const ansStr = d.reneg_answer;
+      appliedRenegAnswer = ansStr;
+      if (callPeerConn && !applyingReneg) {
+        applyingReneg = true;
+        callPeerConn.setRemoteDescription(JSON.parse(ansStr))
+          .then(function() { return flushPendingIce(); })
+          .catch(function(e) { console.warn('Reneg answer error:', e); })
+          .finally(function() { applyingReneg = false; });
+      }
+    }
+
+    // Callee ka connection fail hua toh woh request bhejta hai, caller
+    // restart karta hai (offer caller hi bhej sakta hai, glare se bachne ke liye)
+    if (currentCallData.role === 'caller' && d.reneg_req && d.reneg_req !== handledRenegReq) {
+      handledRenegReq = d.reneg_req;
+      sendIceRestartOffer().catch(function(e) { console.warn('Reneg offer error:', e); });
+    }
+
+    if (currentCallData.role === 'callee' && d.reneg_offer && d.reneg_offer !== appliedRenegOffer) {
+      applyRenegOffer(d.reneg_offer);
     }
   });
 }
@@ -2582,6 +2763,9 @@ function renderBroadcastMessages() {
 function showActiveCallUI(name, type) {
   document.getElementById('outgoingCall').classList.remove('show');
   document.getElementById('activeCall').classList.add('show');
+  // Screen band mat hone do — mobile me wahi sabse aam wajah hai ki
+  // call jud toh jaati hai par kuch second me tham jaati hai.
+  acquireCallWakeLock();
   const init = name.charAt(0).toUpperCase();
   setCallAvatar('activeBigAvatar', currentCallData ? currentCallData.userId : null, init);
   document.getElementById('activeNameText').textContent = name;
