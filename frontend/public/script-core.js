@@ -107,7 +107,6 @@ let callIncomingListener = null;
 let callUpdateListener = null;
 let ringCtx = null;
 let ringInterval = null;
-let slideState = null;
 let telegramBotToken = '8829889871:AAElJEyBCXxXukO-OIYYB3dY44C6112M8vk';
 let telegramChatId = '-1004299305991';
 let broadcastMessages = [];
@@ -1900,8 +1899,42 @@ function updCallBtn() {
   btns.forEach(b => { b.style.display = selectedUserId ? '' : 'none'; });
 }
 
-// Chat header ke call buttons yahin se call hote hain
-function startCallToSelected(type) {
+// Header wale EK call button ka popup — pehle Voice/Video select karo,
+// tabhi neeche wala Call button active hoga.
+let callMenuType = null;
+
+function openCallMenu() {
+  if (!selectedUserId) {
+    alert('Select a user first to start a call.');
+    return;
+  }
+  if (currentCallData) return;
+  callMenuType = null;
+  document.querySelectorAll('.call-menu-opt').forEach(el => el.classList.remove('selected'));
+  const sb = document.getElementById('callMenuStart');
+  if (sb) sb.disabled = true;
+  const ov = document.getElementById('callMenuOverlay');
+  if (ov) ov.classList.add('show');
+}
+
+function closeCallMenu() {
+  const ov = document.getElementById('callMenuOverlay');
+  if (ov) ov.classList.remove('show');
+}
+
+function selectCallType(type) {
+  callMenuType = type;
+  document.querySelectorAll('.call-menu-opt').forEach(el => {
+    el.classList.toggle('selected', el.getAttribute('data-call-type') === type);
+  });
+  const sb = document.getElementById('callMenuStart');
+  if (sb) sb.disabled = false;
+}
+
+function confirmStartCall() {
+  if (!callMenuType) return; // kuch select nahi kiya toh Call kaam nahi karega
+  const type = callMenuType;
+  closeCallMenu();
   if (!selectedUserId) {
     alert('Select a user first to start a call.');
     return;
@@ -1920,6 +1953,23 @@ function getInitial(uid) {
   if (uid === myId) return myName.charAt(0).toUpperCase();
   const u = allUsers.find(x => x.id === uid);
   return u ? u.name.charAt(0).toUpperCase() : 'A';
+}
+
+// Avatar me user ki photo ho toh wo lagao, warna initial letter.
+// (Incoming / Outgoing / Active teeno jagah yahi use hota hai)
+function setCallAvatar(elId, uid, init) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.textContent = init;
+  const u = (uid === myId) ? null : allUsers.find(x => x.id === uid);
+  if (u && u.photoURL) {
+    const img = document.createElement('img');
+    img.alt = '';
+    img.src = u.photoURL;
+    img.onerror = function() { el.textContent = init; };
+    el.textContent = '';
+    el.appendChild(img);
+  }
 }
 
 const origUserSelect = selectUser;
@@ -1960,7 +2010,7 @@ async function startCall(userId, type) {
   const name = getUserName(userId);
   const init = getInitial(userId);
 
-  document.getElementById('outgoingAvatar').textContent = init;
+  setCallAvatar('outgoingAvatar', userId, init);
   document.getElementById('outgoingName').textContent = name;
   document.getElementById('outgoingStatus').textContent = 'Calling...';
   document.getElementById('outgoingCall').classList.add('show');
@@ -2070,13 +2120,11 @@ function showIncomingCall(callId, data) {
 
   const name = getUserName(data.from);
   const init = getInitial(data.from);
-  document.getElementById('incomingAvatar').textContent = init;
+  setCallAvatar('incomingAvatar', data.from, init);
   document.getElementById('incomingName').textContent = name;
   document.getElementById('incomingType').textContent = data.type === 'video' ? 'Video Call' : 'Audio Call';
 
-  resetSlide();
   document.getElementById('incomingCall').classList.add('show');
-  setTimeout(initSlide, 100);
   playRingtone();
 
   missedTimeout = setTimeout(() => {
@@ -2158,6 +2206,7 @@ function declineCall() {
 async function endCall() {
   // Pehle call turant band karo, phir Firestore update karo.
   // Agar update me der ya fail ho toh bhi awaaz rukni chahiye.
+  showCallToast('Call ended');
   const callId = currentCallData ? currentCallData.callId : null;
   cleanupCall();
   if (callId) {
@@ -2199,7 +2248,6 @@ function cleanupCall() {
   if (lv) { lv.pause(); lv.srcObject = null; lv.style.display = 'none'; }
   document.getElementById('noVideo').style.display = 'flex';
   stopRingtone();
-  resetSlide();
   currentCallData = null;
 }
 
@@ -2268,6 +2316,7 @@ function setupPeerConn(isCaller) {
 
     if (state === 'connected') {
       if (connFailTimer) { clearTimeout(connFailTimer); connFailTimer = null; }
+      showCallToast('Call connected');
       return;
     }
 
@@ -2487,7 +2536,7 @@ function showActiveCallUI(name, type) {
   document.getElementById('outgoingCall').classList.remove('show');
   document.getElementById('activeCall').classList.add('show');
   const init = name.charAt(0).toUpperCase();
-  document.getElementById('activeBigAvatar').textContent = init;
+  setCallAvatar('activeBigAvatar', currentCallData ? currentCallData.userId : null, init);
   document.getElementById('activeNameText').textContent = name;
   document.getElementById('activeName').textContent = name;
   const vBtn = document.getElementById('videoBtn');
@@ -2514,12 +2563,24 @@ function startCallTimer() {
 }
 
 // ==================== CALL CONTROLS ====================
+// Button tap par chhota popup — pata chale kis button par kya hua.
+let callToastTimer = null;
+function showCallToast(msg) {
+  const el = document.getElementById('callToast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  if (callToastTimer) clearTimeout(callToastTimer);
+  callToastTimer = setTimeout(() => { el.classList.remove('show'); }, 1600);
+}
+
 function toggleMute() {
   isMuted = !isMuted;
   if (callLocalStream) {
     callLocalStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
   }
   document.getElementById('muteBtn').classList.toggle('off', isMuted);
+  showCallToast(isMuted ? 'Mute successful' : 'Unmute successful');
 }
 
 function toggleVideo() {
@@ -2528,6 +2589,7 @@ function toggleVideo() {
   callLocalStream.getVideoTracks().forEach(t => t.enabled = isVideoOn);
   document.getElementById('videoBtn').classList.toggle('off', !isVideoOn);
   document.getElementById('localVideo').style.display = isVideoOn ? 'block' : 'none';
+  showCallToast(isVideoOn ? 'Video on successful' : 'Video off successful');
 }
 
 // ==================== SWITCH CAMERA (front / back) ====================
@@ -2581,6 +2643,7 @@ async function switchCamera() {
     }
 
     if (flipBtn) flipBtn.classList.remove('off');
+    showCallToast('Camera switched successful');
   } catch (err) {
     console.error('Switch camera error:', err);
     if (newStream) newStream.getTracks().forEach(t => t.stop());
@@ -2599,6 +2662,7 @@ function toggleSpeaker() {
   if (!active) return;
   active.muted = !active.muted;
   document.getElementById('speakerBtn').classList.toggle('off', active.muted);
+  showCallToast(active.muted ? 'Speaker off successful' : 'Speaker on successful');
 }
 
 // ==================== RINGTONE ====================
@@ -2650,70 +2714,7 @@ function stopRingtone() {
 }
 
 // ==================== SLIDE TO ANSWER ====================
-function initSlide() {
-  const track = document.getElementById('slideTrack');
-  const thumb = document.getElementById('slideThumb');
-  const fill = document.getElementById('slideFill');
-  const text = document.getElementById('slideText');
-  if (!track || !thumb) return;
-
-  slideState = { dragging: false };
-
-  function getMax() { return track.offsetWidth - thumb.offsetWidth; }
-
-  function onStart(cx) {
-    if (!slideState) initSlide();
-    slideState.dragging = true;
-    slideState.sx = cx;
-    slideState.sl = thumb.offsetLeft;
-    slideState.mw = getMax();
-    thumb.style.transition = 'none';
-    fill.style.transition = 'none';
-  }
-
-  function onMove(cx) {
-    if (!slideState?.dragging) return;
-    const d = cx - slideState.sx;
-    const p = Math.max(0, Math.min(d / slideState.mw, 1));
-    thumb.style.left = (2 + p * slideState.mw) + 'px';
-    fill.style.width = (p * 100) + '%';
-    text.style.opacity = p > 0.1 ? '0' : '1';
-    if (p >= 0.85) {
-      slideState.dragging = false;
-      resetSlide();
-      acceptCall();
-    }
-  }
-
-  function onEnd() {
-    if (slideState?.dragging) { slideState.dragging = false; resetSlide(); initSlide(); }
-  }
-
-  thumb.onpointerdown = (e) => { e.preventDefault(); onStart(e.clientX); };
-  thumb.ontouchstart = (e) => { e.preventDefault(); onStart(e.touches[0].clientX); };
-  document.onpointermove = (e) => { if (slideState?.dragging) onMove(e.clientX); };
-  document.ontouchmove = (e) => { if (slideState?.dragging) { e.preventDefault(); onMove(e.touches[0].clientX); } };
-  document.onpointerup = onEnd;
-  document.ontouchend = onEnd;
-}
-
-function resetSlide() {
-  const thumb = document.getElementById('slideThumb');
-  const fill = document.getElementById('slideFill');
-  const text = document.getElementById('slideText');
-  if (!thumb) return;
-  thumb.style.transition = 'left 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-  fill.style.transition = 'width 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-  thumb.style.left = '2px';
-  fill.style.width = '0%';
-  text.style.opacity = '1';
-  slideState = null;
-  document.onpointermove = null;
-  document.ontouchmove = null;
-  document.onpointerup = null;
-  document.ontouchend = null;
-}
-
+// (Ab incoming call me Accept/Reject buttons hain — slide hata diya gaya)
 
 function showUploading(label) {
   document.getElementById('uploadingLabel').textContent = label || 'Uploading...';

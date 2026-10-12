@@ -1947,7 +1947,9 @@ button:active {
 .call-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.92);
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(26px) saturate(145%);
+  -webkit-backdrop-filter: blur(26px) saturate(145%);
   z-index: 600;
   display: none;
   flex-direction: column;
@@ -1971,172 +1973,138 @@ button:active {
   to { transform: translateY(0); opacity: 1; }
 }
 
-.incoming-content {
+/* Incoming call — chhota popup card jo blur background ke upar aata hai */
+.incoming-card {
+  width: min(340px, calc(100vw - 40px));
+  padding: 30px 22px 24px;
+  border-radius: 30px;
+  background: rgba(28, 28, 30, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   text-align: center;
-  padding: 40px 20px 30px;
+  animation: callPopIn 0.35s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@keyframes callPopIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.93); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.incoming-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.inc-btn {
+  flex: 1;
+  border: none;
+  border-radius: 20px;
+  padding: 14px 6px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  height: 100%;
-  animation: iosSlideUp 0.5s cubic-bezier(0.32, 0.08, 0.24, 1);
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: transform 0.15s, filter 0.2s;
 }
 
-.incoming-bottom {
-  width: 100%;
+.inc-btn:active { transform: scale(0.93); }
+
+.inc-ico {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 16px;
+  justify-content: center;
 }
 
-.incoming-top {
-  padding-top: 60px;
+.inc-reject {
+  background: #FF3B30;
+  box-shadow: 0 8px 20px rgba(255, 59, 48, 0.35);
+}
+
+.inc-accept {
+  background: #34C759;
+  box-shadow: 0 8px 20px rgba(52, 199, 89, 0.35);
 }
 
 .incoming-avatar {
-  width: 100px;
-  height: 100px;
+  width: 88px;
+  height: 88px;
   border-radius: 50%;
   background: linear-gradient(135deg, #007AFF, #5856D6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 44px;
+  font-size: 38px;
   font-weight: 600;
-  margin: 0 auto 20px;
+  margin: 0 auto 16px;
+  overflow: hidden;
   box-shadow: 0 8px 40px rgba(0, 122, 255, 0.4);
 }
 
+.incoming-avatar img,
+.outgoing-avatar img,
+.big-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .incoming-name {
-  font-size: 28px;
+  font-size: 21px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .incoming-type {
-  font-size: 16px;
-  color: rgba(255,255,255,0.6);
-}
-
-/* Slide to Answer */
-.slide-track {
-  width: 280px;
-  height: 56px;
-  border-radius: 28px;
-  background: rgba(255,255,255,0.2);
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  border: 1px solid rgba(255,255,255,0.3);
-}
-
-.slide-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 0%;
-  border-radius: 28px;
-  background: #34C759;
-  transition: width 0.1s linear;
-}
-
-.slide-thumb {
-  position: absolute;
-  left: 2px;
-  top: 2px;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  z-index: 2;
-  cursor: grab;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  touch-action: none;
-}
-
-.slide-thumb:active { cursor: grabbing; }
-
-.slide-text {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  color: white;
-  letter-spacing: 0.3px;
-  pointer-events: none;
-  transition: opacity 0.2s;
-}
-
-.decline-section {
-  padding-bottom: 40px;
-  text-align: center;
-}
-
-.decline-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
-  background: #FF3B30;
-  color: white;
-  font-size: 26px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 8px;
-  transition: transform 0.15s;
-  box-shadow: 0 4px 16px rgba(255, 59, 48, 0.4);
-}
-
-.decline-btn:active { transform: scale(0.88); }
-
-.decline-label {
   font-size: 13px;
   color: rgba(255,255,255,0.6);
 }
 
+/* Outgoing call — wahi chhota card (blur background ke upar) */
 .outgoing-content {
   text-align: center;
-  padding: 24px;
+  padding: 32px 30px 28px;
+  min-width: min(320px, calc(100vw - 40px));
+  border-radius: 30px;
+  background: rgba(28, 28, 30, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: callPopIn 0.35s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 
 .outgoing-avatar {
-  width: 100px;
-  height: 100px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: linear-gradient(135deg, #007AFF, #5856D6);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 44px;
+  font-size: 40px;
   font-weight: 600;
-  margin: 0 auto 20px;
+  margin: 0 auto 16px;
+  overflow: hidden;
 }
 
 .outgoing-name {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .outgoing-status {
-  font-size: 16px;
+  font-size: 14px;
   color: rgba(255,255,255,0.6);
-  margin-bottom: 40px;
+  margin-bottom: 28px;
 }
 
 .outgoing-end {
@@ -2157,22 +2125,34 @@ button:active {
 
 .outgoing-end:active { transform: scale(0.88); }
 
+/* Active call — beech me card, peeche blur background */
 .active-container {
-  width: 100%;
-  height: 100%;
+  width: min(420px, calc(100vw - 28px));
+  height: auto;
+  max-height: calc(100vh - 40px);
   display: flex;
   flex-direction: column;
   position: relative;
+  background: rgba(18, 18, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 30px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: callPopIn 0.35s cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 
 .remote-wrap {
-  flex: 1;
+  height: min(56vh, 400px);
+  min-height: 230px;
   background: #111;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   position: relative;
+  flex-shrink: 0;
 }
 
 .remote-wrap video {
@@ -2197,6 +2177,7 @@ button:active {
   font-size: 36px;
   font-weight: 600;
   margin: 0 auto 12px;
+  overflow: hidden;
 }
 
 .local-wrap {
@@ -2281,6 +2262,167 @@ button:active {
 .ctrl-label {
   font-size: 10px;
   color: rgba(255,255,255,0.5);
+}
+
+/* ==================== CALL MENU POPUP (header wala ek call button) ==================== */
+.call-menu-card {
+  width: min(340px, calc(100vw - 40px));
+  padding: 22px 18px 18px;
+  border-radius: 30px;
+  background: rgba(28, 28, 30, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: callPopIn 0.3s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+.call-menu-title {
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.call-menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.call-menu-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.18s, background 0.18s, transform 0.12s;
+}
+
+.call-menu-opt:active { transform: scale(0.97); }
+
+.call-menu-opt.selected {
+  border-color: var(--ios-blue, #007AFF);
+  background: rgba(0, 122, 255, 0.16);
+}
+
+.cmo-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ios-blue, #007AFF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cmo-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cmo-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cmo-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.cmo-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ios-blue, #007AFF);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 0.18s, transform 0.18s;
+  flex-shrink: 0;
+}
+
+.call-menu-opt.selected .cmo-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.call-menu-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.call-menu-btn {
+  flex: 1;
+  padding: 13px 10px;
+  border-radius: 16px;
+  border: none;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s, opacity 0.18s, background 0.18s;
+}
+
+.call-menu-btn:active { transform: scale(0.96); }
+
+.cm-cancel {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.cm-start {
+  background: var(--ios-blue, #007AFF);
+  color: #fff;
+}
+
+.cm-start:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ==================== CALL TOAST (button tap ka chhota popup) ==================== */
+.call-toast {
+  position: fixed;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%) translateY(-10px);
+  background: rgba(20, 20, 22, 0.94);
+  color: #fff;
+  padding: 11px 20px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 900;
+  transition: opacity 0.22s var(--ios-ease, ease), transform 0.22s var(--ios-ease, ease);
+}
+
+.call-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* ==================== LOGO ==================== */
@@ -3708,8 +3850,8 @@ button:active {
     padding: 8px 0;
   }
 
-  .call-overlay .incoming-content {
-    width: 90%;
+  .call-overlay .incoming-card {
+    width: min(340px, calc(100vw - 32px));
   }
 
   .incoming-avatar {
@@ -3897,11 +4039,12 @@ button:active {
 /* ==================== MOBILE CALL 768px ==================== */
 @media (max-width: 768px) {
   .local-wrap { width: 90px; height: 130px; }
-  .slide-track { width: 240px; height: 50px; }
-  .slide-thumb { width: 46px; height: 46px; font-size: 18px; }
   .incoming-avatar, .outgoing-avatar { width: 80px; height: 80px; font-size: 36px; }
-  .incoming-name, .outgoing-name { font-size: 22px; }
-  .decline-btn { width: 50px; height: 50px; font-size: 22px; }
+  .incoming-name, .outgoing-name { font-size: 20px; }
+  .active-container { width: calc(100vw - 20px); max-height: calc(100vh - 24px); border-radius: 24px; }
+  .remote-wrap { height: min(52vh, 340px); min-height: 200px; }
+  .call-menu-card, .incoming-card, .outgoing-content { border-radius: 24px; }
+  .call-toast { top: 12%; font-size: 12px; padding: 9px 16px; }
   .call-bottom-controls { gap: 20px; padding: 16px 12px; }
   .ctrl-btn { width: 44px; height: 44px; font-size: 18px; }
   .ctrl-btn.end-call { width: 48px; height: 48px; }
