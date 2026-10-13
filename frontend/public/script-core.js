@@ -910,6 +910,9 @@ function selectUser(userId) {
   if (unsubTyping) { unsubTyping(); unsubTyping = null; }
   if (unsubRecording) { unsubRecording(); unsubRecording = null; }
   loadedMsgIds.clear();
+  // Naya chat khol rahe hain — pichhla record/pack/media state saaf karo,
+  // warna pichhle dost ka data is chat me dikhta rahega.
+  resetChatMedia();
 
   selectedUserId = userId;
   const user = allUsers.find(u => u.id === userId);
@@ -949,6 +952,9 @@ function selectUser(userId) {
   listenRecording();
   renderBroadcastMessages();
   setTimeout(markMessagesAsSeen, 500);
+  // Purana voice note / video (jo sirf MySQL me hai) chat ki timeline me
+  // la do, taaki koi message "goyab" na lage.
+  startLegacyMediaPoll();
 }
 
 function goBack() {
@@ -956,6 +962,9 @@ function goBack() {
   document.getElementById('emptyState').style.display = 'flex';
   document.getElementById('chatView').classList.remove('show');
   updCallBtn();
+  // Chat band ho gaya — recording, pack picker aur legacy poll sab band karo,
+  // warna background me chalte rahe aur pichhle dost ka data load hota rahe.
+  resetChatMedia();
 
   // Mobile: show user list, hide chat
   if (window.innerWidth <= 768) {
@@ -1012,6 +1021,9 @@ function listenMessages() {
             loadedMsgIds.add(doc.id);
             msgCount++;
             const data = doc.data();
+            // Media ki id yaad rakho — MySQL history merge karte waqt isi
+            // ko skip karna hai, warna naya bheja hua media dobara dikhe.
+            if (data.media_id) chatNativeMediaIds.add(data.media_id);
             const ts = data.created_at;
             let timeVal;
             if (ts && typeof ts.toDate === 'function') {
@@ -1065,6 +1077,7 @@ function listenMessages() {
           if (change.type === 'added' && !loadedMsgIds.has(change.doc.id)) {
             loadedMsgIds.add(change.doc.id);
             const data = change.doc.data();
+            if (data.media_id) chatNativeMediaIds.add(data.media_id);
             const msg = { id: change.doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at };
             // Mark as seen if it's from the other user
             if (msg.from !== myId && !msg.seen) {
@@ -1129,6 +1142,7 @@ async function loadMoreMessages() {
           if (!loadedMsgIds.has(doc.id)) {
             loadedMsgIds.add(doc.id);
             const data = doc.data();
+            if (data.media_id) chatNativeMediaIds.add(data.media_id);
             const ts = data.created_at;
             let timeVal;
             if (ts && typeof ts.toDate === 'function') {
@@ -1186,6 +1200,7 @@ async function loadMoreMessages() {
           if (change.type === 'added' && !loadedMsgIds.has(change.doc.id)) {
             loadedMsgIds.add(change.doc.id);
             const data = change.doc.data();
+            if (data.media_id) chatNativeMediaIds.add(data.media_id);
             const msg = { id: change.doc.id, ...data, created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at };
             if (msg.from !== myId && !msg.seen) {
               db.collection('messages').doc(msg.id).update({ seen: true, seen_at: firebase.firestore.FieldValue.serverTimestamp() }).catch(() => {});
@@ -1236,6 +1251,10 @@ function createMessageElement(msg, prevMsg, nextMsg) {
 
   const wrapper = document.createElement('div');
   wrapper.dataset.msgId = msg.id;
+  // Timeline me sahi jagah fit karne ke liye timestamp. Purana media bhi
+  // (jo sirf MySQL me hai) isi wrapper ke beech me baithta hai, toh bina
+  // iske usko position karna possible hi nahi tha.
+  wrapper.dataset.ts = String(msg._ts || (new Date(msg.created_at).getTime() || 0));
 
   setMsgGroupClass(wrapper, prevMsg, nextMsg, msg, isOwn);
 
@@ -3072,6 +3091,535 @@ async function sendImage(input) {
   }
   hideUploading();
   input.value = '';
+}
+
+// ==================== CHAT ME MEDIA (Video / Voice Note / Voice Pack) ====================
+// Voice note aur video pehle sirf apne alag pages se bheji jaati thi. Ab
+// chat page ke andar hi — WhatsApp jaisa — bheji ja sakti hain.
+//
+// DATABASE SAFETY: is feature me kuch bhi delete ya migrate nahi hota.
+//   * File hamesha pehle ke hi tarah backend par upload hoti hai
+//     (voice_recordings / video_recordings tables — bilkul waise hi).
+//   * Chat me dikhne ke liye sirf Firestore `messages` me ek chhoti entry
+//     likhi jati hai: { voice: url } ya { video: { url } }. Renderer
+//     (buildBubbleContent) dono pehle se render karta hai — bas data koi
+//     nahi bhejta tha.
+//   * Naye media par `media_id` likha jaata hai, taaki wo MySQL history
+//     merge karte waqt ek hi baar dikhe, dobara nahi.
+//   * Purane Voice/Video pages, unke tabs aur unka data bilkul chhue nahi
+//     gaye hain.
+const CHAT_VIDEO_API = 'https://yutube-com-pcu9.onrender.com';
+
+// ---- state ----
+let chatAttachOpen = false;
+let chatPackOpen = false;
+let chatLegacyPoll = null;
+let chatLegacyConv = null;
+let chatLegacyItems = [];
+// Firestore messages ke media_id. MySQL history merge karte waqt inhe skip
+// karte hain, warna chat me naya bheja hua media do-do baar dikhta.
+let chatNativeMediaIds = new Set();
+
+let chatRecMediaRecorder = null;
+let chatRecChunks = [];
+let chatRecStartTime = 0;
+let chatRecTimer = null;
+let chatVoiceBlob = null;
+let chatVoiceDur = 0;
+let chatVoiceAudio = null;
+let chatVoiceUrl = null;
+
+// Typing bar sirf tab dikhe jab menu / record / preview me se kuch na ho.
+function updateChatMediaBars() {
+  var bar = document.querySelector('.chat-view .input-bar');
+  if (!bar) return;
+  var rec = document.getElementById('chatRecBar');
+  var prev = document.getElementById('chatVoicePreview');
+  var busy = chatAttachOpen || chatPackOpen ||
+    (rec && rec.style.display !== 'none') ||
+    (prev && prev.style.display !== 'none');
+  bar.classList.toggle('chat-media-busy', !!busy);
+}
+
+// ==================== ATTACH MENU ====================
+function toggleChatAttachMenu() {
+  chatAttachOpen = !chatAttachOpen;
+  var m = document.getElementById('chatAttachMenu');
+  if (m) m.style.display = chatAttachOpen ? 'flex' : 'none';
+  updateChatMediaBars();
+}
+
+function closeChatAttachMenu() {
+  if (!chatAttachOpen) return;
+  chatAttachOpen = false;
+  var m = document.getElementById('chatAttachMenu');
+  if (m) m.style.display = 'none';
+  updateChatMediaBars();
+}
+
+// Text / image aur media — dono ka msgData bilkul same shape rakhte hain.
+// Isiliye reply, seen, reactions aur reply-preview sab pehle se sahi kaam
+// karte hain; media ke liye koi alag code path nahi banaya gaya.
+function buildChatMediaMsg(extra, partnerId) {
+  var to = partnerId || selectedUserId;
+  var msgData = {
+    conversation: [myId, to].sort().join('_'),
+    from: myId,
+    to: to,
+    created_at: firebase.firestore.FieldValue.serverTimestamp(),
+    edited: false,
+    deleted: false,
+    seen: false
+  };
+  Object.keys(extra).forEach(function(k) { msgData[k] = extra[k]; });
+  // Naya media abhi Firestore me likha ja raha hai. MySQL history merge me
+  // isi id ko turant skip karna shuru kar do — snapshot aane me kuch der
+  // lagti hai, aur us dauran same media dobara dikhta.
+  if (extra.media_id) chatNativeMediaIds.add(extra.media_id);
+  if (replyToMsg) {
+    msgData.reply_to = {
+      id: replyToMsg.id,
+      message: replyToMsg.message || 'Media',
+      from: replyToMsg.from
+    };
+    cancelReply();
+  }
+  return msgData;
+}
+
+// ==================== VIDEO BHEJO ====================
+function readVideoDuration(file) {
+  return new Promise(function(resolve) {
+    var url = URL.createObjectURL(file);
+    var v = document.createElement('video');
+    var settled = false;
+    var done = function(ms) {
+      if (settled) return;
+      settled = true;
+      URL.revokeObjectURL(url);
+      resolve(ms || 0);
+    };
+    v.preload = 'metadata';
+    v.onloadedmetadata = function() {
+      (isFinite(v.duration) && v.duration > 0) ? done(v.duration) : done(0);
+    };
+    v.onerror = function() { done(0); };
+    // Kuch browser metadata hi nahi de paate — 3 second baad chhod do,
+    // warna upload hang ho jayega.
+    setTimeout(function() { done(0); }, 3000);
+    v.src = url;
+  });
+}
+
+async function sendChatVideo(input) {
+  var file = input.files && input.files[0];
+  if (input.value !== undefined) input.value = '';
+  if (!file || !selectedUserId) return;
+
+  var partner = selectedUserId;
+  showUploading('Uploading video...');
+  try {
+    var dur = Math.round(await readVideoDuration(file));
+    var fd = new FormData();
+    fd.append('video', file, file.name);
+    fd.append('userId', myId);
+    // /api/videos/upload receiver_id khud set kar deta hai, isliye alag se
+    // /send call karne ki zaroorat nahi padti.
+    fd.append('receiverId', partner);
+    fd.append('duration', dur);
+
+    var res = await fetch(CHAT_VIDEO_API + '/api/videos/upload', { method: 'POST', body: fd });
+    var data = await res.json();
+    if (!res.ok || !data.id) throw new Error((data && data.error) || 'Upload failed');
+
+    await db.collection('messages').add(buildChatMediaMsg({
+      video: { url: CHAT_VIDEO_API + '/api/videos/' + data.id + '/video' },
+      media_id: data.id,
+      media_kind: 'video'
+    }, partner));
+
+    if (typeof sendTelegramAlert === 'function') {
+      var toUser = allUsers.find(function(u) { return u.id === partner; });
+      sendTelegramAlert(myName, '\uD83C\uDFAC Video', new Date().toLocaleString('en-IN'), toUser ? toUser.name : 'Admin');
+    }
+    refreshLegacyMerge();
+    scrollToBottom();
+  } catch (err) {
+    console.error('Send video error:', err);
+    alert('Failed to send video. Check server connection.');
+  }
+  hideUploading();
+}
+
+// ==================== VOICE NOTE ====================
+function startChatVoiceRec() {
+  if (!myId || !selectedUserId) return;
+  if (chatRecMediaRecorder && chatRecMediaRecorder.state === 'recording') return;
+  var partner = selectedUserId;
+
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+    chatRecChunks = [];
+    chatRecStartTime = Date.now();
+    var opts = { mimeType: 'audio/webm' };
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+      opts.mimeType = 'audio/webm;codecs=opus';
+    }
+    opts.audioBitsPerSecond = 24000;
+    var rec = new MediaRecorder(stream, opts);
+    chatRecMediaRecorder = rec;
+    rec.ondataavailable = function(e) { if (e.data && e.data.size > 0) chatRecChunks.push(e.data); };
+    rec.onstop = function() {
+      stream.getTracks().forEach(function(t) { t.stop(); });
+      setRecordingStatus(false, partner);
+      chatVoiceDur = Math.max(1, Math.floor((Date.now() - chatRecStartTime) / 1000));
+      chatVoiceBlob = new Blob(chatRecChunks, { type: 'audio/webm' });
+      chatRecMediaRecorder = null;
+      showChatVoicePreview();
+    };
+    rec.start();
+    setRecordingStatus(true, partner);
+
+    var bar = document.getElementById('chatRecBar');
+    if (bar) bar.style.display = 'flex';
+    var timer = document.getElementById('chatRecTimer');
+    if (timer) timer.textContent = '0:00';
+    updateChatMediaBars();
+
+    if (chatRecTimer) clearInterval(chatRecTimer);
+    chatRecTimer = setInterval(function() {
+      var sec = Math.floor((Date.now() - chatRecStartTime) / 1000);
+      if (sec >= 300) { stopChatVoiceRec(); return; }
+      if (timer) timer.textContent = formatDuration(sec);
+    }, 200);
+  }).catch(function(err) {
+    console.error('Voice note getUserMedia error:', err);
+    alert('Microphone access is required to record a voice note.');
+  });
+}
+
+function stopChatVoiceRec() {
+  if (chatRecTimer) { clearInterval(chatRecTimer); chatRecTimer = null; }
+  if (chatRecMediaRecorder && chatRecMediaRecorder.state !== 'inactive') {
+    chatRecMediaRecorder.stop();
+  }
+  var bar = document.getElementById('chatRecBar');
+  if (bar) bar.style.display = 'none';
+  updateChatMediaBars();
+}
+
+function cancelChatVoiceRec() {
+  if (chatRecTimer) { clearInterval(chatRecTimer); chatRecTimer = null; }
+  if (chatRecMediaRecorder) {
+    try {
+      if (chatRecMediaRecorder.state !== 'inactive') chatRecMediaRecorder.stop();
+      if (chatRecMediaRecorder.stream) {
+        chatRecMediaRecorder.stream.getTracks().forEach(function(t) { t.stop(); });
+      }
+    } catch (e) {}
+    chatRecMediaRecorder = null;
+    setRecordingStatus(false, selectedUserId);
+  }
+  chatRecChunks = [];
+  chatVoiceBlob = null;
+  var bar = document.getElementById('chatRecBar');
+  if (bar) bar.style.display = 'none';
+  updateChatMediaBars();
+}
+
+function showChatVoicePreview() {
+  var prev = document.getElementById('chatVoicePreview');
+  if (prev) prev.style.display = 'flex';
+  var dur = document.getElementById('chatVoiceDur');
+  if (dur) dur.textContent = formatDuration(chatVoiceDur);
+  var fill = document.getElementById('chatVoiceProgressFill');
+  if (fill) fill.style.width = '0%';
+  updateChatMediaBars();
+}
+
+function discardChatVoicePreview() {
+  if (chatVoiceAudio) { chatVoiceAudio.pause(); chatVoiceAudio = null; }
+  if (chatVoiceUrl) { URL.revokeObjectURL(chatVoiceUrl); chatVoiceUrl = null; }
+  chatVoiceBlob = null;
+  chatVoiceDur = 0;
+  var prev = document.getElementById('chatVoicePreview');
+  if (prev) prev.style.display = 'none';
+  updateChatMediaBars();
+}
+
+function toggleChatVoicePreview() {
+  if (!chatVoiceBlob) return;
+  var fill = document.getElementById('chatVoiceProgressFill');
+  if (chatVoiceAudio) {
+    chatVoiceAudio.pause();
+    chatVoiceAudio = null;
+    if (fill) fill.style.width = '0%';
+    return;
+  }
+  if (!chatVoiceUrl) chatVoiceUrl = URL.createObjectURL(chatVoiceBlob);
+  var a = new Audio(chatVoiceUrl);
+  chatVoiceAudio = a;
+  a.onended = function() {
+    chatVoiceAudio = null;
+    if (fill) fill.style.width = '0%';
+  };
+  a.ontimeupdate = function() {
+    if (fill && a.duration) {
+      fill.style.width = Math.min(100, (a.currentTime / a.duration) * 100) + '%';
+    }
+  };
+  a.play().catch(function() {});
+}
+
+async function sendChatVoicePreview() {
+  if (!chatVoiceBlob || !selectedUserId) return;
+  var partner = selectedUserId;
+  var blob = chatVoiceBlob;
+  var dur = chatVoiceDur;
+  showUploading('Uploading voice...');
+  try {
+    var fd = new FormData();
+    fd.append('audio', blob, 'voice.webm');
+    fd.append('userId', myId);
+    fd.append('duration', dur);
+
+    var res = await fetch(VOICE_API + '/api/voices/upload', { method: 'POST', body: fd });
+    var data = await res.json();
+    if (!res.ok || !data.id) throw new Error((data && data.error) || 'Upload failed');
+
+    // /api/voices/upload sirf recording banata hai (receiver_id NULL) —
+    // use is conversation se jodne ke liye /send bhi call karna padta hai.
+    await fetch(VOICE_API + '/api/voices/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recordingId: data.id, senderId: myId, receiverId: partner })
+    }).catch(function() {});
+
+    await db.collection('messages').add(buildChatMediaMsg({
+      voice: VOICE_API + '/api/voices/' + data.id + '/raw',
+      voice_duration: dur,
+      media_id: data.id,
+      media_kind: 'voice'
+    }, partner));
+
+    discardChatVoicePreview();
+    refreshLegacyMerge();
+    scrollToBottom();
+  } catch (err) {
+    console.error('Send voice error:', err);
+    alert('Failed to send voice note. Check server connection.');
+  }
+  hideUploading();
+}
+
+// ==================== VOICE PACK PICKER ====================
+// User ke apne saved voice recordings me se choose karke bhejta hai. File
+// dobara upload nahi hoti — wo pehle se voice_recordings table me hai, bas
+// uska receiver_id set hota hai.
+async function openChatPackPicker() {
+  var el = document.getElementById('chatPackPicker');
+  if (!el) return;
+  el.style.display = 'flex';
+  chatPackOpen = true;
+  updateChatMediaBars();
+
+  var list = document.getElementById('chatPackList');
+  if (list) list.innerHTML = '<div class="cpp-empty">Loading...</div>';
+
+  try {
+    var res = await fetch(VOICE_API + '/api/voices/user/' + encodeURIComponent(myId), { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed');
+    var packs = await res.json();
+    if (!list) return;
+    if (!packs.length) {
+      list.innerHTML = '<div class="cpp-empty">Abhi koi voice pack nahi hai.<br/>Voice Note se pehle ek record kar lo.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    packs.forEach(function(p) {
+      var item = document.createElement('button');
+      item.className = 'cpp-item';
+      item.type = 'button';
+      var when = p.created_at
+        ? new Date(p.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+        : 'Voice pack';
+      item.innerHTML =
+        '<span class="cpp-play"><svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg></span>' +
+        '<span class="cpp-meta"><span class="cpp-title">' + escapeHtml(when) + '</span>' +
+        '<span class="cpp-sub">' + formatDuration(p.duration || 0) + '</span></span>';
+      item.onclick = function(e) { e.stopPropagation(); sendChatPackFromChat(p); };
+      list.appendChild(item);
+    });
+  } catch (err) {
+    console.error('Voice pack list error:', err);
+    if (list) list.innerHTML = '<div class="cpp-empty">Voice packs load nahi ho paye.</div>';
+  }
+}
+
+function closeChatPackPicker() {
+  var el = document.getElementById('chatPackPicker');
+  if (el) el.style.display = 'none';
+  chatPackOpen = false;
+  updateChatMediaBars();
+}
+
+async function sendChatPackFromChat(pack) {
+  if (!selectedUserId || !pack || !pack.id) return;
+  var partner = selectedUserId;
+  closeChatPackPicker();
+  showUploading('Sending voice pack...');
+  try {
+    await fetch(VOICE_API + '/api/voices/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recordingId: pack.id, senderId: myId, receiverId: partner })
+    });
+    await db.collection('messages').add(buildChatMediaMsg({
+      voice: VOICE_API + '/api/voices/' + pack.id + '/raw',
+      voice_duration: pack.duration || 0,
+      media_id: pack.id,
+      media_kind: 'pack'
+    }, partner));
+    refreshLegacyMerge();
+    scrollToBottom();
+  } catch (err) {
+    console.error('Send voice pack error:', err);
+    alert('Failed to send voice pack. Check server connection.');
+  }
+  hideUploading();
+}
+
+// ==================== PURANA MEDIA CHAT ME MERGE ====================
+// Voice note aur video pehle SIRF MySQL me store hote the, Firestore me
+// nahi. Isliye chat me dikhane ke liye dono systems ka data ek hi timeline
+// me mila diya jaata hai. Ye sirf dikhane ke liye hai — read-only: ye
+// Firestore documents nahi hain, isliye inpe reply/edit/delete popup nahi
+// lagta (aur kuch delete hota bhi nahi).
+async function loadLegacyMedia() {
+  if (!myId || !selectedUserId) return;
+  var partner = selectedUserId;
+  var conv = [myId, partner].sort().join('_');
+  if (chatLegacyConv !== conv) {
+    chatLegacyConv = conv;
+    chatLegacyItems = [];
+  }
+  try {
+    var results = await Promise.all([
+      fetch(VOICE_API + '/api/voices/conversation/' + encodeURIComponent(myId) + '/' + encodeURIComponent(partner), { cache: 'no-store' }),
+      fetch(CHAT_VIDEO_API + '/api/videos/conversation/' + encodeURIComponent(myId) + '/' + encodeURIComponent(partner), { cache: 'no-store' })
+    ]);
+
+    var items = [];
+
+    if (results[0].ok) {
+      var voices = await results[0].json();
+      voices.forEach(function(r) {
+        items.push({
+          media_id: r.id,
+          _ts: new Date(r.created_at).getTime(),
+          msg: {
+            id: 'legacy_voice_' + r.id,
+            from: r.user_id,
+            created_at: r.created_at,
+            voice: VOICE_API + '/api/voices/' + r.id + '/raw',
+            voice_duration: r.duration,
+            media_kind: 'voice',
+            _legacy: true
+          }
+        });
+      });
+    }
+
+    if (results[1].ok) {
+      var vids = await results[1].json();
+      vids.forEach(function(r) {
+        // Telegram par file na ho toh play hoga hi nahi — aise record skip.
+        if (!r.telegram_file_id) return;
+        items.push({
+          media_id: r.id,
+          _ts: new Date(r.created_at).getTime(),
+          msg: {
+            id: 'legacy_video_' + r.id,
+            from: r.user_id,
+            created_at: r.created_at,
+            video: { url: CHAT_VIDEO_API + '/api/videos/' + r.id + '/video' },
+            media_kind: 'video',
+            _legacy: true
+          }
+        });
+      });
+    }
+
+    chatLegacyItems = items
+      .filter(function(it) { return isFinite(it._ts); })
+      .sort(function(a, b) { return a._ts - b._ts; });
+    renderLegacyMediaInChat();
+  } catch (err) {
+    // Backend na mile toh chat poori tarah normal chalta rahe — text aur
+    // naya media kisi bhi tarah safe hain.
+    console.warn('Legacy media load failed:', err);
+  }
+}
+
+function renderLegacyMediaInChat() {
+  var area = document.getElementById('messagesArea');
+  if (!area) return;
+  var typingEl = document.getElementById('typingIndicator');
+
+  // Jo pehle render ho chuke hain unhe hatao, phir poori list se naya set
+  // banao — list har poll pe badal sakti hai, isliye duplicate nahi banna
+  // chahiye.
+  Array.prototype.slice.call(area.querySelectorAll('.message-wrapper[data-legacy="1"]')).forEach(function(el) {
+    if (el.parentNode) el.parentNode.removeChild(el);
+  });
+
+  var pending = chatLegacyItems.filter(function(it) {
+    return !chatNativeMediaIds.has(it.media_id);
+  });
+  if (!pending.length) return;
+
+  pending.forEach(function(it) {
+    var wrappers = area.querySelectorAll('.message-wrapper[data-msg-id]:not([data-legacy="1"])');
+    var before = null;
+    for (var i = 0; i < wrappers.length; i++) {
+      var ts = parseInt(wrappers[i].getAttribute('data-ts') || '0', 10);
+      if (ts > it._ts) { before = wrappers[i]; break; }
+    }
+    var el = createMessageElement(it.msg, null, null);
+    if (!el) return;
+    el.setAttribute('data-legacy', '1');
+    // Read-only: Firestore document nahi hai, isliye reply/edit/delete ka
+    // popup mat lagao.
+    el.onclick = null;
+    el.style.animation = 'none';
+    if (before) area.insertBefore(el, before);
+    else if (typingEl) area.insertBefore(el, typingEl);
+    else area.appendChild(el);
+  });
+}
+
+function startLegacyMediaPoll() {
+  if (chatLegacyPoll) clearInterval(chatLegacyPoll);
+  loadLegacyMedia();
+  // Voice/Video page har 3 second poll karta hai. Chat me bhi chahiye, taaki
+  // doosre side se aaya hua voice/video turant dikh jaaye.
+  chatLegacyPoll = setInterval(loadLegacyMedia, 5000);
+}
+
+// Naya media bhej diya — MySQL history wala merge turant dobara chalao,
+// warna poll interval (5 sec) tak wahi media do-do baar dikhta rahega.
+function refreshLegacyMerge() {
+  if (chatLegacyPoll) renderLegacyMediaInChat();
+}
+
+function resetChatMedia() {
+  closeChatAttachMenu();
+  closeChatPackPicker();
+  cancelChatVoiceRec();
+  discardChatVoicePreview();
+  if (chatLegacyPoll) { clearInterval(chatLegacyPoll); chatLegacyPoll = null; }
+  chatLegacyItems = [];
+  chatLegacyConv = null;
+  chatNativeMediaIds.clear();
 }
 
 
