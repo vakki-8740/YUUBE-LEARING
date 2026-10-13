@@ -2127,9 +2127,11 @@ button:active {
 
 /* Active call — beech me card, peeche blur background */
 .active-container {
-  width: min(420px, calc(100vw - 28px));
-  height: auto;
-  max-height: calc(100vh - 40px);
+  /* Card ab poore screen ka 85% x 80% le raha hai (pehle sirf 420px). */
+  width: 85%;
+  height: 80%;
+  max-width: 100%;
+  max-height: calc(100vh - 24px);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -2144,15 +2146,16 @@ button:active {
 }
 
 .remote-wrap {
-  height: min(56vh, 400px);
-  min-height: 230px;
+  /* Pehle fixed height (min(56vh, 400px)) thi. Ab card kitna bhi bada ho,
+     video uske andar bache hue poore space ko gher le. */
+  flex: 1 1 auto;
+  min-height: 180px;
   background: #111;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   position: relative;
-  flex-shrink: 0;
 }
 
 .remote-wrap video {
@@ -4041,8 +4044,8 @@ button:active {
   .local-wrap { width: 90px; height: 130px; }
   .incoming-avatar, .outgoing-avatar { width: 80px; height: 80px; font-size: 36px; }
   .incoming-name, .outgoing-name { font-size: 20px; }
-  .active-container { width: calc(100vw - 20px); max-height: calc(100vh - 24px); border-radius: 24px; }
-  .remote-wrap { height: min(52vh, 340px); min-height: 200px; }
+  .active-container { width: 85%; height: 80%; max-height: calc(100vh - 24px); border-radius: 24px; }
+  .remote-wrap { flex: 1 1 auto; min-height: 160px; }
   .call-menu-card, .incoming-card, .outgoing-content { border-radius: 24px; }
   .call-toast { top: 12%; font-size: 12px; padding: 9px 16px; }
   .call-bottom-controls { gap: 20px; padding: 16px 12px; }
